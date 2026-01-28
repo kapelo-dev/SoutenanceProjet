@@ -318,47 +318,4 @@
         display: none;
     }
 </style>
-<script>
-function toggleDropdown(button) {
-    const parentCell = button.closest('td');
-    const dropdownContent = parentCell.querySelector('.dropdown-content');
-    const icon = button.querySelector('i');
-    
-    if (dropdownContent) {
-        dropdownContent.classList.toggle('hidden');
-        icon.classList.toggle('rotate-180');
-    }
-}
-
-// S'assurer que le message vide reste centré après l'initialisation du datatable
-document.addEventListener('DOMContentLoaded', function() {
-    const emptyRow = document.querySelector('#soldes_table tbody tr.empty-row');
-    if (emptyRow) {
-        const td = emptyRow.querySelector('td');
-        if (td && td.getAttribute('colspan') !== '8') {
-            td.setAttribute('colspan', '8');
-            td.style.width = '100%';
-            td.style.border = 'none';
-        }
-    }
-    
-    // Observer les changements du DOM pour maintenir le colspan
-    const observer = new MutationObserver(function(mutations) {
-        const emptyRow = document.querySelector('#soldes_table tbody tr.empty-row');
-        if (emptyRow) {
-            const td = emptyRow.querySelector('td');
-            if (td && td.getAttribute('colspan') !== '8') {
-                td.setAttribute('colspan', '8');
-                td.style.width = '100%';
-                td.style.border = 'none';
-            }
-        }
-    });
-    
-    const table = document.getElementById('soldes_table');
-    if (table) {
-        observer.observe(table, { childList: true, subtree: true });
-    }
-});
-</script>
 @endsection

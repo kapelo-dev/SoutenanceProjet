@@ -46,10 +46,10 @@ class AgentController extends Controller
             $kiosques = Kiosque::actif()->orderBy('nom')->get();
             $operateurs = Operateur::actif()->get();
 
-            return view('pages.agents.liste_agents.index', compact('agents', 'kiosques', 'operateurs'));
+            return $this->ajaxView('pages.agents.liste_agents.index', compact('agents', 'kiosques', 'operateurs'));
         } catch (\Exception $e) {
             \Log::error('Erreur dans AgentController@index: ' . $e->getMessage());
-            return view('pages.agents.liste_agents.index', [
+            return $this->ajaxView('pages.agents.liste_agents.index', [
                 'agents' => \Illuminate\Pagination\LengthAwarePaginator::make([], 0, 20),
                 'kiosques' => Kiosque::actif()->orderBy('nom')->get(),
                 'operateurs' => Operateur::actif()->get()
@@ -86,10 +86,10 @@ class AgentController extends Controller
             
             // Calculer les commissions pour chaque agent (sera fait dans la vue pour éviter N+1)
 
-            return view('pages.agents.solde.index', compact('agents', 'operateurs'));
+            return $this->ajaxView('pages.agents.solde.index', compact('agents', 'operateurs'));
         } catch (\Exception $e) {
             \Log::error('Erreur dans AgentController@soldes: ' . $e->getMessage());
-            return view('pages.agents.solde.index', [
+            return $this->ajaxView('pages.agents.solde.index', [
                 'agents' => collect(),
                 'operateurs' => Operateur::actif()->get()
             ])->with('error', 'Une erreur est survenue lors du chargement des données.');

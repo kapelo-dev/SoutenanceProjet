@@ -37,59 +37,60 @@
             </div>
         </div>
         <div class="kt-card-content">
-            <div class="grid" data-kt-datatable="true" data-kt-datatable-page-size="10">
-                <div class="kt-scrollable-x-auto">
-                    <table class="kt-table kt-table-border" data-kt-datatable-table="true" id="operateurs_table" style="table-layout: fixed; width: 100%;">
-                        <thead>
-                            <tr>
-                                <th class="w-[50px] text-center">
-                                    <input class="kt-checkbox kt-checkbox-sm" data-kt-datatable-check="true" type="checkbox"/>
-                                </th>
-                                <th class="min-w-[200px]" style="width: 25%;">
-                                    <span class="kt-table-col">
-                                        <span class="kt-table-col-label">
-                                            Opérateur
+            @if($operateurs->count())
+                <div class="grid" data-kt-datatable="true" data-kt-datatable-page-size="10">
+                    <div class="kt-scrollable-x-auto">
+                        <table class="kt-table kt-table-border" data-kt-datatable-table="true" id="operateurs_table" style="table-layout: fixed; width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th class="w-[50px] text-center">
+                                        <input class="kt-checkbox kt-checkbox-sm" data-kt-datatable-check="true" type="checkbox"/>
+                                    </th>
+                                    <th class="min-w-[200px]" style="width: 25%;">
+                                        <span class="kt-table-col">
+                                            <span class="kt-table-col-label">
+                                                Opérateur
+                                            </span>
+                                            <span class="kt-table-col-sort"></span>
                                         </span>
-                                        <span class="kt-table-col-sort"></span>
-                                    </span>
-                                </th>
-                                <th class="min-w-[120px]" style="width: 15%;">
-                                    <span class="kt-table-col">
-                                        <span class="kt-table-col-label">
-                                            Code
+                                    </th>
+                                    <th class="min-w-[120px]" style="width: 15%;">
+                                        <span class="kt-table-col">
+                                            <span class="kt-table-col-label">
+                                                Code
+                                            </span>
+                                            <span class="kt-table-col-sort"></span>
                                         </span>
-                                        <span class="kt-table-col-sort"></span>
-                                    </span>
-                                </th>
-                                <th class="min-w-[100px]" style="width: 12%;">
-                                    <span class="kt-table-col">
-                                        <span class="kt-table-col-label">
-                                            Ordre
+                                    </th>
+                                    <th class="min-w-[100px]" style="width: 12%;">
+                                        <span class="kt-table-col">
+                                            <span class="kt-table-col-label">
+                                                Ordre
+                                            </span>
+                                            <span class="kt-table-col-sort"></span>
                                         </span>
-                                        <span class="kt-table-col-sort"></span>
-                                    </span>
-                                </th>
-                                <th class="min-w-[120px]" style="width: 15%;">
-                                    <span class="kt-table-col">
-                                        <span class="kt-table-col-label">
-                                            Statut
+                                    </th>
+                                    <th class="min-w-[120px]" style="width: 15%;">
+                                        <span class="kt-table-col">
+                                            <span class="kt-table-col-label">
+                                                Statut
+                                            </span>
+                                            <span class="kt-table-col-sort"></span>
                                         </span>
-                                        <span class="kt-table-col-sort"></span>
-                                    </span>
-                                </th>
-                                <th class="min-w-[160px]" style="width: 18%;">
-                                    <span class="kt-table-col">
-                                        <span class="kt-table-col-label">
-                                            Date d'ajout
+                                    </th>
+                                    <th class="min-w-[160px]" style="width: 18%;">
+                                        <span class="kt-table-col">
+                                            <span class="kt-table-col-label">
+                                                Date d'ajout
+                                            </span>
+                                            <span class="kt-table-col-sort"></span>
                                         </span>
-                                        <span class="kt-table-col-sort"></span>
-                                    </span>
-                                </th>
-                                <th class="w-[50px]"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($operateurs as $operateur)
+                                    </th>
+                                    <th class="w-[50px]"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach($operateurs as $operateur)
                             <tr data-statut="{{ $operateur->statut }}">
                                 <td class="text-center">
                                     <input class="kt-checkbox kt-checkbox-sm" data-kt-datatable-row-check="true" type="checkbox" value="{{ $operateur->id }}"/>
@@ -199,27 +200,28 @@
                                     </div>
                                 </td>
                             </tr>
-                            @empty
-                            <tr>
-                                <td colspan="7" class="text-center py-10">
-                                    <div class="flex flex-col items-center gap-3">
-                                        <i class="ki-filled ki-information-2 text-4xl text-secondary-foreground"></i>
-                                        <div class="flex flex-col items-center gap-1">
-                                            <span class="text-sm font-semibold text-foreground">Aucun opérateur</span>
-                                            <span class="text-xs text-secondary-foreground">Aucun opérateur mobile money n'a été enregistré pour le moment.</span>
-                                        </div>
-                                        <a href="{{ route('operateurs.create') }}" class="kt-btn kt-btn-primary kt-btn-sm">
-                                            <i class="ki-filled ki-plus"></i>
-                                            Créer le premier opérateur
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            @else
+                <div class="flex flex-col items-center justify-center py-16">
+                    <div class="flex flex-col items-center gap-3 max-w-md text-center">
+                        <i class="ki-filled ki-information-2 text-4xl text-secondary-foreground"></i>
+                        <div class="flex flex-col items-center gap-1">
+                            <span class="text-sm font-semibold text-foreground">Aucun opérateur</span>
+                            <span class="text-xs text-secondary-foreground">
+                                Aucun opérateur mobile money n'a été enregistré pour le moment.
+                            </span>
+                        </div>
+                        <button class="kt-btn kt-btn-primary kt-btn-sm" data-kt-modal-toggle="#modal_nouvel_operateur">
+                            <i class="ki-filled ki-plus"></i>
+                            Créer le premier opérateur
+                        </button>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 </div>
@@ -234,6 +236,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (filterActifs) {
         filterActifs.addEventListener('change', function() {
             const table = document.getElementById('operateurs_table');
+            if (!table) {
+                return;
+            }
             const rows = table.querySelectorAll('tbody tr[data-statut]');
             
             rows.forEach(row => {
@@ -248,8 +253,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Afficher tous
                     row.style.display = '';
                 }
-            });
-        });
+    });
     }
 
     // Toggle statut depuis le menu déroulant (délégation d'événements)
@@ -259,7 +263,6 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             e.stopPropagation();
             const id = toggleLink.getAttribute('data-id');
-            const currentStatut = toggleLink.getAttribute('data-statut');
             
             fetch(`/operateurs/${id}/toggle-status`, {
                 method: 'POST',
@@ -272,23 +275,31 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     // Mettre à jour l'icône et le badge de statut
-                    const row = this.closest('tr');
-                    const statutCell = row.querySelector('td:nth-child(5)');
-                    const badge = statutCell.querySelector('.kt-badge');
-                    
-                    // Mettre à jour le badge
-                    badge.className = `kt-badge kt-badge-${data.statut === 'actif' ? 'success' : 'danger'}`;
-                    badge.textContent = data.statut.charAt(0).toUpperCase() + data.statut.slice(1);
-                    
-                    // Mettre à jour l'attribut data-statut
-                    row.setAttribute('data-statut', data.statut);
+                    const row = toggleLink.closest('tr');
+                    if (row) {
+                        const statutCell = row.querySelector('td:nth-child(5)');
+                        const badge = statutCell ? statutCell.querySelector('.kt-badge') : null;
+                        
+                        if (badge) {
+                            // Mettre à jour le badge
+                            badge.className = `kt-badge kt-badge-${data.statut === 'actif' ? 'success' : 'danger'}`;
+                            badge.textContent = data.statut.charAt(0).toUpperCase() + data.statut.slice(1);
+                        }
+                        
+                        // Mettre à jour l'attribut data-statut
+                        row.setAttribute('data-statut', data.statut);
+                    }
                     
                     // Mettre à jour l'icône et le texte du lien dans le menu
-                    const icon = this.querySelector('.kt-menu-icon i');
-                    const title = this.querySelector('.kt-menu-title');
-                    icon.className = `ki-filled ki-${data.statut === 'actif' ? 'cross' : 'check'}`;
-                    title.textContent = data.statut === 'actif' ? 'Désactiver' : 'Activer';
-                    this.setAttribute('data-statut', data.statut);
+                    const icon = toggleLink.querySelector('.kt-menu-icon i');
+                    const title = toggleLink.querySelector('.kt-menu-title');
+                    if (icon) {
+                        icon.className = `ki-filled ki-${data.statut === 'actif' ? 'cross' : 'check'}`;
+                    }
+                    if (title) {
+                        title.textContent = data.statut === 'actif' ? 'Désactiver' : 'Activer';
+                    }
+                    toggleLink.setAttribute('data-statut', data.statut);
                     
                     // Afficher un message de succès
                     if (typeof Swal !== 'undefined') {
@@ -308,7 +319,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Erreur:', error);
                 alert('Une erreur est survenue lors de la mise à jour du statut.');
             });
-        });
+        }
     });
 
     // Gestion de la suppression
@@ -617,7 +628,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    });
 });
 </script>
 @endpush
@@ -664,13 +674,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <span class="text-xs text-destructive hidden" id="error_create_statut"></span>
                         </div>
                         
-                        <div class="flex flex-col gap-2">
-                            <label class="kt-label">
-                                Ordre
-                            </label>
-                            <input class="kt-input" type="number" name="ordre" id="create_ordre" placeholder="0" min="0" />
-                            <span class="text-xs text-destructive hidden" id="error_create_ordre"></span>
-                        </div>
+                        <!-- Ordre généré automatiquement côté serveur -->
                     </div>
                     
                     <div class="flex flex-col gap-2">
@@ -837,13 +841,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <span class="text-xs text-destructive hidden" id="error_edit_statut"></span>
                         </div>
                         
-                        <div class="flex flex-col gap-2">
-                            <label class="kt-label">
-                                Ordre
-                            </label>
-                            <input class="kt-input" type="number" name="ordre" id="edit_ordre" min="0" />
-                            <span class="text-xs text-destructive hidden" id="error_edit_ordre"></span>
-                        </div>
+                        <!-- Ordre affiché uniquement en lecture, géré automatiquement -->
                     </div>
                     
                     <div class="flex flex-col gap-2">

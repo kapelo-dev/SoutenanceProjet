@@ -65,8 +65,8 @@
       <div class="flex flex-col gap-5 lg:gap-7.5" id="team_crew_card">
        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-7.5">
         @forelse($utilisateurs as $utilisateur)
-        <div class="kt-card">
-         <div class="kt-card-content lg:pt-9 lg:pb-7.5">
+        <div class="kt-card flex flex-col">
+         <div class="kt-card-content lg:pt-9 lg:pb-7.5 flex-1">
            <div class="flex justify-center mb-2.5">
            <div class="size-20 relative">
             @if($utilisateur->photo_profil)
@@ -168,10 +168,12 @@
        @endif
       </div>
       <div class="hidden" id="team_crew_list">
-       <div class="grid grid-cols-1 gap-5 lg:gap-7.5">
+       <div class="kt-card p-0">
+        <div class="divide-y divide-border">
         @forelse($utilisateurs as $utilisateur)
-        <div class="kt-card p-7.5">
-         <div class="flex items-center flex-wrap justify-between gap-5">
+        <div class="p-7.5">
+         <div class="grid items-center gap-4 lg:gap-8 grid-cols-[minmax(0,1fr)_auto_auto]">
+          <!-- Colonne 1 : avatar + infos de base -->
           <div class="flex items-center gap-3.5">
            <div class="flex justify-center">
             @if($utilisateur->photo_profil)
@@ -215,10 +217,11 @@
             </div>
            </div>
           </div>
-         </div>
-         <div class="flex items-center flex-wrap gap-5 lg:gap-11">
-          <div class="flex items-center flex-wrap gap-2 lg:gap-5">
-           <div class="grid grid-cols-1 gap-1.5 border-[0.5px] border-dashed border-input shrink-0 rounded-md px-2.5 py-2">
+          </div>
+
+          <!-- Colonne 2 : stats alignées (profils / statut / dernière connexion) -->
+          <div class="flex items-center flex-wrap gap-2 lg:gap-4">
+           <div class="grid grid-cols-1 gap-1.5 border-[0.5px] border-dashed border-input shrink-0 rounded-md px-2.5 py-2 min-w-[80px]">
             <span class="text-mono text-sm leading-none font-medium">
              {{ $utilisateur->profils->count() }}
             </span>
@@ -226,7 +229,7 @@
              Profil{{ $utilisateur->profils->count() > 1 ? 's' : '' }}
             </span>
            </div>
-           <div class="grid grid-cols-1 gap-1.5 border-[0.5px] border-dashed border-input shrink-0 rounded-md px-2.5 py-2">
+           <div class="grid grid-cols-1 gap-1.5 border-[0.5px] border-dashed border-input shrink-0 rounded-md px-2.5 py-2 min-w-[80px]">
             <span class="text-mono text-sm leading-none font-medium">
              {{ ucfirst($utilisateur->statut) }}
             </span>
@@ -235,7 +238,7 @@
             </span>
            </div>
            @if($utilisateur->dernier_connexion)
-           <div class="grid grid-cols-1 gap-1.5 border-[0.5px] border-dashed border-input shrink-0 rounded-md px-2.5 py-2">
+           <div class="grid grid-cols-1 gap-1.5 border-[0.5px] border-dashed border-input shrink-0 rounded-md px-2.5 py-2 min-w-[110px]">
             <span class="text-mono text-sm leading-none font-medium">
              {{ $utilisateur->dernier_connexion->format('d/m/Y') }}
             </span>
@@ -245,6 +248,8 @@
            </div>
            @endif
           </div>
+
+          <!-- Colonne 3 : bouton statut -->
           <div class="text-right w-28">
            <a class="kt-btn kt-btn-outline {{ $utilisateur->statut == 'actif' ? 'kt-btn-primary' : '' }}">
             <i class="ki-filled ki-check-circle">
@@ -255,12 +260,11 @@
          </div>
         </div>
         @empty
-        <div class="kt-card">
-         <div class="kt-card-content text-center py-10">
+        <div class="p-7.5 text-center py-10">
           <p class="text-secondary-foreground">Aucun utilisateur trouvé</p>
-         </div>
         </div>
         @endforelse
+        </div>
        </div>
        @if($utilisateurs->hasPages())
        <div class="flex grow justify-center pt-5 lg:pt-7.5">

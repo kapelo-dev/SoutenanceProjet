@@ -31,10 +31,10 @@ class PermissionController extends Controller
                 })
                 ->toArray();
             
-            return view('pages.roles_et_permissions.gestion_permissions.index', compact('roles', 'liens', 'permissions'));
+            return $this->ajaxView('pages.roles_et_permissions.gestion_permissions.index', compact('roles', 'liens', 'permissions'));
         } catch (\Exception $e) {
             \Log::error('Erreur dans PermissionController@index: ' . $e->getMessage());
-            return view('pages.roles_et_permissions.gestion_permissions.index', [
+            return $this->ajaxView('pages.roles_et_permissions.gestion_permissions.index', [
                 'roles' => collect([]),
                 'liens' => collect([]),
                 'permissions' => []

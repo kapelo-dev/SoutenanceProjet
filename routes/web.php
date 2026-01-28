@@ -13,6 +13,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RouteController;
 use App\Http\Controllers\RapportController;
+use App\Http\Controllers\OperationsAgenceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -94,6 +95,7 @@ Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard
 Route::get('/api/dashboard/stats-temps-reel', [DashboardController::class, 'statsTempsReel']);
 Route::get('/api/dashboard/graphique-transactions', [DashboardController::class, 'graphiqueTransactions']);
 Route::get('/api/dashboard/stats-par-operateur', [DashboardController::class, 'statsParOperateur']);
+Route::get('/api/dashboard/carte-performance-mois', [DashboardController::class, 'cartePerformanceMois']);
 
 // Opérateurs
 Route::resource('operateurs', OperateurController::class);
@@ -150,6 +152,4 @@ Route::post('/roles-et-permissions/gestion-routes', [RouteController::class, 'st
 
 Route::get('/rapports', [RapportController::class, 'index'])->name('rapports.index'); 
 
-Route::get('/operations-agence', function () {
-    return view('pages.operation_agence.index');
-})->name('operations-agence.index');
+Route::get('/operations-agence', [OperationsAgenceController::class, 'index'])->name('operations-agence.index');

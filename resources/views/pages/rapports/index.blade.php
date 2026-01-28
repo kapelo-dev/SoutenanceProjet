@@ -207,9 +207,9 @@
                         @if($index < 4)
                         <div class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem]">
                             @if($stat['operateur']->logo)
-                            <img alt="{{ $stat['operateur']->libelle }}" class="ms-5 mt-4 w-7" src="{{ asset('storage/' . $stat['operateur']->logo) }}" />
+                            <img alt="{{ $stat['operateur']->libelle }}" class="ms-5 mt-4 w-20 h-20 object-contain" src="{{ asset('storage/' . $stat['operateur']->logo) }}" />
                             @else
-                            <div class="ms-5 mt-4 w-7 h-7 rounded flex items-center justify-center text-white font-bold" style="background-color: {{ $stat['operateur']->couleur ?? '#3b82f6' }};">
+                            <div class="ms-5 mt-4 w-10 h-10 rounded flex items-center justify-center text-white font-bold" style="background-color: {{ $stat['operateur']->couleur ?? '#3b82f6' }};">
                                 {{ strtoupper(substr($stat['operateur']->libelle, 0, 1)) }}
                             </div>
                             @endif

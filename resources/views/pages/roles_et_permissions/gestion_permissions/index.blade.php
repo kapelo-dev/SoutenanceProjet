@@ -240,5 +240,88 @@ window.addEventListener('beforeunload', function(e) {
 .kt-table tbody td.sticky {
     z-index: 5;
 }
+
+/* Améliorer la visibilité des checkboxes de permissions */
+.permission-checkbox,
+.permission-checkbox.kt-checkbox,
+.permission-checkbox.kt-checkbox-sm {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    cursor: pointer;
+    border: 2px solid #9ca3af !important;
+    border-radius: 4px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    position: relative;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0;
+    padding: 0;
+}
+
+.permission-checkbox:hover,
+.permission-checkbox.kt-checkbox:hover,
+.permission-checkbox.kt-checkbox-sm:hover {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    transform: scale(1.05);
+}
+
+.permission-checkbox:focus,
+.permission-checkbox.kt-checkbox:focus,
+.permission-checkbox.kt-checkbox-sm:focus {
+    outline: none;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.permission-checkbox:checked,
+.permission-checkbox.kt-checkbox:checked,
+.permission-checkbox.kt-checkbox-sm:checked {
+    background-color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+}
+
+.permission-checkbox:checked::after,
+.permission-checkbox.kt-checkbox:checked::after,
+.permission-checkbox.kt-checkbox-sm:checked::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, -60%) rotate(45deg);
+    display: block;
+}
+
+/* Mode sombre */
+.dark .permission-checkbox,
+.dark .permission-checkbox.kt-checkbox,
+.dark .permission-checkbox.kt-checkbox-sm {
+    background-color: #1f2937;
+    border-color: #6b7280 !important;
+}
+
+.dark .permission-checkbox:hover,
+.dark .permission-checkbox.kt-checkbox:hover,
+.dark .permission-checkbox.kt-checkbox-sm:hover {
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+}
+
+.dark .permission-checkbox:checked,
+.dark .permission-checkbox.kt-checkbox:checked,
+.dark .permission-checkbox.kt-checkbox-sm:checked {
+    background-color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+}
 </style>
 @endsection

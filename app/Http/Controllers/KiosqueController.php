@@ -52,7 +52,7 @@ class KiosqueController extends Controller
         $villes = Kiosque::distinct()->whereNotNull('ville')->pluck('ville')->filter();
         $quartiers = Kiosque::distinct()->whereNotNull('quartier')->pluck('quartier')->filter();
 
-        return view('pages.kiosques.index', compact('kiosques', 'villes', 'quartiers'));
+        return $this->ajaxView('pages.kiosques.index', compact('kiosques', 'villes', 'quartiers'));
     }
 
     /**
@@ -67,7 +67,7 @@ class KiosqueController extends Controller
             }])
             ->get();
 
-        return view('pages.kiosques.carte', compact('kiosques'));
+        return $this->ajaxView('pages.kiosques.carte', compact('kiosques'));
     }
 
     /**

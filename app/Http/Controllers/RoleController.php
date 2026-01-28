@@ -23,10 +23,10 @@ class RoleController extends Controller
                 $role->users_count = $role->utilisateurs()->count();
             }
 
-            return view('pages.roles_et_permissions.gestion_roles.index', compact('roles'));
+            return $this->ajaxView('pages.roles_et_permissions.gestion_roles.index', compact('roles'));
         } catch (\Exception $e) {
             \Log::error('Erreur dans RoleController@index: ' . $e->getMessage());
-            return view('pages.roles_et_permissions.gestion_roles.index', [
+            return $this->ajaxView('pages.roles_et_permissions.gestion_roles.index', [
                 'roles' => collect([])
             ]);
         }

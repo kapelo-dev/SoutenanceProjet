@@ -30,5 +30,6 @@
         <!-- End of Page -->
 
         @include('layouts.partials.scripts')
+        @stack('scripts')
     </body>
 </html>

@@ -160,7 +160,7 @@ class RapportController extends Controller
         $agents = Agent::actif()->with('utilisateur')->orderBy('nom')->get();
         $kiosques = Kiosque::actif()->orderBy('nom')->get();
         
-        return view('pages.rapports.index', compact(
+        return $this->ajaxView('pages.rapports.index', compact(
             'statsOperateurs',
             'topAgents',
             'dernieresTransactions',

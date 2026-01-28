@@ -26,7 +26,7 @@ class RouteController extends Controller
             ->orderBy('libelle')
             ->get();
 
-        return view('pages.roles_et_permissions.gestion_routes.index', compact('liens', 'menusParents'));
+        return $this->ajaxView('pages.roles_et_permissions.gestion_routes.index', compact('liens', 'menusParents'));
     }
 
     /**

@@ -15,7 +15,7 @@ class OperateurController extends Controller
     {
         $operateurs = Operateur::orderBy('ordre')->get();
         
-        return view('pages.operateurs.index', compact('operateurs'));
+        return $this->ajaxView('pages.operateurs.index', compact('operateurs'));
     }
 
     /**
@@ -38,8 +38,10 @@ class OperateurController extends Controller
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'couleur' => 'nullable|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
                 'statut' => 'required|in:actif,inactif',
-                'ordre' => 'nullable|integer|min:0',
             ]);
+
+            // Ordre généré automatiquement si non fourni
+            $validated['ordre'] = (Operateur::max('ordre') ?? 0) + 1;
 
             // Upload du logo
             if ($request->hasFile('logo')) {
@@ -126,7 +128,6 @@ class OperateurController extends Controller
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'couleur' => 'nullable|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
                 'statut' => 'required|in:actif,inactif',
-                'ordre' => 'nullable|integer|min:0',
             ]);
 
             // Upload du nouveau logo

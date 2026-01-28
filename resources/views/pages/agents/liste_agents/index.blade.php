@@ -459,10 +459,10 @@
                 </div>
                 
                 <!-- Onglet Kiosque -->
-                <div id="tab_kiosque" class="kt-tab-content p-5">
+                <div id="tab_kiosque" class="kt-tab-content p-5 hidden">
                     <div class="flex flex-col gap-5">
                         <div class="flex items-center gap-2 mb-2">
-                            <input class="kt-switch" type="checkbox" name="creer_kiosque" id="creer_kiosque" />
+                            <input class="kt-switch" type="checkbox" name="creer_kiosque" id="creer_kiosque" value="1" />
                             <label class="kt-label" for="creer_kiosque">
                                 Créer un nouveau kiosque pour cet agent
                             </label>
@@ -532,7 +532,7 @@
                                     <label class="kt-label">
                                         Capacité Agents
                                     </label>
-                                    <input class="kt-input" type="number" name="kiosque_capacite" id="kiosque_capacite" placeholder="5" min="1" value="5" />
+                                    <input class="kt-input" type="number" name="kiosque_capacite" id="kiosque_capacite" placeholder="5" min="1" value="1" />
                                 </div>
                             </div>
                             
@@ -619,6 +619,48 @@ let isCreatingKiosque = false;
 document.addEventListener('DOMContentLoaded', function() {
     const modal = document.querySelector('#modal_nouvel_agent');
     if (modal) {
+        // Gestion manuelle des onglets Agent / Kiosque pour éviter que le contenu kiosque s'affiche sous l'onglet Agent
+        const tabAgentBtn = document.querySelector('[data-kt-tab-toggle="#tab_agent"]');
+        const tabKiosqueBtn = document.querySelector('[data-kt-tab-toggle="#tab_kiosque"]');
+        const tabAgent = document.getElementById('tab_agent');
+        const tabKiosque = document.getElementById('tab_kiosque');
+
+        if (tabAgentBtn && tabKiosqueBtn && tabAgent && tabKiosque) {
+            // État initial : onglet Agent visible, Kiosque caché
+            tabAgentBtn.classList.add('active');
+            tabAgent.classList.add('active');
+            tabKiosqueBtn.classList.remove('active');
+            tabKiosque.classList.add('hidden');
+
+            tabAgentBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                tabAgentBtn.classList.add('active');
+                tabKiosqueBtn.classList.remove('active');
+                tabAgent.classList.remove('hidden');
+                tabAgent.classList.add('active');
+                tabKiosque.classList.add('hidden');
+                tabKiosque.classList.remove('active');
+            });
+
+            tabKiosqueBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                tabKiosqueBtn.classList.add('active');
+                tabAgentBtn.classList.remove('active');
+                tabKiosque.classList.remove('hidden');
+                tabKiosque.classList.add('active');
+                tabAgent.classList.add('hidden');
+                tabAgent.classList.remove('active');
+
+                // Si on a déjà coché "créer kiosque" et que la carte n'est pas initialisée, on l'initialise
+                const creerKiosqueCheckbox = document.getElementById('creer_kiosque');
+                if (creerKiosqueCheckbox && creerKiosqueCheckbox.checked && !map) {
+                    setTimeout(function() {
+                        initMap();
+                    }, 200);
+                }
+            });
+        }
+
         // Toggle création kiosque
         const creerKiosqueCheckbox = document.getElementById('creer_kiosque');
         const kiosqueForm = document.getElementById('kiosque_form');
@@ -643,19 +685,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         map = null;
                         marker = null;
                     }
-                }
-            });
-        }
-        
-        // Écouter les changements d'onglets pour initialiser la carte si nécessaire
-        const tabKiosque = document.querySelector('[data-kt-tab-toggle="#tab_kiosque"]');
-        if (tabKiosque) {
-            tabKiosque.addEventListener('click', function() {
-                // Si le formulaire de kiosque est visible et la carte n'est pas initialisée
-                if (creerKiosqueCheckbox && creerKiosqueCheckbox.checked && !map) {
-                    setTimeout(function() {
-                        initMap();
-                    }, 200);
                 }
             });
         }
@@ -881,7 +910,7 @@ function saveAgentWithKiosque() {
     }
     
     // Si création de kiosque
-    if (data.creer_kiosque === 'on') {
+    if (data.creer_kiosque === '1') {
         if (!data.kiosque_code || data.kiosque_code.trim() === '') {
             document.getElementById('error_kiosque_code').textContent = 'Le code kiosque est requis.';
             document.getElementById('error_kiosque_code').classList.remove('hidden');
@@ -939,7 +968,7 @@ function saveAgentWithKiosque() {
     @endif
     
     // Préparer les données du kiosque si création
-    if (data.creer_kiosque === 'on') {
+    if (data.creer_kiosque === '1') {
         data.kiosque = {
             code: data.kiosque_code,
             nom: data.kiosque_nom,
@@ -979,7 +1008,6 @@ function saveAgentWithKiosque() {
     delete data.kiosque_horaire_ouverture;
     delete data.kiosque_horaire_fermeture;
     delete data.kiosque_description;
-    delete data.creer_kiosque;
     
     // Désactiver le bouton
     const submitBtn = document.getElementById('btn_save_agent_kiosque');
@@ -1018,7 +1046,7 @@ function saveAgentWithKiosque() {
     }
     
     // Ajouter les données du kiosque si création
-    if (data.creer_kiosque === 'on' && data.kiosque) {
+    if (data.creer_kiosque === '1' && data.kiosque) {
         finalFormData.append('kiosque[code]', data.kiosque.code);
         finalFormData.append('kiosque[nom]', data.kiosque.nom);
         finalFormData.append('kiosque[adresse]', data.kiosque.adresse);
@@ -1500,11 +1528,14 @@ window.loadAgentEdit = function(id) {
     });
 }
 
-// Event listeners pour voir et modifier (délégation d'événements)
-document.addEventListener('DOMContentLoaded', function() {
+// Fonction pour initialiser les event listeners des boutons d'action
+function initAgentsPageActions() {
     // Utiliser la délégation d'événements pour capturer les clics même après le chargement dynamique
+    // Note: Cette fonction peut être appelée plusieurs fois, mais la délégation d'événements au niveau du document
+    // garantit que les clics seront toujours capturés, même après navigation AJAX
+    
+    // Voir les détails
     document.addEventListener('click', function(e) {
-        // Voir les détails
         const viewLink = e.target.closest('.view-agent');
         if (viewLink) {
             e.preventDefault();
@@ -1514,6 +1545,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Fermer le menu déroulant
             const menu = viewLink.closest('.kt-menu-dropdown');
             if (menu) {
+                menu.classList.add('hidden');
                 setTimeout(() => {
                     const id = viewLink.getAttribute('data-id');
                     if (id && typeof window.loadAgentDetails === 'function') {
@@ -1539,6 +1571,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Fermer le menu déroulant
             const menu = editLink.closest('.kt-menu-dropdown');
             if (menu) {
+                menu.classList.add('hidden');
                 setTimeout(() => {
                     const id = editLink.getAttribute('data-id');
                     if (id && typeof window.loadAgentEdit === 'function') {
@@ -1554,6 +1587,22 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
     }, true);
+}
+
+// Initialisation sur chargement normal
+document.addEventListener('DOMContentLoaded', function() {
+    initAgentsPageActions();
+});
+
+// Réinitialisation après navigation AJAX
+document.addEventListener('ajax-content-loaded', function() {
+    // Réinitialiser les menus Metronic
+    if (window.MetronicCore && typeof window.MetronicCore.initMenus === 'function') {
+        window.MetronicCore.initMenus();
+    }
+    // Les event listeners sont déjà attachés au niveau du document, donc pas besoin de les réinitialiser
+    // Mais on peut forcer une réinitialisation si nécessaire
+    initAgentsPageActions();
 });
 
 </script>

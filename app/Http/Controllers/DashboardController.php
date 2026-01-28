@@ -8,6 +8,7 @@ use App\Models\Operateur;
 use App\Models\Kiosque;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -114,7 +115,7 @@ class DashboardController extends Controller
                 return $kiosque->agentsActifs->count() === 0 || $kiosque->estSature();
             });
 
-        return view('pages.dashboard.index', compact(
+        return $this->ajaxView('pages.dashboard.index', compact(
             'stats',
             'transactionsParType',
             'operateurs',
@@ -231,5 +232,61 @@ class DashboardController extends Controller
         });
 
         return response()->json($stats);
+    }
+
+    /**
+     * API pour la carte de performance du mois (chiffre d'affaires par kiosque)
+     */
+    public function cartePerformanceMois()
+    {
+        try {
+            Log::info('[Dashboard] cartePerformanceMois appelée', [
+                'timestamp' => now()->toDateTimeString(),
+                'ip' => request()->ip(),
+            ]);
+
+            // Agréger le montant total des transactions valides du mois par kiosque (via les agents)
+            $points = Kiosque::query()
+                ->whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->leftJoin('agents', 'agents.kiosque_id', '=', 'kiosques.id')
+                ->leftJoin('transactions', function ($join) {
+                    $join->on('transactions.agent_id', '=', 'agents.id')
+                        ->where('transactions.statut', 'valide')
+                        ->whereBetween('transactions.date', [now()->startOfMonth(), now()->endOfMonth()]);
+                })
+                ->groupBy('kiosques.id', 'kiosques.nom', 'kiosques.latitude', 'kiosques.longitude')
+                ->select([
+                    'kiosques.id',
+                    'kiosques.nom',
+                    'kiosques.latitude',
+                    'kiosques.longitude',
+                    DB::raw('COALESCE(SUM(transactions.montant), 0) as montant'),
+                ])
+                ->get()
+                ->map(function ($row) {
+                    return [
+                        'id' => $row->id,
+                        'nom' => $row->nom,
+                        'latitude' => (float) $row->latitude,
+                        'longitude' => (float) $row->longitude,
+                        'montant' => (float) $row->montant,
+                    ];
+                });
+
+            Log::info('[Dashboard] cartePerformanceMois points calculés', [
+                'count' => $points->count(),
+                'sample' => $points->first(),
+                'all_points' => $points->toArray(),
+            ]);
+
+            return response()->json($points);
+        } catch (\Exception $e) {
+            Log::error('[Dashboard] Erreur dans cartePerformanceMois', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['error' => 'Erreur lors du calcul des données'], 500);
+        }
     }
 }

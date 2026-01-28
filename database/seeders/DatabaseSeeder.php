@@ -12,7 +12,6 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            OperateurSeeder::class,
             ProfilSeeder::class,
             LienSeeder::class,
             // UtilisateurSeeder::class, // À décommenter si besoin

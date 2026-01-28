@@ -40,7 +40,7 @@ class UtilisateurController extends Controller
         $utilisateurs = $query->orderBy('nom')->orderBy('prenom')->paginate(20);
         $profils = Profil::ordreParNiveau()->get();
 
-        return view('pages.utilisateurs.index', compact('utilisateurs', 'profils'));
+        return $this->ajaxView('pages.utilisateurs.index', compact('utilisateurs', 'profils'));
     }
 
     /**

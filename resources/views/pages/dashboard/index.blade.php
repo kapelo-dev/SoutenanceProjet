@@ -88,55 +88,34 @@
                     </div>
                 </div>
                 <div class="lg:col-span-2">
-                    <style>
-                        .entry-callout-bg {
-                            background-image: url('{{ asset("assets/media/images/2600x1600/2.png") }}');
-                        }
-
-                        .dark .entry-callout-bg {
-                            background-image: url('{{ asset("assets/media/images/2600x1600/2-dark.png") }}');
-                        }
-                    </style>
                     <div class="kt-card h-full">
-                        <div
-                            class="kt-card-content entry-callout-bg bg-[length:80%] bg-no-repeat p-10 [background-position:175%_25%] rtl:[background-position:-70%_25%]">
-                            <div class="flex flex-col justify-center gap-4">
-                                <div class="flex -space-x-2">
-                                    @foreach($topAgents->take(3) as $agent)
-                                    <div class="flex">
-                                        <img class="hover:z-5 relative size-10 shrink-0 rounded-full ring-1 ring-background"
-                                            src="{{ $agent->utilisateur && $agent->utilisateur->photo_profil ? asset($agent->utilisateur->photo_profil) : asset('assets/media/avatars/blank.png') }}" />
-                                    </div>
-                                    @endforeach
-                                    @if($topAgents->count() > 3)
-                                    <div class="flex">
-                                        <span
-                                            class="hover:z-5 text-2xs relative inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold leading-none text-primary-inverse ring-1 ring-background">
-                                            +{{ $topAgents->count() - 3 }}
-                                        </span>
-                                    </div>
-                                    @endif
-                                </div>
-                                <h2 class="text-xl font-semibold text-mono">
-                                    Performance du Mois
-                                    <br />
-                                    <a class="kt-link" href="{{ route('transactions.index') }}">
-                                        {{ number_format($stats['transactions_mois']) }} Transactions
-                                    </a>
-                                </h2>
-                                <p class="leading-5.5 text-sm font-normal text-secondary-foreground">
-                                    Montant total traité ce mois :
-                                    <br />
-                                    <span class="font-semibold text-success">{{ number_format($stats['montant_mois'], 0, ',', ' ') }} FCFA</span>
-                                    <br />
-                                    Commission générée : {{ number_format($stats['commission_mois'], 0, ',', ' ') }} FCFA
-                                </p>
+                        <div class="kt-card-header">
+                            <h3 class="kt-card-title">
+                                Performance du Mois
+                            </h3>
+                            <div class="flex flex-col items-end gap-0.5 text-right">
+                                <span class="text-xs text-secondary-foreground">
+                                    Montant total : 
+                                    <span class="font-semibold text-success">
+                                        {{ number_format($stats['montant_mois'], 0, ',', ' ') }} FCFA
+                                    </span>
+                                </span>
+                                <span class="text-xs text-secondary-foreground">
+                                    {{ number_format($stats['transactions_mois']) }} transactions • 
+                                    Commission : {{ number_format($stats['commission_mois'], 0, ',', ' ') }} FCFA
+                                </span>
                             </div>
+                        </div>
+                        <div class="kt-card-content">
+                            <div id="dashboard_month_map" class="rounded-lg overflow-hidden" style="height: 260px; width: 100%;"></div>
+                            <p class="mt-3 text-xs text-secondary-foreground">
+                                Le cercle le plus large indique la zone avec le plus fort chiffre d'affaires du mois.
+                            </p>
                         </div>
                         <div class="kt-card-footer justify-center">
                             <a class="kt-link kt-link-underlined kt-link-dashed"
-                                href="{{ route('agents.index') }}">
-                                Voir Tous les Agents
+                                href="{{ route('transactions.index') }}">
+                                Détail des Transactions
                             </a>
                         </div>
                     </div>
@@ -253,7 +232,7 @@
                                 <div class="flex items-center gap-3.5 w-full">
                                     <div class="flex items-center justify-center rounded-full bg-gray-100 size-9 shrink-0 dark:bg-gray-900">
                                         @if($item['operateur']->logo)
-                                            <img class="h-6 w-6 rounded object-contain" src="{{ asset($item['operateur']->logo) }}" alt="{{ $item['operateur']->libelle }}"/>
+                                            <img class="h-6 w-6 rounded object-contain" src="{{ asset('storage/' . $item['operateur']->logo) }}" alt="{{ $item['operateur']->libelle }}"/>
                                         @else
                                             <i class="ki-filled ki-abstract-39 text-base text-gray-600 dark:text-gray-300">
                                             </i>
@@ -311,7 +290,7 @@
                             </div>
                             <div class="flex -space-x-2 ms-auto">
                                 @if($transaction->operateur->logo)
-                                <img class="h-7 w-7 rounded" src="{{ asset($transaction->operateur->logo) }}" alt="{{ $transaction->operateur->libelle }}"/>
+                                <img class="h-7 w-7 rounded" src="{{ asset('storage/' . $transaction->operateur->logo) }}" alt="{{ $transaction->operateur->libelle }}"/>
                                 @endif
                             </div>
                             <div class="flex items-center gap-1 lg:gap-5">
@@ -368,3 +347,10 @@
     <!-- End of Container -->
 
 @endsection
+
+@push('scripts')
+<!-- Leaflet CSS & JS pour la carte de performance du mois -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Le module JS dashboard-month-map.js est chargé via app.js (Vite) -->
+@endpush

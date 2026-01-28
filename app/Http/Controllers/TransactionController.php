@@ -64,7 +64,7 @@ class TransactionController extends Controller
             'commission' => $query->valide()->sum('commission'),
         ];
 
-        return view('pages.transactions.index', compact('transactions', 'operateurs', 'agents', 'stats'));
+        return $this->ajaxView('pages.transactions.index', compact('transactions', 'operateurs', 'agents', 'stats'));
     }
 
     /**
