@@ -1,0 +1,409 @@
+# Schéma de la Base de Données - Piscill POS
+
+## Vue d'ensemble
+
+Ce document décrit le schéma complet de la base de données SQLite utilisée par l'application Piscill POS. La base de données gère les utilisateurs, les agents, les transactions de mobile money, les soldes et l'historique d'audit.
+
+## Diagramme des Relations
+
+```
+┌─────────────────┐
+│  utilisateurs   │
+└────────┬────────┘
+         │ 1
+         │
+         │ 0..1
+         ▼
+    ┌─────────┐         1     ┌──────────────┐
+    │  agents │◄──────────────┤ transactions │
+    └────┬────┘               └──────┬───────┘
+         │ 1                         │ 0..1
+         │                           │
+         │ 1..*                      ▼
+         ▼                    ┌─────────────┐
+    ┌────────┐                │   audits    │
+    │ soldes │                └─────────────┘
+    └────────┘                       │ 0..1
+                                     │
+                                     ▼
+                              ┌─────────────┐
+                              │utilisateurs │
+                              └─────────────┘
+```
+
+---
+
+## Tables
+
+### 1. **utilisateurs**
+
+Table principale pour gérer tous les utilisateurs du système (administrateurs, agents, etc.).
+
+#### Colonnes
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `uid` | String(36) | PRIMARY KEY | Identifiant unique UUID v4 |
+| `nom` | String(100) | NOT NULL | Nom de famille de l'utilisateur |
+| `prenom` | String(100) | NOT NULL | Prénom de l'utilisateur |
+| `email` | String(100) | UNIQUE, NOT NULL | Adresse email (identifiant de connexion) |
+| `mot_de_passe` | String(255) | NOT NULL | Mot de passe hashé (bcrypt) |
+| `role` | String(20) | NOT NULL | Rôle : 'admin', 'agent', 'superviseur', etc. |
+| `telephone` | String(20) | NULL | Numéro de téléphone |
+| `date_creation` | DateTime(TZ) | DEFAULT now() | Date de création du compte |
+| `statut` | String(20) | NOT NULL, DEFAULT 'actif' | Statut : 'actif', 'inactif', 'suspendu' |
+| `dernier_connexion` | DateTime(TZ) | NULL | Date de la dernière connexion |
+| `photo_profil` | String(255) | NULL | Chemin vers la photo de profil |
+
+#### Index
+- Index unique sur `email`
+
+#### Valeurs par défaut
+- `uid`: UUID v4 généré automatiquement
+- `date_creation`: Timestamp actuel
+- `statut`: 'actif'
+
+#### Relations
+- **1:0..1** avec `agents` (un utilisateur peut être lié à un agent)
+- **1:N** avec `audits` (un utilisateur peut effectuer plusieurs modifications)
+
+---
+
+### 2. **agents**
+
+Table pour gérer les agents de mobile money sur le terrain.
+
+#### Colonnes
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `uid` | String(36) | PRIMARY KEY | Identifiant unique UUID v4 |
+| `code_agent` | String(50) | UNIQUE, NULL | Code d'agent (ex: AG001, AG002) |
+| `nom` | String(100) | NOT NULL | Nom de famille de l'agent |
+| `prenom` | String(100) | NOT NULL | Prénom de l'agent |
+| `telephone` | String(20) | UNIQUE, NOT NULL | Numéro de téléphone unique |
+| `montant_initial_total` | Float | NOT NULL, DEFAULT 0.00 | Montant initial total lors de la création |
+| `espece_initiale` | Float | DEFAULT 0.00 | Montant initial en espèces |
+| `date_creation` | DateTime(TZ) | DEFAULT now() | Date de création de l'agent |
+| `statut` | String(20) | NOT NULL, DEFAULT 'actif' | Statut : 'actif', 'inactif', 'suspendu' |
+| `user_uid` | String(36) | FOREIGN KEY → utilisateurs.uid, NULL | Lien vers le compte utilisateur associé |
+| `deleted_at` | DateTime(TZ) | NULL | Date de suppression logique (soft delete) |
+
+#### Index
+- Index unique sur `code_agent`
+- Index unique sur `telephone`
+- Index foreign key sur `user_uid`
+
+#### Valeurs par défaut
+- `uid`: UUID v4 généré automatiquement
+- `montant_initial_total`: 0.00
+- `espece_initiale`: 0.00
+- `date_creation`: Timestamp actuel
+- `statut`: 'actif'
+
+#### Relations
+- **N:0..1** avec `utilisateurs` (un agent peut avoir un compte utilisateur)
+- **1:N** avec `transactions` (un agent effectue plusieurs transactions)
+- **1:N** avec `soldes` (un agent a plusieurs enregistrements de solde)
+
+#### Notes
+- Le champ `deleted_at` permet une suppression logique (soft delete)
+- Un agent peut exister sans compte utilisateur (user_uid NULL)
+
+---
+
+### 3. **transactions**
+
+Table pour enregistrer toutes les transactions de mobile money.
+
+#### Colonnes
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `uid` | String(36) | PRIMARY KEY | Identifiant unique UUID v4 |
+| `reference` | String(50) | UNIQUE, NOT NULL | Référence unique de la transaction |
+| `date` | DateTime(TZ) | DEFAULT now() | Date et heure de la transaction |
+| `montant` | Float | NOT NULL | Montant de la transaction |
+| `type` | String(20) | NOT NULL | Type : 'dépôt', 'retrait', 'transfert', 'paiement' |
+| `operateur` | String(20) | NOT NULL | Opérateur : 'Mixx by YAS', 'Flooz' |
+| `agent_uid` | String(36) | FOREIGN KEY → agents.uid, NOT NULL | Agent qui a effectué la transaction |
+| `statut` | String(20) | NOT NULL, DEFAULT 'validé' | Statut : 'validé', 'en_attente', 'annulé' |
+| `description` | Text | NULL | Description ou notes additionnelles |
+| `commission` | Float | NULL | Commission perçue sur la transaction |
+| `virtual_balance_after` | Float | NULL | Solde virtuel après la transaction |
+| `operator_txn_id` | String(50) | NULL | ID de transaction de l'opérateur |
+
+#### Index
+- Index unique sur `reference`
+- Index foreign key sur `agent_uid`
+
+#### Valeurs par défaut
+- `uid`: UUID v4 généré automatiquement
+- `date`: Timestamp actuel
+- `statut`: 'validé'
+
+#### Relations
+- **N:1** avec `agents` (plusieurs transactions par agent)
+- **1:0..1** avec `audits` (une transaction peut avoir un historique d'audit)
+
+#### Types de transactions
+- **dépôt** : Client dépose de l'argent
+- **retrait** : Client retire de l'argent
+- **transfert** : Transfert entre comptes
+- **paiement** : Paiement de service
+
+#### Opérateurs
+- **Mixx by YAS** (anciennement T-Money)
+- **Flooz**
+
+---
+
+### 4. **soldes**
+
+Table pour tracker les soldes des agents en temps réel.
+
+#### Colonnes
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `uid` | String(36) | PRIMARY KEY | Identifiant unique UUID v4 |
+| `agent_uid` | String(36) | FOREIGN KEY → agents.uid, NOT NULL | Agent concerné |
+| `date` | DateTime(TZ) | DEFAULT now() | Date de l'enregistrement du solde |
+| `espece` | Float | DEFAULT 0.00 | Solde en espèces (cash) |
+| `tmoney` | Float | DEFAULT 0.00 | Solde T-Money / Mixx by YAS |
+| `flooz` | Float | DEFAULT 0.00 | Solde Flooz |
+| `description` | Text | NULL | Description ou notes |
+
+#### Index
+- Index foreign key sur `agent_uid`
+
+#### Valeurs par défaut
+- `uid`: UUID v4 généré automatiquement
+- `date`: Timestamp actuel
+- `espece`: 0.00
+- `tmoney`: 0.00
+- `flooz`: 0.00
+
+#### Relations
+- **N:1** avec `agents` (plusieurs enregistrements de solde par agent)
+
+#### Calculs
+- **Solde virtuel total** = `tmoney` + `flooz`
+- **Solde total** = `espece` + `tmoney` + `flooz`
+
+#### Notes
+- Chaque enregistrement représente un snapshot du solde à un moment donné
+- Permet de suivre l'évolution des soldes dans le temps
+
+---
+
+### 5. **audits**
+
+Table pour l'historique des modifications (audit trail).
+
+#### Colonnes
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `uid` | String(36) | PRIMARY KEY | Identifiant unique UUID v4 |
+| `transaction_uid` | String(36) | FOREIGN KEY → transactions.uid, NULL | Transaction modifiée |
+| `ancien_montant` | Float | NULL | Montant avant modification |
+| `nouveau_montant` | Float | NULL | Montant après modification |
+| `operateur` | String(10) | NULL | Opérateur concerné : 'T-Money', 'Flooz' |
+| `date_modification` | DateTime(TZ) | DEFAULT now() | Date de la modification |
+| `utilisateur_uid` | String(36) | FOREIGN KEY → utilisateurs.uid, NULL | Utilisateur qui a fait la modification |
+| `raison` | Text | NULL | Raison de la modification |
+| `type_modification` | String(20) | NOT NULL | Type : 'correction', 'annulation', 'ajustement' |
+
+#### Index
+- Index foreign key sur `transaction_uid`
+- Index foreign key sur `utilisateur_uid`
+
+#### Valeurs par défaut
+- `uid`: UUID v4 généré automatiquement
+- `date_modification`: Timestamp actuel
+
+#### Relations
+- **N:0..1** avec `transactions` (plusieurs audits peuvent concerner une transaction)
+- **N:0..1** avec `utilisateurs` (un utilisateur peut effectuer plusieurs modifications)
+
+#### Types de modifications
+- **correction** : Correction d'une erreur de saisie
+- **annulation** : Annulation d'une transaction
+- **ajustement** : Ajustement de solde
+
+#### Notes
+- Permet de tracer toutes les modifications importantes
+- Essentiel pour la conformité et le debugging
+
+---
+
+## Règles de Gestion
+
+### Gestion des Agents
+
+1. Un agent DOIT avoir un téléphone unique
+2. Un agent PEUT avoir un code_agent unique (généré automatiquement)
+3. Un agent PEUT être lié à un compte utilisateur
+4. Un agent supprimé a un `deleted_at` non NULL (soft delete)
+
+### Gestion des Transactions
+
+1. Chaque transaction DOIT avoir une référence unique
+2. Une transaction DOIT être liée à un agent existant
+3. Le montant DOIT être positif
+4. La commission est optionnelle
+5. Le statut par défaut est 'validé'
+
+### Gestion des Soldes
+
+1. Chaque agent a au moins un enregistrement de solde
+2. Les soldes sont mis à jour après chaque transaction
+3. Le solde virtuel = tmoney + flooz
+4. Le solde total = espece + tmoney + flooz
+
+### Gestion de l'Audit
+
+1. Toute modification importante génère un enregistrement d'audit
+2. L'audit conserve l'ancienne et la nouvelle valeur
+3. L'utilisateur qui effectue la modification est enregistré
+4. Une raison DOIT être fournie pour chaque modification
+
+---
+
+## Statistiques et Vues Dérivées
+
+### Statistiques par Agent
+
+```sql
+SELECT 
+  a.uid,
+  a.nom,
+  a.prenom,
+  COUNT(t.uid) as total_transactions,
+  SUM(t.montant) as montant_total,
+  SUM(t.commission) as commission_totale
+FROM agents a
+LEFT JOIN transactions t ON a.uid = t.agent_uid
+WHERE a.deleted_at IS NULL
+GROUP BY a.uid;
+```
+
+### Solde Actuel par Agent
+
+```sql
+SELECT 
+  a.uid,
+  a.nom,
+  a.prenom,
+  s.espece,
+  s.tmoney,
+  s.flooz,
+  (s.tmoney + s.flooz) as virtuel_total,
+  (s.espece + s.tmoney + s.flooz) as solde_total
+FROM agents a
+JOIN soldes s ON a.uid = s.agent_uid
+WHERE a.deleted_at IS NULL
+  AND s.uid = (
+    SELECT uid FROM soldes 
+    WHERE agent_uid = a.uid 
+    ORDER BY date DESC 
+    LIMIT 1
+  );
+```
+
+### Transactions par Opérateur (30 derniers jours)
+
+```sql
+SELECT 
+  operateur,
+  COUNT(*) as nombre_transactions,
+  SUM(montant) as montant_total,
+  AVG(montant) as montant_moyen,
+  SUM(commission) as commission_totale
+FROM transactions
+WHERE date >= datetime('now', '-30 days')
+  AND statut = 'validé'
+GROUP BY operateur;
+```
+
+---
+
+## Migrations
+
+### Historique des Migrations
+
+1. **Migration initiale** : Création des tables de base
+2. **add_user_uid.py** : Ajout de la colonne `user_uid` dans la table `agents`
+3. **add_photo_profil.py** : Ajout de la colonne `photo_profil` dans la table `utilisateurs`
+4. **add_deleted_at.py** : Ajout de la colonne `deleted_at` dans la table `agents`
+
+---
+
+## Maintenance et Optimisation
+
+### Index Recommandés
+
+```sql
+-- Index pour améliorer les performances de recherche
+CREATE INDEX idx_transactions_date ON transactions(date DESC);
+CREATE INDEX idx_transactions_agent ON transactions(agent_uid);
+CREATE INDEX idx_soldes_agent_date ON soldes(agent_uid, date DESC);
+CREATE INDEX idx_audits_date ON audits(date_modification DESC);
+```
+
+### Nettoyage Périodique
+
+1. **Archivage des anciennes transactions** : Archiver les transactions de plus de 2 ans
+2. **Consolidation des soldes** : Conserver uniquement le dernier solde par agent
+3. **Compression de l'audit** : Archiver les audits de plus de 1 an
+
+---
+
+## Sécurité
+
+### Données Sensibles
+
+- **Mots de passe** : Hashés avec bcrypt (coût 12)
+- **Téléphones** : Stockés en clair mais uniques
+- **Emails** : Stockés en clair mais uniques
+
+### Recommandations
+
+1. Sauvegardes régulières de la base de données
+2. Chiffrement de la base de données en production
+3. Limitation des accès directs à la base
+4. Logs d'accès pour traçabilité
+
+---
+
+## Nomenclature
+
+### Conventions de Nommage
+
+- **Tables** : Nom au pluriel, minuscules (ex: `utilisateurs`, `agents`)
+- **Colonnes** : Nom descriptif, snake_case (ex: `date_creation`, `montant_initial_total`)
+- **Foreign Keys** : Suffixe `_uid` (ex: `agent_uid`, `user_uid`)
+- **Primary Keys** : Toujours `uid` (UUID v4)
+
+### Formats
+
+- **Dates** : DateTime avec timezone (ISO 8601)
+- **Montants** : Float (2 décimales implicites)
+- **UUIDs** : String(36) format standard (ex: `550e8400-e29b-41d4-a716-446655440000`)
+
+---
+
+## Support
+
+Pour toute question sur le schéma de la base de données, consultez :
+- La documentation technique dans `/docs`
+- Les modèles SQLAlchemy dans `/app/models`
+- Les scripts de migration dans `/migrations`
+
+---
+
+**Version** : 1.0  
+**Dernière mise à jour** : 27 janvier 2026  
+**Base de données** : SQLite 3  
+**ORM** : SQLAlchemy

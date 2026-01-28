@@ -2,10 +2,6 @@
 
 @section('content')
     <!-- Container -->
-    <div class="kt-container-fixed" id="contentContainer">
-    </div>
-    <!-- End of Container -->
-    <!-- Container -->
     <div class="kt-container-fixed">
         <div class="flex flex-wrap items-center justify-between gap-5 pb-7.5 lg:items-end">
             <div class="flex flex-col justify-center gap-2">
@@ -13,17 +9,18 @@
                     Dashboard
                 </h1>
                 <div class="flex items-center gap-2 text-sm font-normal text-secondary-foreground">
-                    Central Hub for Personal Customization
+                    Vue d'ensemble de l'activité en temps réel
                 </div>
             </div>
             <div class="flex items-center gap-2.5">
-                <a class="kt-btn kt-btn-outline" href="#">
-                    View Profile
+                <a class="kt-btn kt-btn-outline" href="{{ route('transactions.index') }}">
+                    Voir Transactions
                 </a>
             </div>
         </div>
     </div>
     <!-- End of Container -->
+
     <!-- Container -->
     <div class="kt-container-fixed">
         <div class="grid gap-5 lg:gap-7.5">
@@ -33,61 +30,58 @@
                     <div class="grid h-full grid-cols-2 items-stretch gap-5 lg:gap-7.5">
                         <style>
                             .channel-stats-bg {
-                                background-image: url('assets/media/images/2600x1600/bg-3.png');
+                                background-image: url('{{ asset("assets/media/images/2600x1600/bg-3.png") }}');
                             }
 
                             .dark .channel-stats-bg {
-                                background-image: url('assets/media/images/2600x1600/bg-3-dark.png');
+                                background-image: url('{{ asset("assets/media/images/2600x1600/bg-3-dark.png") }}');
                             }
                         </style>
                         <div
                             class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem]">
-                            <img alt="" class="ms-5 mt-4 w-7" src="assets/media/brand-logos/linkedin-2.svg" />
+                            <i class="ki-filled ki-chart-line ms-5 mt-4 text-3xl text-primary"></i>
                             <div class="flex flex-col gap-1 px-5 pb-4">
                                 <span class="text-3xl font-semibold text-mono">
-                                    9.3k
+                                    {{ number_format($stats['transactions_jour']) }}
                                 </span>
                                 <span class="text-sm font-normal text-secondary-foreground">
-                                    Amazing mates
+                                    Transactions/Jour
                                 </span>
                             </div>
                         </div>
                         <div
                             class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem]">
-                            <img alt="" class="ms-5 mt-4 w-7" src="assets/media/brand-logos/youtube-2.svg" />
+                            <i class="ki-filled ki-dollar ms-5 mt-4 text-3xl text-success"></i>
                             <div class="flex flex-col gap-1 px-5 pb-4">
                                 <span class="text-3xl font-semibold text-mono">
-                                    24k
+                                    {{ number_format($stats['montant_jour'] / 1000000, 1) }}M
                                 </span>
                                 <span class="text-sm font-normal text-secondary-foreground">
-                                    Lessons Views
+                                    FCFA Aujourd'hui
                                 </span>
                             </div>
                         </div>
                         <div
                             class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem]">
-                            <img alt="" class="ms-5 mt-4 w-7" src="assets/media/brand-logos/instagram-03.svg" />
+                            <i class="ki-filled ki-people ms-5 mt-4 text-3xl text-warning"></i>
                             <div class="flex flex-col gap-1 px-5 pb-4">
                                 <span class="text-3xl font-semibold text-mono">
-                                    608
+                                    {{ $stats['agents_actifs'] }}
                                 </span>
                                 <span class="text-sm font-normal text-secondary-foreground">
-                                    New subscribers
+                                    Agents Actifs
                                 </span>
                             </div>
                         </div>
                         <div
                             class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem]">
-                            <img alt="" class="ms-5 mt-4 w-7 dark:hidden"
-                                src="assets/media/brand-logos/tiktok.svg" />
-                            <img alt="" class="ms-5 mt-4 hidden w-7 dark:block"
-                                src="assets/media/brand-logos/tiktok-dark.svg" />
+                            <i class="ki-filled ki-shop ms-5 mt-4 text-3xl text-info"></i>
                             <div class="flex flex-col gap-1 px-5 pb-4">
                                 <span class="text-3xl font-semibold text-mono">
-                                    2.5k
+                                    {{ $stats['kiosques_actifs'] }}
                                 </span>
                                 <span class="text-sm font-normal text-secondary-foreground">
-                                    Stream audience
+                                    Kiosques Actifs
                                 </span>
                             </div>
                         </div>
@@ -96,71 +90,67 @@
                 <div class="lg:col-span-2">
                     <style>
                         .entry-callout-bg {
-                            background-image: url('assets/media/images/2600x1600/2.png');
+                            background-image: url('{{ asset("assets/media/images/2600x1600/2.png") }}');
                         }
 
                         .dark .entry-callout-bg {
-                            background-image: url('assets/media/images/2600x1600/2-dark.png');
+                            background-image: url('{{ asset("assets/media/images/2600x1600/2-dark.png") }}');
                         }
                     </style>
-                    <div class="kt-card h-full h-full">
+                    <div class="kt-card h-full">
                         <div
                             class="kt-card-content entry-callout-bg bg-[length:80%] bg-no-repeat p-10 [background-position:175%_25%] rtl:[background-position:-70%_25%]">
                             <div class="flex flex-col justify-center gap-4">
                                 <div class="flex -space-x-2">
+                                    @foreach($topAgents->take(3) as $agent)
                                     <div class="flex">
                                         <img class="hover:z-5 relative size-10 shrink-0 rounded-full ring-1 ring-background"
-                                            src="assets/media/avatars/300-4.png" />
+                                            src="{{ $agent->utilisateur && $agent->utilisateur->photo_profil ? asset($agent->utilisateur->photo_profil) : asset('assets/media/avatars/blank.png') }}" />
                                     </div>
-                                    <div class="flex">
-                                        <img class="hover:z-5 relative size-10 shrink-0 rounded-full ring-1 ring-background"
-                                            src="assets/media/avatars/300-1.png" />
-                                    </div>
-                                    <div class="flex">
-                                        <img class="hover:z-5 relative size-10 shrink-0 rounded-full ring-1 ring-background"
-                                            src="assets/media/avatars/300-2.png" />
-                                    </div>
+                                    @endforeach
+                                    @if($topAgents->count() > 3)
                                     <div class="flex">
                                         <span
-                                            class="hover:z-5 text-2xs relative inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-green-500 text-xs font-semibold leading-none text-white ring-1 ring-background">
-                                            S
+                                            class="hover:z-5 text-2xs relative inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold leading-none text-primary-inverse ring-1 ring-background">
+                                            +{{ $topAgents->count() - 3 }}
                                         </span>
                                     </div>
+                                    @endif
                                 </div>
                                 <h2 class="text-xl font-semibold text-mono">
-                                    Connect Today & Join
+                                    Performance du Mois
                                     <br />
-                                    the
-                                    <a class="kt-link" href="#">
-                                        KeenThemes Network
+                                    <a class="kt-link" href="{{ route('transactions.index') }}">
+                                        {{ number_format($stats['transactions_mois']) }} Transactions
                                     </a>
                                 </h2>
                                 <p class="leading-5.5 text-sm font-normal text-secondary-foreground">
-                                    Enhance your projects with premium themes and
+                                    Montant total traité ce mois :
                                     <br />
-                                    templates. Join the KeenThemes community today
+                                    <span class="font-semibold text-success">{{ number_format($stats['montant_mois'], 0, ',', ' ') }} FCFA</span>
                                     <br />
-                                    for top-quality designs and resources.
+                                    Commission générée : {{ number_format($stats['commission_mois'], 0, ',', ' ') }} FCFA
                                 </p>
                             </div>
                         </div>
                         <div class="kt-card-footer justify-center">
                             <a class="kt-link kt-link-underlined kt-link-dashed"
-                                href="#">
-                                Get Started
+                                href="{{ route('agents.index') }}">
+                                Voir Tous les Agents
                             </a>
                         </div>
                     </div>
                 </div>
             </div>
             <!-- end: grid -->
+
             <!-- begin: grid -->
             <div class="grid items-stretch gap-5 lg:grid-cols-3 lg:gap-7.5">
                 <div class="lg:col-span-1">
                     <div class="kt-card h-full">
                         <div class="kt-card-header">
                             <h3 class="kt-card-title">
-                                Highlights
+                                Transactions par Type
                             </h3>
                             <div class="kt-menu" data-kt-menu="true">
                                 <div class="kt-menu-item" data-kt-menu-item-offset="0, 10px"
@@ -173,83 +163,26 @@
                                     <div class="kt-menu-dropdown kt-menu-default w-full max-w-[200px]"
                                         data-kt-menu-dismiss="true">
                                         <div class="kt-menu-item">
-                                            <a class="kt-menu-link" href="#">
+                                            <a class="kt-menu-link" href="{{ route('transactions.index') }}">
                                                 <span class="kt-menu-icon">
                                                     <i class="ki-filled ki-cloud-change">
                                                     </i>
                                                 </span>
                                                 <span class="kt-menu-title">
-                                                    Activity
+                                                    Toutes les transactions
                                                 </span>
                                             </a>
                                         </div>
                                         <div class="kt-menu-item">
-                                            <a class="kt-menu-link" data-kt-modal-toggle="#share_profile_modal"
-                                                href="#">
-                                                <span class="kt-menu-icon">
-                                                    <i class="ki-filled ki-share">
-                                                    </i>
-                                                </span>
-                                                <span class="kt-menu-title">
-                                                    Share
-                                                </span>
-                                            </a>
-                                        </div>
-                                        <div class="kt-menu-item" data-kt-menu-item-offset="-15px, 0"
-                                            data-kt-menu-item-placement="right-start"
-                                            data-kt-menu-item-toggle="dropdown"
-                                            data-kt-menu-item-trigger="click|lg:hover">
-                                            <div class="kt-menu-link">
+                                            <a class="kt-menu-link" href="#">
                                                 <span class="kt-menu-icon">
                                                     <i class="ki-filled ki-setting-3">
                                                     </i>
                                                 </span>
                                                 <span class="kt-menu-title">
-                                                    Settings
+                                                    Paramètres
                                                 </span>
-                                                <span class="kt-menu-arrow">
-                                                    <i class="ki-filled ki-right text-3xs">
-                                                    </i>
-                                                </span>
-                                            </div>
-                                            <div class="kt-menu-dropdown kt-menu-default w-full max-w-[175px]">
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link"
-                                                        href="#">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-notification-bing">
-                                                            </i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            Notifications
-                                                        </span>
-                                                    </a>
-                                                </div>
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link"
-                                                        href="#">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-profile-circle">
-                                                            </i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            Account
-                                                        </span>
-                                                    </a>
-                                                </div>
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link"
-                                                        href="#">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-color-swatch">
-                                                            </i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            Appearance
-                                                        </span>
-                                                    </a>
-                                                </div>
-                                            </div>
+                                            </a>
                                         </div>
                                     </div>
                                 </div>
@@ -257,49 +190,49 @@
                         </div>
                         <div class="kt-card-content flex flex-col gap-5 px-5 pt-5 lg:px-7.5">
                             <div class="flex items-center gap-2.5">
-                                <img alt="" class="size-9 rounded-full"
-                                    src="assets/media/avatars/300-3.png" />
+                                <div class="flex items-center justify-center size-9 rounded-full bg-success-light">
+                                    <i class="ki-filled ki-arrow-up text-base text-success"></i>
+                                </div>
                                 <div class="flex flex-col gap-1.5">
-                                    <a class="text-sm font-medium leading-none text-foreground hover:text-primary"
-                                        href="#">
-                                        Tyler Hero
-                                    </a>
+                                    <span class="text-sm font-medium leading-none text-foreground">
+                                        Dépôts
+                                    </span>
                                     <span class="text-xs font-normal text-secondary-foreground">
-                                        Pro plan
+                                        {{ number_format($transactionsParType['depot'], 0, ',', ' ') }} FCFA
                                     </span>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2.5">
-                                <img alt="" class="size-9 rounded-full"
-                                    src="assets/media/avatars/300-1.png" />
+                                <div class="flex items-center justify-center size-9 rounded-full bg-destructive-light">
+                                    <i class="ki-filled ki-arrow-down text-base text-destructive"></i>
+                                </div>
                                 <div class="flex flex-col gap-1.5">
-                                    <a class="text-sm font-medium leading-none text-foreground hover:text-primary"
-                                        href="#">
-                                        Esther Howard
-                                    </a>
+                                    <span class="text-sm font-medium leading-none text-foreground">
+                                        Retraits
+                                    </span>
                                     <span class="text-xs font-normal text-secondary-foreground">
-                                        Enterprise plan
+                                        {{ number_format($transactionsParType['retrait'], 0, ',', ' ') }} FCFA
                                     </span>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2.5">
-                                <img alt="" class="size-9 rounded-full"
-                                    src="assets/media/avatars/300-11.png" />
+                                <div class="flex items-center justify-center size-9 rounded-full bg-primary-light">
+                                    <i class="ki-filled ki-arrows-circle text-base text-primary"></i>
+                                </div>
                                 <div class="flex flex-col gap-1.5">
-                                    <a class="text-sm font-medium leading-none text-foreground hover:text-primary"
-                                        href="#">
-                                        Jacob Jones
-                                    </a>
+                                    <span class="text-sm font-medium leading-none text-foreground">
+                                        Transferts
+                                    </span>
                                     <span class="text-xs font-normal text-secondary-foreground">
-                                        Free plan
+                                        {{ number_format($transactionsParType['transfert'], 0, ',', ' ') }} FCFA
                                     </span>
                                 </div>
                             </div>
                         </div>
                         <div class="kt-card-footer justify-center">
                             <a class="kt-link kt-link-underlined kt-link-dashed"
-                                href="#">
-                                All Users
+                                href="{{ route('transactions.index') }}">
+                                Toutes les Transactions
                             </a>
                         </div>
                     </div>
@@ -308,293 +241,130 @@
                     <div class="kt-card h-full">
                         <div class="kt-card-header">
                             <h3 class="kt-card-title">
-                                Latest Updates
+                                Opérateurs Actifs
                             </h3>
-                            <a class="kt-btn kt-btn-sm kt-btn-outline" href="#">
-                                View All
+                            <a class="kt-btn kt-btn-sm kt-btn-outline" href="{{ route('operateurs.index') }}">
+                                Gérer
                             </a>
                         </div>
                         <div class="kt-card-content">
                             <div class="flex flex-col gap-5">
-                                <div class="flex items-center gap-2.5">
-                                    <div class="flex items-center justify-center rounded-full bg-gray-100 size-9 dark:bg-gray-900">
-                                        <i class="ki-filled ki-abstract-39 text-base text-gray-600 dark:text-gray-300">
-                                        </i>
+                                @foreach($operateurs as $item)
+                                <div class="flex items-center gap-3.5 w-full">
+                                    <div class="flex items-center justify-center rounded-full bg-gray-100 size-9 shrink-0 dark:bg-gray-900">
+                                        @if($item['operateur']->logo)
+                                            <img class="h-6 w-6 rounded object-contain" src="{{ asset($item['operateur']->logo) }}" alt="{{ $item['operateur']->libelle }}"/>
+                                        @else
+                                            <i class="ki-filled ki-abstract-39 text-base text-gray-600 dark:text-gray-300">
+                                            </i>
+                                        @endif
                                     </div>
-                                    <div class="flex flex-col gap-0.5">
-                                        <span class="text-sm font-medium text-foreground">
-                                            Phoenix Digital Agency
+                                    <div class="flex flex-col gap-0.5 min-w-0 flex-1">
+                                        <span class="text-sm font-medium text-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+                                            {{ $item['operateur']->libelle }}
+                                        </span>
+                                        <span class="text-xs font-normal text-secondary-foreground whitespace-nowrap">
+                                            {{ number_format($item['transactions']) }} transactions ce mois
+                                        </span>
+                                    </div>
+                                    <div class="flex flex-col items-end gap-0.5 shrink-0 ms-auto">
+                                        <span class="text-sm font-semibold text-success whitespace-nowrap">
+                                            {{ number_format($item['montant'], 0, ',', ' ') }} FCFA
                                         </span>
                                         <span class="text-xs font-normal text-secondary-foreground">
-                                            Laravel, Next.js app
+                                            {{ number_format($item['transactions']) }} trans.
                                         </span>
-                                    </div>
-                                    <div class="flex -space-x-2">
-                                        <div class="flex">
-                                            <img class="hover:z-5 relative size-7 shrink-0 rounded-full ring-1 ring-background"
-                                                src="assets/media/avatars/300-3.png" />
-                                        </div>
-                                        <div class="flex">
-                                            <img class="hover:z-5 relative size-7 shrink-0 rounded-full ring-1 ring-background"
-                                                src="assets/media/avatars/300-2.png" />
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-1 lg:gap-5">
-                                        <span class="text-xs font-normal text-secondary-foreground">
-                                            3 days ago
-                                        </span>
-                                        <div class="kt-menu" data-kt-menu="true">
-                                            <div class="kt-menu-item" data-kt-menu-item-offset="0, 10px"
-                                                data-kt-menu-item-placement="bottom-end"
-                                                data-kt-menu-item-placement-rtl="bottom-start"
-                                                data-kt-menu-item-toggle="dropdown"
-                                                data-kt-menu-item-trigger="click">
-                                                <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
-                                                    <i class="ki-filled ki-dots-vertical text-lg">
-                                                    </i>
-                                                </button>
-                                                <div class="kt-menu-dropdown kt-menu-default w-full max-w-[200px]"
-                                                    data-kt-menu-dismiss="true">
-                                                    <div class="kt-menu-item">
-                                                        <a class="kt-menu-link" href="#">
-                                                            <span class="kt-menu-icon">
-                                                                <i class="ki-filled ki-document">
-                                                                </i>
-                                                            </span>
-                                                            <span class="kt-menu-title">
-                                                                Details
-                                                            </span>
-                                                        </a>
-                                                    </div>
-                                                    <div class="kt-menu-item">
-                                                        <a class="kt-menu-link" href="#">
-                                                            <span class="kt-menu-icon">
-                                                                <i class="ki-filled ki-pencil">
-                                                                </i>
-                                                            </span>
-                                                            <span class="kt-menu-title">
-                                                                Edit
-                                                            </span>
-                                                        </a>
-                                                    </div>
-                                                    <div class="kt-menu-item">
-                                                        <a class="kt-menu-link" href="#">
-                                                            <span class="kt-menu-icon">
-                                                                <i class="ki-filled ki-copy">
-                                                                </i>
-                                                            </span>
-                                                            <span class="kt-menu-title">
-                                                                Make a copy
-                                                            </span>
-                                                        </a>
-                                                    </div>
-                                                    <div class="kt-menu-separator">
-                                                    </div>
-                                                    <div class="kt-menu-item">
-                                                        <a class="kt-menu-link" href="#">
-                                                            <span class="kt-menu-icon">
-                                                                <i class="ki-filled ki-trash">
-                                                                </i>
-                                                            </span>
-                                                            <span class="kt-menu-title">
-                                                                Remove
-                                                            </span>
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2.5">
-                                    <div class="flex items-center justify-center rounded-full bg-gray-100 size-9 dark:bg-gray-900">
-                                        <i class="ki-filled ki-abstract-25 text-base text-gray-600 dark:text-gray-300">
-                                        </i>
-                                    </div>
-                                    <div class="flex flex-col gap-0.5">
-                                        <span class="text-sm font-medium text-foreground">
-                                            Acme Corp Branding
-                                        </span>
-                                        <span class="text-xs font-normal text-secondary-foreground">
-                                            Web, UI/UX design
-                                        </span>
-                                    </div>
-                                    <div class="flex -space-x-2">
-                                        <div class="flex">
-                                            <img class="hover:z-5 relative size-7 shrink-0 rounded-full ring-1 ring-background"
-                                                src="assets/media/avatars/300-1.png" />
-                                        </div>
-                                        <div class="flex">
-                                            <img class="hover:z-5 relative size-7 shrink-0 rounded-full ring-1 ring-background"
-                                                src="assets/media/avatars/300-2.png" />
-                                        </div>
-                                        <div class="flex">
-                                            <span
-                                                class="hover:z-5 text-2xs relative inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold leading-none text-primary-inverse ring-1 ring-background">
-                                                +3
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-1 lg:gap-5">
-                                        <span class="text-xs font-normal text-secondary-foreground">
-                                            1 week ago
-                                        </span>
-                                        <div class="kt-menu" data-kt-menu="true">
-                                            <div class="kt-menu-item" data-kt-menu-item-offset="0, 10px"
-                                                data-kt-menu-item-placement="bottom-end"
-                                                data-kt-menu-item-placement-rtl="bottom-start"
-                                                data-kt-menu-item-toggle="dropdown"
-                                                data-kt-menu-item-trigger="click">
-                                                <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
-                                                    <i class="ki-filled ki-dots-vertical text-lg">
-                                                    </i>
-                                                </button>
-                                                <div class="kt-menu-dropdown kt-menu-default w-full max-w-[200px]"
-                                                    data-kt-menu-dismiss="true">
-                                                    <div class="kt-menu-item">
-                                                        <a class="kt-menu-link" href="#">
-                                                            <span class="kt-menu-icon">
-                                                                <i class="ki-filled ki-document">
-                                                                </i>
-                                                            </span>
-                                                            <span class="kt-menu-title">
-                                                                Details
-                                                            </span>
-                                                        </a>
-                                                    </div>
-                                                    <div class="kt-menu-item">
-                                                        <a class="kt-menu-link" href="#">
-                                                            <span class="kt-menu-icon">
-                                                                <i class="ki-filled ki-pencil">
-                                                                </i>
-                                                            </span>
-                                                            <span class="kt-menu-title">
-                                                                Edit
-                                                            </span>
-                                                        </a>
-                                                    </div>
-                                                    <div class="kt-menu-item">
-                                                        <a class="kt-menu-link" href="#">
-                                                            <span class="kt-menu-icon">
-                                                                <i class="ki-filled ki-copy">
-                                                                </i>
-                                                            </span>
-                                                            <span class="kt-menu-title">
-                                                                Make a copy
-                                                            </span>
-                                                        </a>
-                                                    </div>
-                                                    <div class="kt-menu-separator">
-                                                    </div>
-                                                    <div class="kt-menu-item">
-                                                        <a class="kt-menu-link" href="#">
-                                                            <span class="kt-menu-icon">
-                                                                <i class="ki-filled ki-trash">
-                                                                </i>
-                                                            </span>
-                                                            <span class="kt-menu-title">
-                                                                Remove
-                                                            </span>
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2.5">
-                                    <div class="flex items-center justify-center rounded-full bg-gray-100 size-9 dark:bg-gray-900">
-                                        <i class="ki-filled ki-abstract-44 text-base text-gray-600 dark:text-gray-300">
-                                        </i>
-                                    </div>
-                                    <div class="flex flex-col gap-0.5">
-                                        <span class="text-sm font-medium text-foreground">
-                                            Salesforce Integration
-                                        </span>
-                                        <span class="text-xs font-normal text-secondary-foreground">
-                                            Figma, Sketch design
-                                        </span>
-                                    </div>
-                                    <div class="flex -space-x-2">
-                                        <div class="flex">
-                                            <img class="hover:z-5 relative size-7 shrink-0 rounded-full ring-1 ring-background"
-                                                src="assets/media/avatars/300-14.png" />
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-1 lg:gap-5">
-                                        <span class="text-xs font-normal text-secondary-foreground">
-                                            3 weeks ago
-                                        </span>
-                                        <div class="kt-menu" data-kt-menu="true">
-                                            <div class="kt-menu-item" data-kt-menu-item-offset="0, 10px"
-                                                data-kt-menu-item-placement="bottom-end"
-                                                data-kt-menu-item-placement-rtl="bottom-start"
-                                                data-kt-menu-item-toggle="dropdown"
-                                                data-kt-menu-item-trigger="click">
-                                                <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
-                                                    <i class="ki-filled ki-dots-vertical text-lg">
-                                                    </i>
-                                                </button>
-                                                <div class="kt-menu-dropdown kt-menu-default w-full max-w-[200px]"
-                                                    data-kt-menu-dismiss="true">
-                                                    <div class="kt-menu-item">
-                                                        <a class="kt-menu-link" href="#">
-                                                            <span class="kt-menu-icon">
-                                                                <i class="ki-filled ki-document">
-                                                                </i>
-                                                            </span>
-                                                            <span class="kt-menu-title">
-                                                                Details
-                                                            </span>
-                                                        </a>
-                                                    </div>
-                                                    <div class="kt-menu-item">
-                                                        <a class="kt-menu-link" href="#">
-                                                            <span class="kt-menu-icon">
-                                                                <i class="ki-filled ki-pencil">
-                                                                </i>
-                                                            </span>
-                                                            <span class="kt-menu-title">
-                                                                Edit
-                                                            </span>
-                                                        </a>
-                                                    </div>
-                                                    <div class="kt-menu-item">
-                                                        <a class="kt-menu-link" href="#">
-                                                            <span class="kt-menu-icon">
-                                                                <i class="ki-filled ki-copy">
-                                                                </i>
-                                                            </span>
-                                                            <span class="kt-menu-title">
-                                                                Make a copy
-                                                            </span>
-                                                        </a>
-                                                    </div>
-                                                    <div class="kt-menu-separator">
-                                                    </div>
-                                                    <div class="kt-menu-item">
-                                                        <a class="kt-menu-link" href="#">
-                                                            <span class="kt-menu-icon">
-                                                                <i class="ki-filled ki-trash">
-                                                                </i>
-                                                            </span>
-                                                            <span class="kt-menu-title">
-                                                                Remove
-                                                            </span>
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                @endforeach
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             <!-- end: grid -->
+
+            <!-- begin: Dernières Transactions -->
+            <div class="kt-card">
+                <div class="kt-card-header">
+                    <h3 class="kt-card-title">
+                        Dernières Transactions
+                    </h3>
+                    <a class="kt-btn kt-btn-sm kt-btn-outline" href="{{ route('transactions.index') }}">
+                        Voir Tout
+                    </a>
+                </div>
+                <div class="kt-card-content">
+                    <div class="flex flex-col gap-5">
+                        @foreach($dernieresTransactions->take(5) as $transaction)
+                        <div class="flex items-center gap-2.5">
+                            <div class="flex items-center justify-center rounded-full {{ $transaction->type == 'depot' ? 'bg-success-light' : 'bg-destructive-light' }} size-9">
+                                <i class="ki-filled {{ $transaction->type == 'depot' ? 'ki-arrow-up' : 'ki-arrow-down' }} text-base {{ $transaction->type == 'depot' ? 'text-success' : 'text-destructive' }}"></i>
+                            </div>
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-sm font-medium text-foreground">
+                                    {{ $transaction->agent->nom }} {{ $transaction->agent->prenom }}
+                                </span>
+                                <span class="text-xs font-normal text-secondary-foreground">
+                                    {{ ucfirst($transaction->type) }} - {{ $transaction->operateur->libelle }}
+                                </span>
+                            </div>
+                            <div class="flex -space-x-2 ms-auto">
+                                @if($transaction->operateur->logo)
+                                <img class="h-7 w-7 rounded" src="{{ asset($transaction->operateur->logo) }}" alt="{{ $transaction->operateur->libelle }}"/>
+                                @endif
+                            </div>
+                            <div class="flex items-center gap-1 lg:gap-5">
+                                <span class="text-sm font-semibold {{ $transaction->type == 'depot' ? 'text-success' : 'text-destructive' }}">
+                                    {{ $transaction->type == 'depot' ? '+' : '-' }}{{ number_format($transaction->montant, 0, ',', ' ') }} FCFA
+                                </span>
+                                <div class="kt-menu" data-kt-menu="true">
+                                    <div class="kt-menu-item" data-kt-menu-item-offset="0, 10px"
+                                        data-kt-menu-item-placement="bottom-end"
+                                        data-kt-menu-item-placement-rtl="bottom-start"
+                                        data-kt-menu-item-toggle="dropdown"
+                                        data-kt-menu-item-trigger="click">
+                                        <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
+                                            <i class="ki-filled ki-dots-vertical text-lg">
+                                            </i>
+                                        </button>
+                                        <div class="kt-menu-dropdown kt-menu-default w-full max-w-[200px]"
+                                            data-kt-menu-dismiss="true">
+                                            <div class="kt-menu-item">
+                                                <a class="kt-menu-link" href="{{ route('transactions.show', $transaction->id) }}">
+                                                    <span class="kt-menu-icon">
+                                                        <i class="ki-filled ki-document">
+                                                        </i>
+                                                    </span>
+                                                    <span class="kt-menu-title">
+                                                        Détails
+                                                    </span>
+                                                </a>
+                                            </div>
+                                            <div class="kt-menu-item">
+                                                <a class="kt-menu-link" href="{{ route('transactions.edit', $transaction->id) }}">
+                                                    <span class="kt-menu-icon">
+                                                        <i class="ki-filled ki-pencil">
+                                                        </i>
+                                                    </span>
+                                                    <span class="kt-menu-title">
+                                                        Modifier
+                                                    </span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            <!-- end: Dernières Transactions -->
+
         </div>
     </div>
     <!-- End of Container -->
+
 @endsection

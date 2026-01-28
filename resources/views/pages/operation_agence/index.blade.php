@@ -42,14 +42,14 @@
             <div class="kt-card-content">
             <div class="grid" data-kt-datatable="true" data-kt-datatable-page-size="10">
             <div class="kt-scrollable-x-auto">
-            <table class="kt-table kt-table-border" data-kt-datatable-table="true" id="transactions_table">
+            <table class="kt-table kt-table-border" data-kt-datatable-table="true" id="transactions_table" style="table-layout: fixed; width: 100%;">
                 <thead>
                 <tr>
-                <th class="w-[60px] text-center">
+                <th class="w-[50px] text-center">
                 <input class="kt-checkbox kt-checkbox-sm" data-kt-datatable-check="true" type="checkbox">
                 </input>
                 </th>
-                <th class="min-w-[180px]">
+                <th class="min-w-[180px]" style="width: 18%;">
                 <span class="kt-table-col">
                     <span class="kt-table-col-label">
                     N° Transaction
@@ -58,7 +58,7 @@
                     </span>
                 </span>
                 </th>
-                <th class="w-[200px]">
+                <th class="min-w-[200px]" style="width: 25%;">
                 <span class="kt-table-col">
                     <span class="kt-table-col-label">
                     Client
@@ -67,7 +67,7 @@
                     </span>
                 </span>
                 </th>
-                <th class="w-[150px]">
+                <th class="min-w-[140px]" style="width: 15%;">
                 <span class="kt-table-col">
                     <span class="kt-table-col-label">
                     Montant
@@ -76,7 +76,7 @@
                     </span>
                 </span>
                 </th>
-                <th class="w-[150px]">
+                <th class="min-w-[120px]" style="width: 12%;">
                 <span class="kt-table-col">
                     <span class="kt-table-col-label">
                     Statut
@@ -85,7 +85,7 @@
                     </span>
                 </span>
                 </th>
-                <th class="w-[200px]">
+                <th class="min-w-[160px]" style="width: 18%;">
                 <span class="kt-table-col">
                     <span class="kt-table-col-label">
                     Date
@@ -94,7 +94,7 @@
                     </span>
                 </span>
                 </th>
-                <th class="w-[60px]">
+                <th class="w-[50px]">
                 </th>
                 </tr>
                 </thead>
