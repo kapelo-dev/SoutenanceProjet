@@ -197,6 +197,7 @@
                 </tr>
                 @endforelse
                 </tbody>
+                    </table>
                 </div>
                 <div class="kt-card-footer justify-center md:justify-between flex-col md:flex-row gap-5 text-secondary-foreground text-sm font-medium">
                     <div class="flex items-center gap-2 order-2 md:order-1">
@@ -216,10 +217,7 @@
         </div>
     </div>
 </div>
-    </div>
-</div>
 <!-- End of Container -->
-</main>
 <style>
     /* S'assurer que le message vide est centré sur toute la largeur (même logique que la page transactions) */
     #transactions_table tbody tr.empty-row {
@@ -347,73 +345,82 @@
         @endif
     });
 </script>
-   <!-- Modal Nouvelle Opération -->
+   <!-- Modal Nouvelle Opération (opérations des agents : versements, ajouts espèces, etc.) -->
    <div class="kt-modal" data-kt-modal="true" data-kt-modal-disable-scroll="false" id="modal_nouvelle_operation">
       <div class="kt-modal-content max-w-[600px]">
        <div class="kt-modal-header">
         <h3 class="kt-modal-title">
-         Nouvelle Opération
+         Nouvelle opération en agence
         </h3>
         <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
          <i class="ki-filled ki-cross"></i>
         </button>
        </div>
        <div class="kt-modal-body">
-        <form class="flex flex-col gap-5">
+        <form id="form_nouvelle_operation_agence" class="flex flex-col gap-5">
+         <div class="flex flex-col gap-2 relative">
+          <label class="kt-label">
+           Agent <span class="text-destructive">*</span>
+          </label>
+          <input class="kt-input" type="text" name="agent_search" id="operation_agent_search" placeholder="Rechercher agent (nom, prénom…)" autocomplete="off" required />
+          <input type="hidden" name="agent_id" id="operation_agent_id" value="" />
+          <div id="operation_agent_list" class="hidden absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-border bg-background shadow-lg max-h-48 overflow-auto"></div>
+          <span class="text-xs text-muted-foreground">Agent qui effectue l'opération (versement, ajout espèces, etc.)</span>
+         </div>
          <div class="flex flex-col gap-2">
           <label class="kt-label">
-           Type d'opération
+           Type d'opération <span class="text-destructive">*</span>
           </label>
-          <select class="kt-select" data-kt-select="true" required>
-           <option value="">Sélectionnez le type</option>
-           <option value="depot">Dépôt</option>
-           <option value="retrait">Retrait</option>
-           <option value="transfert">Transfert</option>
+          <select class="kt-select" name="type_operation_id" id="operation_type_operation_id" data-kt-select="true" required>
+           <option value="" data-requiert-operateur="0">Sélectionnez le type</option>
+           @foreach($typesOperation ?? [] as $typeOp)
+            <option value="{{ $typeOp->id }}" data-requiert-operateur="{{ $typeOp->requiert_operateur ? '1' : '0' }}">{{ $typeOp->libelle }}</option>
+           @endforeach
           </select>
+          <span class="text-xs text-muted-foreground">Type sans opérateur figé ; l'opérateur (T-Money, Flooz…) se choisit à part si le type est « virtuel ».</span>
+         </div>
+         <div class="flex flex-col gap-2 relative" id="operation_operateur_block" style="display: block;">
+          <label class="kt-label" for="operation_operateur_trigger">
+           Opérateur (T-Money, Flooz…) <span class="text-destructive" id="operation_operateur_required_star" style="display:none">*</span>
+          </label>
+          <input type="hidden" name="operateur_id" id="operation_operateur_id" value="" />
+          <button type="button" id="operation_operateur_trigger" class="kt-input w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-left flex items-center gap-2 min-h-[40px]" aria-haspopup="listbox" aria-expanded="false">
+           <span id="operation_operateur_display" class="flex items-center gap-2 text-muted-foreground">Sélectionnez un opérateur</span>
+          </button>
+          <div id="operation_operateur_dropdown" class="hidden absolute left-0 right-0 top-full z-30 mt-1 rounded-lg border border-border bg-background shadow-lg max-h-56 overflow-auto py-1">
+           <div class="px-3 py-2 text-xs text-muted-foreground border-b border-border">Choisir un opérateur</div>
+           @foreach($operateurs ?? [] as $operateur)
+            @php $logoUrl = $operateur->logo ? asset('storage/' . $operateur->logo) : ''; @endphp
+            <button type="button" class="operation_operateur_option w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-muted/50 transition-colors" data-id="{{ $operateur->id }}" data-libelle="{{ e($operateur->libelle) }}" data-logo="{{ $logoUrl }}" data-couleur="{{ $operateur->couleur ?? '#6b7280' }}">
+             @if($operateur->logo)
+              <span class="h-6 w-6 shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-muted"><img src="{{ $logoUrl }}" alt="{{ $operateur->libelle }}" class="h-full w-full object-cover" /></span>
+             @else
+              <span class="h-6 w-6 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0" style="background-color: {{ $operateur->couleur ?? '#6b7280' }}">{{ strtoupper(substr($operateur->libelle ?? '', 0, 1)) }}</span>
+             @endif
+             <span class="text-sm">{{ $operateur->libelle }}</span>
+            </button>
+           @endforeach
+           @if(empty($operateurs) || count($operateurs) === 0)
+            <div class="px-3 py-2 text-xs text-muted-foreground">Aucun opérateur configuré.</div>
+           @endif
+          </div>
+          @if(empty($operateurs) || count($operateurs) === 0)
+          <span class="text-xs text-muted-foreground">Aucun opérateur configuré. Allez dans « Opérateurs Mobile Money » pour en ajouter.</span>
+          @else
+          <span class="text-xs text-muted-foreground">Requis pour « Apport virtuel » et « Retrait virtuel ». Optionnel pour les autres types.</span>
+          @endif
          </div>
          <div class="flex flex-col gap-2">
           <label class="kt-label">
-           Client
+           Montant (FCFA) <span class="text-destructive">*</span>
           </label>
-          <input class="kt-input" type="text" placeholder="Nom du client" required />
+          <input class="kt-input" type="number" name="montant" id="operation_montant" placeholder="0" min="0" step="1" value="0" required />
          </div>
          <div class="flex flex-col gap-2">
           <label class="kt-label">
-           Numéro de compte
+           Note (optionnel)
           </label>
-          <input class="kt-input" type="text" placeholder="Ex: 1234567890" required />
-         </div>
-         <div class="flex flex-col gap-2">
-          <label class="kt-label">
-           Montant (FCFA)
-          </label>
-          <input class="kt-input" type="number" placeholder="0" min="0" step="1000" required />
-         </div>
-         <div class="flex flex-col gap-2">
-          <label class="kt-label">
-           Opérateur
-          </label>
-          <select class="kt-select" data-kt-select="true">
-           <option value="">Sélectionnez un opérateur</option>
-           <option value="mixx">Mixx by YAS</option>
-           <option value="flooz">Flooz</option>
-           <option value="moov">Moov Money</option>
-           <option value="mtn">MTN Money</option>
-           <option value="orange">Orange Money</option>
-           <option value="wave">Wave</option>
-          </select>
-         </div>
-         <div class="flex flex-col gap-2">
-          <label class="kt-label">
-           Numéro de téléphone
-          </label>
-          <input class="kt-input" type="tel" placeholder="+225 XX XX XX XX XX" />
-         </div>
-         <div class="flex flex-col gap-2">
-          <label class="kt-label">
-           Notes / Commentaires
-          </label>
-          <textarea class="kt-input" rows="3" placeholder="Informations supplémentaires..."></textarea>
+          <textarea class="kt-input" name="note" id="operation_note" rows="3" placeholder="Commentaire"></textarea>
          </div>
         </form>
        </div>
@@ -421,12 +428,190 @@
         <button class="kt-btn kt-btn-ghost" data-kt-modal-dismiss="true">
          Annuler
         </button>
-        <button class="kt-btn kt-btn-primary">
+        <button class="kt-btn kt-btn-primary" type="button" id="btn_enregistrer_operation">
          <i class="ki-filled ki-check"></i>
-         Valider l'opération
+         Enregistrer
         </button>
        </div>
       </div>
      </div>
    <!-- End Modal Nouvelle Opération -->
+
+<script>
+// Fonction globale d'initialisation pour éviter les doublons
+window.initOperationAgenceModal = window.initOperationAgenceModal || function() {
+    console.log('Initialisation du modal Opération Agence');
+    
+    var agentsData = @json($agentsJson ?? []);
+    if (!Array.isArray(agentsData)) agentsData = [];
+    
+    var agentSearchEl = document.getElementById('operation_agent_search');
+    var agentIdEl = document.getElementById('operation_agent_id');
+    var agentListEl = document.getElementById('operation_agent_list');
+    var operateurTrigger = document.getElementById('operation_operateur_trigger');
+    var operateurDropdown = document.getElementById('operation_operateur_dropdown');
+    var operateurDisplay = document.getElementById('operation_operateur_display');
+    var operateurInput = document.getElementById('operation_operateur_id');
+    var typeSelectEl = document.getElementById('operation_type_operation_id');
+    var btnSave = document.getElementById('btn_enregistrer_operation');
+    
+    if (!agentSearchEl || !operateurTrigger) {
+        console.warn('Éléments du modal non trouvés');
+        return;
+    }
+    
+    // Nettoyer les anciens gestionnaires en remplaçant les éléments
+    if (agentSearchEl._hasOperationListener) return; // Déjà initialisé
+    agentSearchEl._hasOperationListener = true;
+    
+    // 1. Recherche d'agent
+    agentSearchEl.addEventListener('input', function() {
+        var q = (this.value || '').toLowerCase().trim();
+        if (agentIdEl) agentIdEl.value = '';
+        if (!agentListEl) return;
+        if (q.length < 2) {
+            agentListEl.classList.add('hidden');
+            agentListEl.innerHTML = '';
+            return;
+        }
+        var filtered = agentsData.filter(function(a) {
+            return (a.libelle && a.libelle.toLowerCase().indexOf(q) !== -1) ||
+                (a.nom && a.nom.toLowerCase().indexOf(q) !== -1) ||
+                (a.prenom && a.prenom.toLowerCase().indexOf(q) !== -1);
+        });
+        agentListEl.innerHTML = filtered.slice(0, 10).map(function(a) {
+            return '<div class="px-3 py-2 cursor-pointer hover:bg-muted border-b border-border last:border-0" data-agent-id="' + a.id + '" data-agent-libelle="' + (a.libelle || '').replace(/"/g, '&quot;') + '">' + (a.libelle || 'Agent #' + a.id) + '</div>';
+        }).join('');
+        agentListEl.classList.remove('hidden');
+        if (filtered.length === 0) agentListEl.classList.add('hidden');
+    });
+    
+    // 2. Sélection d'un agent
+    if (agentListEl) {
+        agentListEl.addEventListener('click', function(e) {
+            var row = e.target.closest('[data-agent-id]');
+            if (row) {
+                if (agentIdEl) agentIdEl.value = row.getAttribute('data-agent-id');
+                if (agentSearchEl) agentSearchEl.value = row.getAttribute('data-agent-libelle') || '';
+                agentListEl.classList.add('hidden');
+                agentListEl.innerHTML = '';
+            }
+        });
+    }
+    
+    // 3. Dropdown opérateur - bouton toggle
+    if (operateurTrigger && operateurDropdown) {
+        operateurTrigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            operateurDropdown.classList.toggle('hidden');
+            operateurTrigger.setAttribute('aria-expanded', operateurDropdown.classList.contains('hidden') ? 'false' : 'true');
+        });
+    }
+    
+    // 4. Sélection d'un opérateur
+    if (operateurDropdown) {
+        var options = operateurDropdown.querySelectorAll('.operation_operateur_option');
+        options.forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                var id = this.getAttribute('data-id');
+                var libelle = this.getAttribute('data-libelle');
+                var logo = this.getAttribute('data-logo');
+                var couleur = this.getAttribute('data-couleur') || '#6b7280';
+                if (operateurInput) operateurInput.value = id;
+                if (operateurDisplay) {
+                    if (logo) {
+                        operateurDisplay.innerHTML = '<span class="h-5 w-5 shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-muted"><img src="' + logo + '" alt="" class="h-full w-full object-cover" /></span><span class="text-foreground">' + libelle + '</span>';
+                    } else {
+                        operateurDisplay.innerHTML = '<span class="h-5 w-5 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0" style="background-color:' + couleur + '">' + (libelle ? libelle.charAt(0).toUpperCase() : '') + '</span><span class="text-foreground">' + libelle + '</span>';
+                    }
+                    operateurDisplay.classList.remove('text-muted-foreground');
+                }
+                operateurDropdown.classList.add('hidden');
+                if (operateurTrigger) operateurTrigger.setAttribute('aria-expanded', 'false');
+            });
+        });
+    }
+    
+    // 5. Fermer en cliquant dehors
+    document.addEventListener('click', function(e) {
+        if (agentListEl && agentSearchEl && !agentSearchEl.contains(e.target) && !agentListEl.contains(e.target)) {
+            agentListEl.classList.add('hidden');
+        }
+        if (operateurTrigger && operateurDropdown && !operateurTrigger.contains(e.target) && !operateurDropdown.contains(e.target)) {
+            operateurDropdown.classList.add('hidden');
+            if (operateurTrigger) operateurTrigger.setAttribute('aria-expanded', 'false');
+        }
+    });
+    
+    // 6. Toggle opérateur requis
+    function toggleOperateurBlock() {
+        var operateurSelect = document.getElementById('operation_operateur_id');
+        var star = document.getElementById('operation_operateur_required_star');
+        if (!typeSelectEl || !operateurSelect) return;
+        var opt = typeSelectEl.options[typeSelectEl.selectedIndex];
+        var requiert = opt && opt.getAttribute('data-requiert-operateur') === '1';
+        if (requiert) {
+            operateurSelect.setAttribute('required', 'required');
+            if (star) star.style.display = '';
+        } else {
+            operateurSelect.removeAttribute('required');
+            operateurSelect.value = '';
+            if (star) star.style.display = 'none';
+        }
+    }
+    if (typeSelectEl) {
+        typeSelectEl.addEventListener('change', toggleOperateurBlock);
+        toggleOperateurBlock();
+    }
+    
+    // 7. Bouton enregistrer
+    if (btnSave) {
+        btnSave.addEventListener('click', function() {
+            var formOp = document.getElementById('form_nouvelle_operation_agence');
+            var modalOp = document.getElementById('modal_nouvelle_operation');
+            var agId = document.getElementById('operation_agent_id') ? document.getElementById('operation_agent_id').value : '';
+            var typeId = document.getElementById('operation_type_operation_id') ? document.getElementById('operation_type_operation_id').value : '';
+            var mont = document.getElementById('operation_montant') ? document.getElementById('operation_montant').value : '';
+            var opId = document.getElementById('operation_operateur_id') ? document.getElementById('operation_operateur_id').value : '';
+            var typeOp = document.getElementById('operation_type_operation_id');
+            var typeOpt = typeOp ? typeOp.selectedOptions[0] : null;
+            var req = typeOpt && typeOpt.getAttribute('data-requiert-operateur') === '1';
+            if (!agId) { alert('Veuillez sélectionner un agent.'); return; }
+            if (!typeId) { alert('Veuillez sélectionner un type d\'opération.'); return; }
+            if (req && !opId) { alert('Veuillez sélectionner un opérateur.'); return; }
+            if (!mont || parseFloat(mont) <= 0) { alert('Veuillez saisir un montant valide.'); return; }
+            var note = document.getElementById('operation_note') ? document.getElementById('operation_note').value : '';
+            var csrf = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
+            var url = '{{ route("operations-agence.store") }}';
+            btnSave.disabled = true;
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ agent_id: agId, type_operation_id: typeId, operateur_id: opId || null, montant: parseFloat(mont), note: note })
+            })
+            .then(function(r) { return r.text().then(function(t) { try { return { ok: r.ok, data: JSON.parse(t) }; } catch (e) { return { ok: false, data: { message: 'Erreur serveur.' } }; } }); })
+            .then(function(res) {
+                btnSave.disabled = false;
+                if (res.ok && res.data.success) {
+                    alert(res.data.message || 'Opération enregistrée avec succès.');
+                    if (modalOp) { var d = modalOp.querySelector('[data-kt-modal-dismiss="true"]'); if (d) d.click(); }
+                    if (formOp) formOp.reset();
+                    if (document.getElementById('operation_agent_id')) document.getElementById('operation_agent_id').value = '';
+                    if (document.getElementById('operation_operateur_id')) document.getElementById('operation_operateur_id').value = '';
+                    if (operateurDisplay) { operateurDisplay.innerHTML = 'Sélectionnez un opérateur'; operateurDisplay.classList.add('text-muted-foreground'); }
+                    window.location.reload();
+                } else {
+                    alert((res.data && res.data.message) || 'Erreur lors de l\'enregistrement.');
+                }
+            })
+            .catch(function() { btnSave.disabled = false; alert('Erreur réseau.'); });
+        });
+    }
+};
+
+// Appeler immédiatement
+window.initOperationAgenceModal();
+</script>
 @endsection

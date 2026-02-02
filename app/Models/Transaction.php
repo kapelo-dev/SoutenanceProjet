@@ -18,6 +18,7 @@ class Transaction extends Model
         'date',
         'montant',
         'type',
+        'type_operation_id',
         'operateur_id',
         'agent_id',
         'statut',
@@ -61,6 +62,12 @@ class Transaction extends Model
     public function agent()
     {
         return $this->belongsTo(Agent::class, 'agent_id');
+    }
+
+    // Une transaction appartient à un type d'opération (opérations en agence)
+    public function typeOperation()
+    {
+        return $this->belongsTo(TypeOperation::class, 'type_operation_id');
     }
 
     // Une transaction appartient à un opérateur

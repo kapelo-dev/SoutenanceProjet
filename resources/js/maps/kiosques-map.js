@@ -23,7 +23,7 @@ class KiosquesMap {
         // Vérifier si l'élément existe
         const mapElement = document.getElementById('kiosques_map');
         if (!mapElement) {
-            console.debug('[KiosquesMap] Élément #kiosques_map introuvable');
+            // Ne pas logger si l'élément n'existe pas (page normale sans carte)
             return;
         }
 

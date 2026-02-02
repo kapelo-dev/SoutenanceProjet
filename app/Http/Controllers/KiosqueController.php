@@ -115,6 +115,14 @@ class KiosqueController extends Controller
             $validated['photo'] = $photoPath;
         }
 
+        // Convertir les horaires au format H:i:s pour la base de données
+        if (isset($validated['horaire_ouverture']) && $validated['horaire_ouverture']) {
+            $validated['horaire_ouverture'] = $validated['horaire_ouverture'] . ':00';
+        }
+        if (isset($validated['horaire_fermeture']) && $validated['horaire_fermeture']) {
+            $validated['horaire_fermeture'] = $validated['horaire_fermeture'] . ':00';
+        }
+
         $kiosque = Kiosque::create($validated);
 
         return redirect()->route('kiosques.index')
@@ -149,7 +157,7 @@ class KiosqueController extends Controller
                 ->sum('transactions.montant'),
         ];
 
-        return view('pages.kiosques.show', compact('kiosque', 'stats'));
+        return $this->ajaxView('pages.kiosques.show', compact('kiosque', 'stats'));
     }
 
     /**
@@ -157,7 +165,15 @@ class KiosqueController extends Controller
      */
     public function edit(Kiosque $kiosque)
     {
-        return view('pages.kiosques.edit', compact('kiosque'));
+        // Convertir les horaires au format H:i pour le formulaire
+        if ($kiosque->horaire_ouverture) {
+            $kiosque->horaire_ouverture = substr($kiosque->horaire_ouverture, 0, 5);
+        }
+        if ($kiosque->horaire_fermeture) {
+            $kiosque->horaire_fermeture = substr($kiosque->horaire_fermeture, 0, 5);
+        }
+        
+        return $this->ajaxView('pages.kiosques.edit', compact('kiosque'));
     }
 
     /**
@@ -165,6 +181,24 @@ class KiosqueController extends Controller
      */
     public function update(Request $request, Kiosque $kiosque)
     {
+        // Normaliser les horaires avant la validation
+        $requestData = $request->all();
+        if (isset($requestData['horaire_ouverture']) && $requestData['horaire_ouverture']) {
+            // Si le format est H:i:s, extraire seulement H:i
+            if (strlen($requestData['horaire_ouverture']) > 5) {
+                $requestData['horaire_ouverture'] = substr($requestData['horaire_ouverture'], 0, 5);
+            }
+        }
+        if (isset($requestData['horaire_fermeture']) && $requestData['horaire_fermeture']) {
+            // Si le format est H:i:s, extraire seulement H:i
+            if (strlen($requestData['horaire_fermeture']) > 5) {
+                $requestData['horaire_fermeture'] = substr($requestData['horaire_fermeture'], 0, 5);
+            }
+        }
+        
+        // Créer une nouvelle requête avec les données normalisées
+        $request->merge($requestData);
+        
         $validated = $request->validate([
             'code' => 'nullable|string|max:50|unique:kiosques,code,' . $kiosque->id,
             'nom' => 'required|string|max:150',
@@ -192,7 +226,27 @@ class KiosqueController extends Controller
             $validated['photo'] = $photoPath;
         }
 
+        // Convertir les horaires au format H:i:s pour la base de données
+        if (isset($validated['horaire_ouverture']) && $validated['horaire_ouverture']) {
+            $validated['horaire_ouverture'] = $validated['horaire_ouverture'] . ':00';
+        } elseif (isset($validated['horaire_ouverture']) && empty($validated['horaire_ouverture'])) {
+            $validated['horaire_ouverture'] = null;
+        }
+        if (isset($validated['horaire_fermeture']) && $validated['horaire_fermeture']) {
+            $validated['horaire_fermeture'] = $validated['horaire_fermeture'] . ':00';
+        } elseif (isset($validated['horaire_fermeture']) && empty($validated['horaire_fermeture'])) {
+            $validated['horaire_fermeture'] = null;
+        }
+
         $kiosque->update($validated);
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Kiosque mis à jour avec succès !',
+                'redirect' => route('kiosques.show', $kiosque)
+            ]);
+        }
 
         return redirect()->route('kiosques.show', $kiosque)
             ->with('success', 'Kiosque mis à jour avec succès !');

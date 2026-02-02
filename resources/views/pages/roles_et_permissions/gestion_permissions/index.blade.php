@@ -13,7 +13,7 @@
         </div>
        </div>
        <div class="flex items-center gap-2.5">
-        <button class="kt-btn kt-btn-primary" onclick="saveAllPermissions()">
+        <button class="kt-btn kt-btn-primary" onclick="saveAllPermissions(this)">
          <i class="ki-filled ki-check"></i>
          Enregistrer les modifications
         </button>
@@ -92,7 +92,7 @@
            <button class="kt-btn kt-btn-outline" onclick="deselectAllPermissions()">
             Réinitialiser
            </button>
-           <button class="kt-btn kt-btn-primary" onclick="saveAllPermissions()">
+           <button class="kt-btn kt-btn-primary" onclick="saveAllPermissions(this)">
             <i class="ki-filled ki-check"></i>
             Enregistrer les modifications
            </button>
@@ -102,6 +102,8 @@
       </div>
       <!-- end: grid -->
      </div>
+    </div>
+    <!-- End of Container -->
 
 <script>
 let permissionsChanged = false;
@@ -112,6 +114,11 @@ function togglePermission(profilId, lienId, granted) {
     // Optionnel: sauvegarder immédiatement (décommentez si vous voulez une sauvegarde automatique)
     // savePermission(profilId, lienId, granted);
 }
+
+// Réinitialiser le flag après chargement AJAX
+document.addEventListener('ajax-content-loaded', function() {
+    permissionsChanged = false;
+});
 
 function savePermission(profilId, lienId, granted) {
     fetch('{{ route("permissions.toggle") }}', {
@@ -146,7 +153,7 @@ function savePermission(profilId, lienId, granted) {
     });
 }
 
-function saveAllPermissions() {
+function saveAllPermissions(saveBtnEl) {
     const checkboxes = document.querySelectorAll('.permission-checkbox');
     const permissions = [];
     
@@ -159,20 +166,29 @@ function saveAllPermissions() {
     });
     
     // Désactiver le bouton pendant le traitement
-    const saveBtn = event.target;
-    const originalText = saveBtn.innerHTML;
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = '<i class="ki-filled ki-loading"></i> Enregistrement...';
+    const saveBtn = saveBtnEl || document.querySelector('button[onclick^="saveAllPermissions"]');
+    const originalText = saveBtn ? saveBtn.innerHTML : '';
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="ki-filled ki-loading"></i> Enregistrement...';
+    }
     
     fetch('{{ route("permissions.save-all") }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: JSON.stringify({ permissions: permissions })
     })
-    .then(response => response.json())
+    .then(async (response) => {
+        if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            throw new Error(`Erreur HTTP ${response.status} ${text ? '- ' + text : ''}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             permissionsChanged = false;
@@ -183,14 +199,18 @@ function saveAllPermissions() {
         } else {
             alert('Erreur: ' + (data.message || 'Une erreur est survenue lors de l\'enregistrement.'));
         }
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = originalText;
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Une erreur est survenue lors de l\'enregistrement.');
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = originalText;
+        alert('Une erreur est survenue lors de l\'enregistrement: ' + (error?.message || error));
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        }
     });
 }
 

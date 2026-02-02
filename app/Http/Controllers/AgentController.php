@@ -7,6 +7,7 @@ use App\Models\Kiosque;
 use App\Models\Utilisateur;
 use App\Models\Solde;
 use App\Models\Operateur;
+use App\Models\Profil;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -63,7 +64,7 @@ class AgentController extends Controller
     public function soldes(Request $request)
     {
         try {
-            $query = Agent::with(['kiosque', 'soldes.operateur']);
+            $query = Agent::with(['kiosque', 'utilisateur', 'soldes.operateur']);
 
             // Filtrer uniquement les agents avec soldes positifs
             if ($request->has('soldes_positifs') && $request->soldes_positifs == 1) {
@@ -190,7 +191,10 @@ class AgentController extends Controller
             }
 
             // Validation Kiosque si création
-            if ($request->has('kiosque') && is_array($request->kiosque)) {
+            // Vérifier si creer_kiosque est à '1' ou si kiosque est présent
+            $creerKiosque = $request->input('creer_kiosque') === '1' || $request->input('creer_kiosque') === 1 || $request->has('kiosque');
+            
+            if ($creerKiosque && $request->has('kiosque') && is_array($request->kiosque)) {
                 $kiosqueRules = [
                     'kiosque.code' => 'required|string|max:50|unique:kiosques,code',
                     'kiosque.nom' => 'required|string|max:100',
@@ -214,8 +218,14 @@ class AgentController extends Controller
             }
 
             if ($validator->fails()) {
+                \Log::error('Erreur de validation dans AgentController@storeWithKiosque', [
+                    'errors' => $validator->errors()->toArray(),
+                    'request_data' => $request->except(['photo', 'password', 'mot_de_passe'])
+                ]);
+                
                 return response()->json([
                     'success' => false,
+                    'message' => 'Erreur de validation',
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -223,7 +233,9 @@ class AgentController extends Controller
             $kiosqueId = null;
 
             // Créer le kiosque si demandé
-            if ($request->has('kiosque') && is_array($request->kiosque)) {
+            $creerKiosque = $request->input('creer_kiosque') === '1' || $request->input('creer_kiosque') === 1 || ($request->has('kiosque') && is_array($request->kiosque));
+            
+            if ($creerKiosque && $request->has('kiosque') && is_array($request->kiosque)) {
                 $kiosqueData = $request->kiosque;
                 $kiosque = Kiosque::create([
                     'code' => $kiosqueData['code'],
@@ -272,6 +284,15 @@ class AgentController extends Controller
                 'photo_profil' => $photoProfil,
                 'statut' => 'actif',
             ]);
+
+            // Assigner le profil "Agent" par défaut
+            $profilAgent = Profil::where('libelle', 'Agent')->first();
+            if ($profilAgent) {
+                $utilisateur->profils()->attach($profilAgent->id);
+            } else {
+                // Si le profil Agent n'existe pas, créer un log d'erreur
+                \Log::warning('Le profil "Agent" n\'existe pas dans la base de données. L\'utilisateur ' . $utilisateur->id . ' n\'a pas de profil assigné.');
+            }
 
             // Créer l'agent
             $agentData = $request->only([

@@ -85,7 +85,6 @@
                                         <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
-                                <th class="w-[50px] text-center"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -107,14 +106,32 @@
                                 <td class="text-center">
                                     <div class="flex items-center justify-center gap-2.5">
                                         <div class="">
-                                            <img class="h-9 rounded-full" src="{{ asset('assets/media/avatars/300-3.png') }}"/>
+                                            @php
+                                                $avatar = asset('assets/media/avatars/300-3.png'); // Défaut
+                                                if ($transaction->agent && $transaction->agent->utilisateur && $transaction->agent->utilisateur->photo_profil) {
+                                                    $avatar = asset('storage/' . $transaction->agent->utilisateur->photo_profil);
+                                                }
+                                            @endphp
+                                            <img class="h-9 w-9 rounded-full object-cover" src="{{ $avatar }}" alt="{{ $transaction->client_nom ?? 'Agent' }}"/>
                                         </div>
                                         <div class="flex flex-col gap-0.5">
                                             <span class="leading-none font-medium text-sm">
-                                                {{ $transaction->client_nom ?? 'N/A' }}
+                                                @if($transaction->client_nom)
+                                                    {{ $transaction->client_nom }}
+                                                @elseif($transaction->agent && $transaction->agent->utilisateur)
+                                                    {{ $transaction->agent->utilisateur->prenom }} {{ $transaction->agent->utilisateur->nom }}
+                                                @else
+                                                    N/A
+                                                @endif
                                             </span>
                                             <span class="text-xs text-secondary-foreground font-normal">
-                                                {{ $transaction->client_telephone ?? 'N/A' }}
+                                                @if($transaction->client_telephone)
+                                                    {{ $transaction->client_telephone }}
+                                                @elseif($transaction->agent && $transaction->agent->utilisateur && $transaction->agent->utilisateur->telephone)
+                                                    {{ $transaction->agent->utilisateur->telephone }}
+                                                @else
+                                                    N/A
+                                                @endif
                                             </span>
                                         </div>
                                     </div>
@@ -150,81 +167,10 @@
                                 <td class="text-center text-foreground font-normal">
                                     {{ $transaction->date->locale('fr')->isoFormat('D MMM Y, HH:mm') }}
                                 </td>
-                                <td class="text-center">
-                                    <div class="kt-menu" data-kt-menu="true">
-                                        <div class="kt-menu-item" data-kt-menu-item-offset="0, 10px" data-kt-menu-item-placement="bottom-end" data-kt-menu-item-placement-rtl="bottom-start" data-kt-menu-item-toggle="dropdown" data-kt-menu-item-trigger="click">
-                                            <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
-                                                <i class="ki-filled ki-dots-vertical text-lg"></i>
-                                            </button>
-                                            <div class="kt-menu-dropdown kt-menu-default w-full max-w-[175px]" data-kt-menu-dismiss="true">
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link" href="{{ route('transactions.show', $transaction->id) }}">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-search-list"></i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            View
-                                                        </span>
-                                                    </a>
-                                                </div>
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link" href="#">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-file-up"></i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            Export
-                                                        </span>
-                                                    </a>
-                                                </div>
-                                                <div class="kt-menu-separator"></div>
-                                                @if($transaction->statut != 'valide')
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link" href="{{ route('transactions.edit', $transaction->id) }}">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-pencil"></i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            Edit
-                                                        </span>
-                                                    </a>
-                                                </div>
-                                                @endif
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link" href="#">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-copy"></i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            Make a copy
-                                                        </span>
-                                                    </a>
-                                                </div>
-                                                <div class="kt-menu-separator"></div>
-                                                @if($transaction->statut != 'annule')
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link" href="#" onclick="event.preventDefault(); if(confirm('Êtes-vous sûr de vouloir annuler cette transaction ?')) { document.getElementById('cancel-form-{{ $transaction->id }}').submit(); }">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-trash"></i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            Remove
-                                                        </span>
-                                                    </a>
-                                                    <form id="cancel-form-{{ $transaction->id }}" action="{{ route('transactions.destroy', $transaction->id) }}" method="POST" style="display: none;">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                    </form>
-                                                </div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
                             </tr>
                             @empty
                             <tr class="empty-row">
-                                <td colspan="7" class="text-center py-20 !border-0" style="width: 100% !important; padding: 5rem 0 !important; border: none !important; border-left: none !important; border-right: none !important;">
+                                <td colspan="6" class="text-center py-20 !border-0" style="width: 100% !important; padding: 5rem 0 !important; border: none !important; border-left: none !important; border-right: none !important;">
                                     <div class="flex flex-col items-center justify-center gap-5 w-full">
                                         <div class="flex items-center justify-center rounded-full bg-gray-100 size-20 dark:bg-gray-900">
                                             <i class="ki-filled ki-file text-4xl text-gray-500 dark:text-gray-400"></i>

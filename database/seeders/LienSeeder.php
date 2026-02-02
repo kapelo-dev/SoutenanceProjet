@@ -12,6 +12,12 @@ class LienSeeder extends Seeder
      */
     public function run(): void
     {
+        // Vérifier si les liens existent déjà pour éviter les doublons
+        if (Lien::where('libelle', 'Dashboard')->exists()) {
+            $this->command->info('⚠️  Les liens existent déjà. Utilisez php artisan migrate:fresh --seed pour réinitialiser.');
+            return;
+        }
+
         // Menus principaux
         $dashboard = Lien::create([
             'libelle' => 'Dashboard',
@@ -39,10 +45,18 @@ class LienSeeder extends Seeder
         ]);
 
         Lien::create([
+            'libelle' => 'Mon Dashboard',
+            'route' => 'agent.dashboard',
+            'parent_id' => $menuAgents->id,
+            'ordre' => 1,
+            'visible' => true,
+        ]);
+
+        Lien::create([
             'libelle' => 'Liste des Agents',
             'route' => 'agents.index',
             'parent_id' => $menuAgents->id,
-            'ordre' => 1,
+            'ordre' => 2,
             'visible' => true,
         ]);
 
@@ -50,7 +64,7 @@ class LienSeeder extends Seeder
             'libelle' => 'Soldes des Agents',
             'route' => 'agents.soldes',
             'parent_id' => $menuAgents->id,
-            'ordre' => 2,
+            'ordre' => 3,
             'visible' => true,
         ]);
 
@@ -103,12 +117,45 @@ class LienSeeder extends Seeder
             'visible' => true,
         ]);
 
+        // Menu Gestion d'Entreprise avec sous-menus (soumis aux permissions comme les autres)
+        $menuEntreprise = Lien::create([
+            'libelle' => 'Gestion d\'Entreprise',
+            'route' => 'gestion-entreprise.index',
+            'icone' => 'ki-filled ki-office-bag',
+            'ordre' => 8,
+            'visible' => true,
+        ]);
+
+        Lien::create([
+            'libelle' => 'Salaires',
+            'url' => '/gestion-entreprise?onglet=salaires',
+            'parent_id' => $menuEntreprise->id,
+            'ordre' => 1,
+            'visible' => true,
+        ]);
+
+        Lien::create([
+            'libelle' => 'Paramètres Salaire',
+            'url' => '/gestion-entreprise?onglet=parametres',
+            'parent_id' => $menuEntreprise->id,
+            'ordre' => 2,
+            'visible' => true,
+        ]);
+
+        Lien::create([
+            'libelle' => 'Trésorerie',
+            'url' => '/gestion-entreprise?onglet=tresorerie',
+            'parent_id' => $menuEntreprise->id,
+            'ordre' => 3,
+            'visible' => true,
+        ]);
+
         // Menu Configuration avec sous-menus
         $menuConfig = Lien::create([
             'libelle' => 'Configuration',
             'route' => null,
             'icone' => 'ki-filled ki-setting-2',
-            'ordre' => 8,
+            'ordre' => 9,
             'visible' => true,
         ]);
 
@@ -141,6 +188,14 @@ class LienSeeder extends Seeder
             'route' => 'operateurs.index',
             'parent_id' => $menuConfig->id,
             'ordre' => 4,
+            'visible' => true,
+        ]);
+
+        Lien::create([
+            'libelle' => 'Configuration App Mobile',
+            'route' => 'parametres-app-mobile.index',
+            'parent_id' => $menuConfig->id,
+            'ordre' => 5,
             'visible' => true,
         ]);
 

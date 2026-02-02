@@ -74,7 +74,11 @@
          </div>
          @endforelse
         </div>
-        <div class="kt-card-footer justify-center">
+        <div class="kt-card-footer justify-between">
+         <button class="kt-btn kt-btn-primary" id="btn_save_visibility" onclick="saveRoutesVisibility()">
+          <i class="ki-filled ki-check"></i>
+          <span>Enregistrer les modifications</span>
+         </button>
          <button class="kt-btn kt-btn-outline" data-kt-modal-toggle="#modal_nouvelle_route">
           Nouvelle Route
          </button>
@@ -295,5 +299,75 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function saveRoutesVisibility() {
+    // Collecter tous les switches et leurs états
+    const switches = document.querySelectorAll('input[type="checkbox"][name^="lien_"]');
+    const routes = [];
+    
+    switches.forEach(switchEl => {
+        const lienId = switchEl.value;
+        const visible = switchEl.checked;
+        routes.push({
+            id: parseInt(lienId),
+            visible: visible
+        });
+    });
+    
+    if (routes.length === 0) {
+        alert('Aucune route à mettre à jour.');
+        return;
+    }
+    
+    // Désactiver le bouton pendant le traitement
+    const saveBtn = document.getElementById('btn_save_visibility');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="ki-filled ki-loading"></i> Enregistrement...';
+    
+    fetch('{{ route("routes.update-visibility") }}', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ routes: routes })
+    })
+    .then(async (response) => {
+        if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            throw new Error(`Erreur HTTP ${response.status} ${text ? '- ' + text : ''}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Afficher un message de succès
+            alert(data.message || 'Modifications enregistrées avec succès !');
+            // Optionnel: recharger la page pour s'assurer de la synchronisation
+            // window.location.reload();
+        } else {
+            // Afficher les erreurs
+            if (data.errors) {
+                const errorMessages = Object.values(data.errors).flat().join('\n');
+                alert('Erreur: ' + errorMessages);
+            } else if (data.message) {
+                alert('Erreur: ' + data.message);
+            } else {
+                alert('Une erreur est survenue lors de l\'enregistrement.');
+            }
+            
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue lors de l\'enregistrement: ' + (error?.message || error));
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+    });
+}
 </script>
 @endsection

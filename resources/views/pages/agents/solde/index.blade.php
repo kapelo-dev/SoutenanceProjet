@@ -30,10 +30,7 @@
                     <i class="ki-filled ki-magnifier"></i>
                     <input data-kt-datatable-search="#soldes_table" placeholder="Rechercher un agent" type="text" value=""/>
                 </label>
-                <label class="kt-label whitespace-nowrap">
-                    Soldes Positifs
-                    <input class="kt-switch kt-switch-sm" name="check" type="checkbox" value="1"/>
-                </label>
+                
             </div>
         </div>
         <div class="kt-card-content">
@@ -93,7 +90,7 @@
                                         <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
-                                <th class="w-[50px]"></th>
+                                
                             </tr>
                         </thead>
                         <tbody>
@@ -138,7 +135,7 @@
                                             </span>
                                         </div>
                                         <div class="flex flex-col gap-0.5">
-                                            <a class="leading-none font-medium text-sm text-mono hover:text-primary" href="{{ route('agents.show', $agent->id) }}">
+                                            <a class="leading-none font-medium text-sm text-mono hover:text-primary" href="javascript:void(0)" onclick="loadAgentDetails({{ $agent->id }})">
                                                 {{ $agent->nomComplet }}
                                             </a>
                                             <span class="text-xs text-secondary-foreground font-normal">
@@ -158,24 +155,35 @@
                                     <div class="flex flex-col gap-1">
                                         <div class="flex items-center justify-between gap-2">
                                             <span class="text-xs text-primary font-medium">{{ number_format($totalVirtuel, 0, ',', ' ') }} FCFA</span>
-                                            @if($soldesVirtuels->count() > 1)
                                             <button class="kt-btn kt-btn-xs kt-btn-icon kt-btn-ghost" onclick="toggleDropdown(this)">
                                                 <i class="ki-filled ki-down text-xs transition-transform duration-200"></i>
                                             </button>
-                                            @endif
                                         </div>
-                                        @if($soldesVirtuels->count() > 1)
                                         <div class="hidden dropdown-content mt-1 border-t border-border pt-1">
                                             <div class="text-xs text-secondary-foreground">
                                                 @foreach($soldesVirtuels as $soldeVirtuel)
-                                                <div class="flex justify-between py-1">
-                                                    <span class="text-primary">{{ $soldeVirtuel->operateur ? $soldeVirtuel->operateur->libelle : 'N/A' }}</span>
+                                                <div class="flex justify-between items-center py-1 gap-2">
+                                                    <div class="flex items-center gap-1.5">
+                                                        @if($soldeVirtuel->operateur)
+                                                            @if($soldeVirtuel->operateur->logo)
+                                                                <span class="h-4 w-4 shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-muted">
+                                                                    <img src="{{ asset('storage/' . $soldeVirtuel->operateur->logo) }}" alt="{{ $soldeVirtuel->operateur->libelle }}" class="h-full w-full object-cover" />
+                                                                </span>
+                                                            @else
+                                                                <span class="h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-semibold text-white shrink-0" style="background-color: {{ $soldeVirtuel->operateur->couleur ?? '#6b7280' }}">
+                                                                    {{ strtoupper(substr($soldeVirtuel->operateur->libelle ?? '', 0, 1)) }}
+                                                                </span>
+                                                            @endif
+                                                            <span class="text-primary">{{ $soldeVirtuel->operateur->libelle }}</span>
+                                                        @else
+                                                            <span class="text-primary">N/A</span>
+                                                        @endif
+                                                    </div>
                                                     <span class="font-medium">{{ number_format($soldeVirtuel->montant, 0, ',', ' ') }} FCFA</span>
                                                 </div>
                                                 @endforeach
                                             </div>
                                         </div>
-                                        @endif
                                     </div>
                                     @else
                                     <span class="text-xs text-primary font-medium">0 FCFA</span>
@@ -187,58 +195,9 @@
                                 <td class="text-foreground text-sm font-normal">
                                     {{ $derniereMaj->locale('fr')->isoFormat('D MMM Y, HH:mm') }}
                                 </td>
-                                <td>
-                                    <div class="kt-menu" data-kt-menu="true">
-                                        <div class="kt-menu-item" data-kt-menu-item-offset="0, 10px" data-kt-menu-item-placement="bottom-end" data-kt-menu-item-placement-rtl="bottom-start" data-kt-menu-item-toggle="dropdown" data-kt-menu-item-trigger="click">
-                                            <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
-                                                <i class="ki-filled ki-dots-vertical text-lg"></i>
-                                            </button>
-                                            <div class="kt-menu-dropdown kt-menu-default w-full max-w-[175px]" data-kt-menu-dismiss="true">
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link" href="{{ route('agents.show', $agent->id) }}">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-search-list"></i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            Détails
-                                                        </span>
-                                                    </a>
-                                                </div>
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link" href="#">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-file-up"></i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            Exporter
-                                                        </span>
-                                                    </a>
-                                                </div>
-                                                <div class="kt-menu-separator"></div>
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link" href="{{ route('agents.edit', $agent->id) }}">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-pencil"></i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            Ajuster
-                                                        </span>
-                                                    </a>
-                                                </div>
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link" href="{{ route('agents.show', $agent->id) }}">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-arrows-circle"></i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            Historique
-                                                        </span>
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
+                                
+                                 
+                                
                             </tr>
                             @empty
                             <tr class="empty-row">

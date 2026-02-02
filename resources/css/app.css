@@ -1,1 +1,28 @@
 @import "tailwindcss";
+
+/* Espacement entre labels, inputs et textes d'aide dans les modals */
+.kt-modal .kt-modal-body .flex.flex-col.gap-2 {
+  gap: 1.25rem; /* 20px entre label, input et texte d'aide */
+}
+
+/* Plus d'espace entre les groupes de champs du formulaire modal */
+.kt-modal .kt-modal-body form.flex.flex-col {
+  gap: 1.75rem; /* 28px entre chaque bloc (agent, type, opérateur, etc.) */
+}
+
+/* Marge sous le texte d'aide pour bien séparer du bloc suivant */
+.kt-modal .kt-modal-body .flex.flex-col span.text-xs.text-muted-foreground {
+  margin-bottom: 0.25rem;
+}
+
+/* Texte d'aide sous les champs : gris clair */
+.kt-modal .kt-modal-body .text-muted-foreground {
+  color: var(--muted-foreground, #71717a);
+}
+
+/* Sidebar demo1 : au survol en mode collapse, décaler le contenu au lieu d'ouvrir par-dessus */
+@media (min-width: 64rem) {
+  .demo1.kt-sidebar-collapse:has(#sidebar:hover) {
+    --sidebar-width: var(--sidebar-default-width);
+  }
+}

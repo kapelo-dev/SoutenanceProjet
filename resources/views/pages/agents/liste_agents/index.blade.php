@@ -30,10 +30,7 @@
                     <i class="ki-filled ki-magnifier"></i>
                     <input data-kt-datatable-search="#agents_table" placeholder="Rechercher un agent" type="text" value=""/>
                 </label>
-                <label class="kt-label whitespace-nowrap">
-                    Agents Actifs
-                    <input class="kt-switch kt-switch-sm" name="check" type="checkbox" value="1"/>
-                </label>
+                
             </div>
         </div>
         <div class="kt-card-content">
@@ -100,7 +97,7 @@
                                             <img class="h-9 rounded-full" src="{{ $agent->utilisateur && $agent->utilisateur->photo_profil ? asset('storage/' . $agent->utilisateur->photo_profil) : asset('assets/media/avatars/300-3.png') }}"/>
                                         </div>
                                         <div class="flex flex-col gap-0.5">
-                                            <a class="leading-none font-medium text-sm text-mono hover:text-primary" href="{{ route('agents.show', $agent->id) }}">
+                                            <a class="leading-none font-medium text-sm text-mono hover:text-primary" href="javascript:void(0)" onclick="loadAgentDetails({{ $agent->id }})">
                                                 {{ $agent->nomComplet }}
                                             </a>
                                             @if($agent->utilisateur)
@@ -150,7 +147,7 @@
                                 </td>
                                 <td>
                                     <div class="kt-menu" data-kt-menu="true">
-                                        <div class="kt-menu-item" data-kt-menu-item-offset="0, 10px" data-kt-menu-item-placement="bottom-end" data-kt-menu-item-placement-rtl="bottom-start" data-kt-menu-item-toggle="dropdown" data-kt-menu-item-trigger="click">
+                                        <div class="kt-menu-item" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end" data-kt-menu-offset="0, 10px">
                                             <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
                                                 <i class="ki-filled ki-dots-vertical text-lg"></i>
                                             </button>
@@ -167,16 +164,6 @@
                                                         </span>
                                                     </a>
                                                 </div>
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link" href="#">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-file-up"></i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            Exporter
-                                                        </span>
-                                                    </a>
-                                                </div>
                                                 <div class="kt-menu-separator"></div>
                                                 <div class="kt-menu-item">
                                                     <a class="kt-menu-link edit-agent" 
@@ -187,16 +174,6 @@
                                                         </span>
                                                         <span class="kt-menu-title">
                                                             Modifier
-                                                        </span>
-                                                    </a>
-                                                </div>
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link" href="#">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-copy"></i>
-                                                        </span>
-                                                        <span class="kt-menu-title">
-                                                            Dupliquer
                                                         </span>
                                                     </a>
                                                 </div>
@@ -296,6 +273,99 @@
     /* Cacher le message par défaut du datatable si présent */
     #agents_table tbody tr td:only-child:not(.empty-row td) {
         display: none;
+    }
+    
+    /* Styles pour les menus déroulants */
+    .kt-menu {
+        position: relative;
+    }
+    
+    .kt-menu-dropdown {
+        display: none !important;
+        position: fixed !important; /* Fixed au lieu d'absolute pour être au-dessus de tout */
+        z-index: 99999 !important; /* Z-index très élevé */
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        min-width: 175px;
+        padding: 0.5rem 0;
+    }
+    
+    .kt-menu-dropdown.show {
+        display: block !important;
+    }
+    
+    /* S'assurer que le conteneur parent ne limite pas le z-index */
+    .kt-card,
+    .kt-card-content,
+    .kt-scrollable-x-auto {
+        position: relative;
+        z-index: auto;
+    }
+    
+    /* Les lignes du tableau doivent avoir un z-index bas */
+    #agents_table tbody tr {
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Le modal doit avoir un z-index très élevé pour être au-dessus de tout */
+    .kt-modal,
+    #modal_view_agent {
+        z-index: 100000 !important;
+    }
+    
+    .kt-modal-content {
+        z-index: 100001 !important;
+    }
+    
+    /* Mode sombre */
+    .dark .kt-menu-dropdown {
+        background: #1f2937;
+        border-color: #374151;
+    }
+    
+    .kt-menu-item {
+        position: relative;
+    }
+    
+    .kt-menu-link {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        color: #374151;
+        text-decoration: none;
+        transition: background-color 0.15s ease;
+        cursor: pointer;
+    }
+    
+    .kt-menu-link:hover {
+        background-color: #f3f4f6;
+    }
+    
+    .dark .kt-menu-link {
+        color: #d1d5db;
+    }
+    
+    .dark .kt-menu-link:hover {
+        background-color: #374151;
+    }
+    
+    .kt-menu-icon {
+        margin-right: 0.75rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .kt-menu-separator {
+        height: 1px;
+        background-color: #e5e7eb;
+        margin: 0.25rem 0;
+    }
+    
+    .dark .kt-menu-separator {
+        background-color: #374151;
     }
 </style>
 <script>
@@ -662,23 +732,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Toggle création kiosque
-        const creerKiosqueCheckbox = document.getElementById('creer_kiosque');
-        const kiosqueForm = document.getElementById('kiosque_form');
-        const kiosqueExistant = document.getElementById('kiosque_existant');
-        
-        if (creerKiosqueCheckbox) {
-            creerKiosqueCheckbox.addEventListener('change', function() {
-                isCreatingKiosque = this.checked;
-                if (this.checked) {
+        // IMPORTANT (AJAX): KTUI/Metronic peut recréer le DOM du switch,
+        // donc on utilise une délégation d'événements (robuste après navigation AJAX).
+        if (!window.__agentCreerKiosqueListenerAttached) {
+            window.__agentCreerKiosqueListenerAttached = true;
+
+            document.addEventListener('change', function (e) {
+                const target = e.target;
+                if (!target || target.id !== 'creer_kiosque') return;
+
+                const kiosqueForm = document.getElementById('kiosque_form');
+                const kiosqueExistant = document.getElementById('kiosque_existant');
+                if (!kiosqueForm || !kiosqueExistant) return;
+
+                isCreatingKiosque = target.checked;
+                if (target.checked) {
                     kiosqueForm.classList.remove('hidden');
                     kiosqueExistant.classList.add('hidden');
+
                     // Réinitialiser la carte après que le formulaire soit visible
-                    setTimeout(function() {
+                    setTimeout(function () {
                         initMap();
                     }, 300);
                 } else {
                     kiosqueForm.classList.add('hidden');
                     kiosqueExistant.classList.remove('hidden');
+
                     // Détruire la carte si elle existe
                     if (map) {
                         map.remove();
@@ -686,7 +765,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         marker = null;
                     }
                 }
-            });
+            }, true);
         }
         
         // Réinitialiser le formulaire quand le modal se ferme
@@ -831,7 +910,7 @@ function geolocaliser() {
     }
 }
 
-function resetAgentModal() {
+window.resetAgentModal = function resetAgentModal() {
     document.getElementById('form_nouvel_agent_kiosque').reset();
     document.getElementById('creer_kiosque').checked = false;
     document.getElementById('kiosque_form').classList.add('hidden');
@@ -858,7 +937,8 @@ function resetAgentModal() {
     });
 }
 
-function saveAgentWithKiosque() {
+window.saveAgentWithKiosque = function saveAgentWithKiosque() {
+    console.log('saveAgentWithKiosque appelée');
     const form = document.getElementById('form_nouvel_agent_kiosque');
     const formData = new FormData(form);
     
@@ -1117,21 +1197,37 @@ function saveAgentWithKiosque() {
             window.location.reload();
         } else {
             // Afficher les erreurs
+            console.error('Erreurs de validation:', data.errors);
+            
             if (data.errors) {
+                // Réinitialiser toutes les erreurs d'abord
+                document.querySelectorAll('.text-destructive').forEach(el => {
+                    el.classList.add('hidden');
+                    el.textContent = '';
+                });
+                
                 Object.keys(data.errors).forEach(field => {
                     // Gérer les erreurs de kiosque (kiosque.code, kiosque.nom, etc.)
                     const fieldName = field.startsWith('kiosque.') ? 'kiosque_' + field.replace('kiosque.', '') : field;
-                    const errorElement = document.getElementById('error_' + fieldName.replace('.', '_'));
+                    const errorElement = document.getElementById('error_' + fieldName.replace(/\./g, '_'));
                     if (errorElement) {
                         errorElement.textContent = data.errors[field][0];
                         errorElement.classList.remove('hidden');
                     } else {
-                        // Si l'élément d'erreur n'existe pas, afficher dans une alerte
-                        console.warn('Erreur pour le champ:', field, data.errors[field][0]);
+                        // Si l'élément d'erreur n'existe pas, afficher dans la console et dans une alerte
+                        console.warn('Élément d\'erreur introuvable pour le champ:', field, 'Valeur:', data.errors[field][0]);
                     }
                 });
+                
+                // Afficher un message général si des erreurs existent
+                if (Object.keys(data.errors).length > 0) {
+                    const errorMessages = Object.values(data.errors).flat().join('\n');
+                    alert('Erreurs de validation:\n\n' + errorMessages);
+                }
             } else if (data.message) {
                 alert('Erreur: ' + data.message);
+            } else {
+                alert('Une erreur est survenue lors de la création de l\'agent.');
             }
             
             submitBtn.disabled = false;
@@ -1589,20 +1685,132 @@ function initAgentsPageActions() {
     }, true);
 }
 
+// Fonction pour initialiser les menus KTMenu
+function initKTMenus() {
+    console.log('Initialisation des menus KTMenu...');
+    
+    // Méthode 1: Via MetronicCore
+    if (window.MetronicCore && typeof window.MetronicCore.initMenus === 'function') {
+        window.MetronicCore.initMenus();
+    }
+    
+    // Méthode 2: Initialisation manuelle de tous les menus
+    if (typeof KTMenu !== 'undefined') {
+        const menuElements = document.querySelectorAll('[data-kt-menu="true"]');
+        console.log('Menus trouvés:', menuElements.length);
+        
+        menuElements.forEach(function(el, index) {
+            // Détruire l'instance existante si elle existe
+            const existingInstance = KTMenu.getInstance(el);
+            if (existingInstance) {
+                existingInstance.destroy();
+            }
+            
+            // Créer une nouvelle instance
+            try {
+                const menu = new KTMenu(el);
+                console.log('Menu initialisé:', index + 1);
+            } catch (e) {
+                console.error('Erreur initialisation menu:', e);
+            }
+        });
+    }
+    
+    // Ajouter toujours le fallback manuel pour gérer les clics
+    // (même si KTMenu est disponible, au cas où il ne fonctionne pas)
+    console.log('Ajout du fallback manuel pour les menus');
+    
+    // Utiliser capture pour intercepter les clics avant les autres handlers
+    document.addEventListener('click', function(e) {
+        const menuToggle = e.target.closest('.kt-menu-toggle');
+        if (menuToggle) {
+            console.log('Clic sur menu toggle détecté');
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const menuItem = menuToggle.closest('.kt-menu-item');
+            const dropdown = menuItem ? menuItem.querySelector('.kt-menu-dropdown') : null;
+            
+            console.log('Dropdown trouvé:', dropdown ? 'oui' : 'non');
+            
+            if (dropdown) {
+                // Fermer tous les autres dropdowns
+                document.querySelectorAll('.kt-menu-dropdown').forEach(d => {
+                    if (d !== dropdown) {
+                        d.classList.remove('show');
+                        d.style.display = 'none';
+                    }
+                });
+                
+                // Toggle le dropdown actuel
+                const isOpen = dropdown.classList.contains('show');
+                console.log('État actuel du dropdown:', isOpen ? 'ouvert' : 'fermé');
+                
+                if (isOpen) {
+                    dropdown.classList.remove('show');
+                    dropdown.style.display = 'none';
+                    console.log('Fermeture du dropdown');
+                } else {
+                    // Positionner le dropdown en fixed pour qu'il soit au-dessus de tout
+                    const rect = menuToggle.getBoundingClientRect();
+                    dropdown.style.position = 'fixed';
+                    dropdown.style.top = (rect.bottom + 5) + 'px'; // 5px sous le bouton
+                    dropdown.style.right = (window.innerWidth - rect.right) + 'px'; // Aligné à droite du bouton
+                    dropdown.style.zIndex = '99999';
+                    
+                    dropdown.classList.add('show');
+                    dropdown.style.display = 'block';
+                    console.log('Ouverture du dropdown à position:', dropdown.style.top, dropdown.style.right);
+                }
+            }
+            return false;
+        }
+        
+        // Fermer les dropdowns quand on clique ailleurs
+        if (!e.target.closest('.kt-menu')) {
+            const openDropdowns = document.querySelectorAll('.kt-menu-dropdown.show');
+            if (openDropdowns.length > 0) {
+                console.log('Fermeture de', openDropdowns.length, 'dropdown(s) ouverts');
+                openDropdowns.forEach(d => {
+                    d.classList.remove('show');
+                    d.style.display = 'none';
+                });
+            }
+        }
+    }, true); // Utiliser capture phase
+    
+    console.log('Fallback manuel activé');
+}
+
 // Initialisation sur chargement normal
 document.addEventListener('DOMContentLoaded', function() {
+    // Attendre que tout soit chargé avant d'initialiser les menus
+    setTimeout(() => {
+        initKTMenus();
+    }, 300);
+    
     initAgentsPageActions();
 });
 
 // Réinitialisation après navigation AJAX
 document.addEventListener('ajax-content-loaded', function() {
-    // Réinitialiser les menus Metronic
-    if (window.MetronicCore && typeof window.MetronicCore.initMenus === 'function') {
-        window.MetronicCore.initMenus();
-    }
-    // Les event listeners sont déjà attachés au niveau du document, donc pas besoin de les réinitialiser
-    // Mais on peut forcer une réinitialisation si nécessaire
-    initAgentsPageActions();
+    // Attendre un court délai pour que les scripts soient exécutés
+    setTimeout(() => {
+        // Réinitialiser les menus
+        initKTMenus();
+        
+        // Les event listeners sont déjà attachés au niveau du document, donc pas besoin de les réinitialiser
+        // Mais on peut forcer une réinitialisation si nécessaire
+        initAgentsPageActions();
+        
+        // Vérifier que les fonctions globales sont accessibles
+        if (typeof window.saveAgentWithKiosque !== 'function') {
+            console.error('saveAgentWithKiosque n\'est pas accessible après navigation AJAX');
+        }
+        if (typeof window.resetAgentModal !== 'function') {
+            console.error('resetAgentModal n\'est pas accessible après navigation AJAX');
+        }
+    }, 100);
 });
 
 </script>
@@ -1642,10 +1850,7 @@ document.addEventListener('ajax-content-loaded', function() {
                         </div>
                     </div>
                     <div class="flex justify-end gap-2">
-                        <button class="kt-btn kt-btn-primary" id="view_agent_connect_btn">
-                            <i class="ki-filled ki-users"></i>
-                            Contacter
-                        </button>
+                        
                         <button class="kt-btn kt-btn-icon kt-btn-outline">
                             <i class="ki-filled ki-messages"></i>
                         </button>

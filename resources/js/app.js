@@ -4,6 +4,10 @@ import './ajax-navigation';
 // Importer les modules de cartes
 import './maps/dashboard-month-map';
 import './maps/kiosques-map';
+// Importer le système de permissions de menu
+import './menu-permissions';
+// Importer le système d'initialisation des pages
+import './page-init';
 
 // Start Alpine.js
 window.Alpine = Alpine;
@@ -130,8 +134,24 @@ function initModals() {
             const modal = document.querySelector(modalId);
 
             if (modal) {
-                modal.classList.toggle('hidden');
-                modal.classList.toggle('flex');
+                // Certains modals ont un style inline `display: none;`
+                // Donc on ne peut pas se contenter de toggle les classes.
+                const isHiddenByClass = modal.classList.contains('hidden');
+                const isHiddenByStyle = (modal.style && modal.style.display === 'none');
+
+                const shouldShow = isHiddenByClass || isHiddenByStyle;
+
+                if (shouldShow) {
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    modal.style.display = 'flex';
+                    modal.classList.add('show');
+                } else {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    modal.style.display = 'none';
+                    modal.classList.remove('show');
+                }
             }
         });
     });
@@ -250,3 +270,6 @@ window.MetronicCore = {
     initMetronicCore,
     initSoldesPage
 };
+
+// Exposer initSoldesPage globalement pour le système de réinitialisation automatique
+window.initSoldesPage = initSoldesPage;

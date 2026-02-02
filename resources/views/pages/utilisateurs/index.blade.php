@@ -14,8 +14,8 @@
         Affichage de {{ $utilisateurs->total() }} utilisateur{{ $utilisateurs->total() > 1 ? 's' : '' }}
        </h3>
        <div class="flex items-center flex-wrap gap-5">
-        <form method="GET" action="{{ route('utilisateurs.index') }}" class="flex items-center gap-2.5">
-         <select name="statut" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner un statut" onchange="this.form.submit()">
+        <form method="GET" action="{{ route('utilisateurs.index') }}" class="flex items-center gap-2.5" id="utilisateurs-filter-form">
+         <select name="statut" id="filter-statut" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner un statut">
           <option value="">Tous les statuts</option>
           <option value="actif" {{ request('statut') == 'actif' ? 'selected' : '' }}>
            Actif
@@ -27,7 +27,7 @@
            Suspendu
           </option>
          </select>
-         <select name="profil_id" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner un profil" onchange="this.form.submit()">
+         <select name="profil_id" id="filter-profil" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner un profil">
           <option value="">Tous les profils</option>
           @foreach($profils ?? [] as $profil)
           <option value="{{ $profil->id }}" {{ request('profil_id') == $profil->id ? 'selected' : '' }}>
@@ -37,11 +37,11 @@
          </select>
          <input type="hidden" name="search" value="{{ request('search') }}">
         </form>
-        <form method="GET" action="{{ route('utilisateurs.index') }}" class="flex">
+        <form method="GET" action="{{ route('utilisateurs.index') }}" class="flex" id="utilisateurs-search-form">
          <label class="kt-input">
           <i class="ki-filled ki-magnifier">
           </i>
-          <input placeholder="Rechercher par nom, prénom, email" type="text" name="search" value="{{ request('search') }}" onkeyup="if(event.key === 'Enter') this.form.submit()"/>
+          <input placeholder="Rechercher par nom, prénom, email" type="text" name="search" id="filter-search" value="{{ request('search') }}"/>
           @if(request('statut'))
           <input type="hidden" name="statut" value="{{ request('statut') }}">
           @endif
@@ -291,19 +291,22 @@
            </div>
           </div>
           <div class="flex items-center flex-col">
-           <div class="flex items-center gap-1.5 mb-2">
-            <span id="modal_profile_name" class="text-xl leading-6 font-semibold text-foreground">
-             
-            </span>
+           <div class="flex items-center gap-2 mb-2">
+            <span id="modal_profile_name" class="text-xl leading-6 font-semibold text-foreground"></span>
+            <svg class="text-primary" fill="none" height="18" viewBox="0 0 15 16" width="18" xmlns="http://www.w3.org/2000/svg">
+             <path d="M14.5425 6.89749L13.5 5.83999C13.4273 5.76877 13.3699 5.6835 13.3312 5.58937C13.2925 5.49525 13.2734 5.39424 13.275 5.29249V3.79249C13.274 3.58699 13.2324 3.38371 13.1527 3.19432C13.0729 3.00494 12.9565 2.83318 12.8101 2.68892C12.6638 2.54466 12.4904 2.43073 12.2998 2.35369C12.1093 2.27665 11.9055 2.23801 11.7 2.23999H10.2C10.0982 2.24159 9.99722 2.22247 9.9031 2.18378C9.80898 2.1451 9.72371 2.08767 9.65249 2.01499L8.60249 0.957487C8.30998 0.665289 7.91344 0.50116 7.49999 0.50116C7.08654 0.50116 6.68999 0.665289 6.39749 0.957487L5.33999 1.99999C5.26876 2.07267 5.1835 2.1301 5.08937 2.16879C4.99525 2.20747 4.89424 2.22659 4.79249 2.22499H3.29249C3.08699 2.22597 2.88371 2.26754 2.69432 2.34731C2.50494 2.42709 2.33318 2.54349 2.18892 2.68985C2.04466 2.8362 1.93073 3.00961 1.85369 3.20013C1.77665 3.39064 1.73801 3.5945 1.73999 3.79999V5.29999C1.74159 5.40174 1.72247 5.50275 1.68378 5.59687C1.6451 5.691 1.58767 5.77627 1.51499 5.84749L0.457487 6.89749C0.165289 7.19 0.00115967 7.58654 0.00115967 7.99999C0.00115967 8.41344 0.165289 8.80998 0.457487 9.10249L1.49999 10.16C1.57267 10.2312 1.6301 10.3165 1.66878 10.4106C1.70747 10.5047 1.72659 10.6057 1.72499 10.7075V12.2075C1.72597 12.413 1.76754 12.6163 1.84731 12.8056C1.92709 12.995 2.04349 13.1668 2.18985 13.3111C2.3362 13.4553 2.50961 13.5692 2.70013 13.6463C2.89064 13.7233 3.0945 13.762 3.29999 13.76H4.79999C4.90174 13.7584 5.00275 13.7775 5.09687 13.8162C5.191 13.8549 5.27627 13.9123 5.34749 13.985L6.40499 15.0425C6.69749 15.3347 7.09404 15.4988 7.50749 15.4988C7.92094 15.4988 8.31748 15.3347 8.60999 15.0425L9.65999 14C9.73121 13.9273 9.81647 13.8699 9.9106 13.8312C10.0047 13.7925 10.1057 13.7734 10.2075 13.775H11.7075C12.1212 13.775 12.518 13.6106 12.8106 13.3181C13.1031 13.0255 13.2675 12.6287 13.2675 12.215V10.715C13.2659 10.6132 13.285 10.5122 13.3237 10.4181C13.3624 10.324 13.4198 10.2387 13.4925 10.1675L14.55 9.10999C14.6953 8.96452 14.8104 8.79176 14.8887 8.60164C14.9671 8.41152 15.007 8.20779 15.0063 8.00218C15.0056 7.79656 14.9643 7.59311 14.8847 7.40353C14.8051 7.21394 14.6888 7.04197 14.5425 6.89749ZM10.635 6.64999L6.95249 10.25C6.90055 10.3026 6.83864 10.3443 6.77038 10.3726C6.70212 10.4009 6.62889 10.4153 6.55499 10.415C6.48062 10.4139 6.40719 10.3982 6.33896 10.3685C6.27073 10.3389 6.20905 10.2961 6.15749 10.2425L4.37999 8.44249C4.32532 8.39044 4.28169 8.32793 4.25169 8.25867C4.22169 8.18941 4.20593 8.11482 4.20536 8.03934C4.20479 7.96387 4.21941 7.88905 4.24836 7.81934C4.27731 7.74964 4.31999 7.68647 4.37387 7.63361C4.42774 7.58074 4.4917 7.53926 4.56194 7.51163C4.63218 7.484 4.70726 7.47079 4.78271 7.47278C4.85816 7.47478 4.93244 7.49194 5.00112 7.52324C5.0698 7.55454 5.13148 7.59935 5.18249 7.65499L6.56249 9.05749L9.84749 5.84749C9.95296 5.74215 10.0959 5.68298 10.245 5.68298C10.394 5.68298 10.537 5.74215 10.6425 5.84749C10.6953 5.90034 10.737 5.96318 10.7653 6.03234C10.7935 6.1015 10.8077 6.1756 10.807 6.25031C10.8063 6.32502 10.7908 6.39884 10.7612 6.46746C10.7317 6.53608 10.6888 6.59813 10.635 6.64999Z" fill="currentColor"></path>
+            </svg>
            </div>
-           <div class="flex flex-wrap justify-center gap-2 lg:gap-3 text-sm">
-            <div class="flex gap-1 items-center" id="modal_profile_profils_container" style="display: none;">
-             <i class="ki-filled ki-abstract text-muted-foreground text-base"></i>
-             <span id="modal_profile_profils" class="text-secondary-foreground"></span>
+           <div class="flex flex-wrap justify-center gap-3 lg:gap-4 text-sm">
+            <div class="flex gap-2 items-center" id="modal_profile_profils_container" style="display: none;">
+             <span class="kt-badge kt-badge-primary kt-badge-outline">
+              <i class="ki-filled ki-abstract-41 me-1"></i>
+              <span id="modal_profile_profils" class="font-medium"></span>
+             </span>
             </div>
-            <div class="flex gap-1 items-center">
-             <i class="ki-filled ki-sms text-muted-foreground text-base"></i>
-             <a id="modal_profile_email" class="text-secondary-foreground hover:text-primary" href="#"></a>
+            <div class="flex gap-2 items-center">
+             <i class="ki-filled ki-sms text-primary text-lg"></i>
+             <a id="modal_profile_email" class="text-secondary-foreground hover:text-primary font-medium" href="#"></a>
             </div>
            </div>
           </div>
@@ -312,13 +315,14 @@
        <div class="kt-modal-body kt-scrollable-y py-5 mb-5 px-6">
         <div class="flex justify-center">
          <div class="w-full max-w-2xl">
-          <div class="kt-card">
-           <div class="kt-card-header">
-            <h3 class="kt-card-title">
-             Informations
+          <div class="kt-card shadow-sm">
+           <div class="kt-card-header bg-primary/5 border-b border-primary/20">
+            <h3 class="kt-card-title text-primary flex items-center gap-2">
+             <i class="ki-filled ki-information-circle text-xl"></i>
+             Informations détaillées
             </h3>
            </div>
-           <div class="kt-card-content pt-4 pb-5">
+           <div class="kt-card-content pt-5 pb-6">
             <table class="kt-table-auto w-full">
              <tbody id="modal_profile_about">
               <!-- Les informations seront chargées dynamiquement -->
@@ -334,182 +338,125 @@
    <!-- End Modal de Profil Utilisateur -->
 
 <script>
-// Fonction pour charger et afficher les détails d'un utilisateur
-window.loadUserProfile = function(id) {
-    const modal = document.getElementById('modal_profile');
-    if (!modal) {
-        console.error('Modal de profil utilisateur introuvable');
-        return;
+// La fonction loadUserProfile est définie dans resources/js/page-init.js
+// et est disponible globalement via window.loadUserProfile
+
+// Filtrage en temps réel via AJAX
+(function() {
+    let searchTimeout;
+    
+    // Fonction pour charger les utilisateurs via AJAX
+    function loadUtilisateurs() {
+        // Récupérer les valeurs actuelles des filtres à chaque appel
+        const filterStatut = document.getElementById('filter-statut');
+        const filterProfil = document.getElementById('filter-profil');
+        const filterSearch = document.getElementById('filter-search');
+        
+        if (!filterStatut || !filterProfil || !filterSearch) {
+            console.error('Éléments de filtre non trouvés');
+            return;
+        }
+        
+        const statut = filterStatut.value;
+        const profilId = filterProfil.value;
+        const search = filterSearch.value;
+        
+        console.log('Chargement avec filtres:', { statut, profilId, search });
+        
+        // Construire l'URL avec les paramètres
+        const params = new URLSearchParams();
+        if (statut) params.append('statut', statut);
+        if (profilId) params.append('profil_id', profilId);
+        if (search) params.append('search', search);
+        
+        const url = '{{ route("utilisateurs.index") }}' + (params.toString() ? '?' + params.toString() : '');
+        
+        // Récupérer seulement la section des résultats (pas les filtres)
+        const resultsContainer = document.querySelector('#team_crew_card, #team_crew_list').parentElement;
+        const countElement = document.querySelector('h3.text-base.text-mono');
+        
+        if (resultsContainer) {
+            resultsContainer.style.opacity = '0.6';
+            resultsContainer.style.pointerEvents = 'none';
+        }
+        
+        // Faire la requête AJAX
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Erreur de chargement');
+            return response.text();
+        })
+        .then(html => {
+            // Parser le HTML reçu
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Extraire seulement la section des résultats (pas les filtres)
+            const newResults = doc.querySelector('#team_crew_card, #team_crew_list').parentElement;
+            const newCount = doc.querySelector('h3.text-base.text-mono');
+            
+            if (newResults && resultsContainer) {
+                // Remplacer seulement les résultats
+                resultsContainer.innerHTML = newResults.innerHTML;
+                
+                // Mettre à jour le compteur
+                if (newCount && countElement) {
+                    countElement.textContent = newCount.textContent;
+                }
+                
+                // Restaurer l'opacité
+                resultsContainer.style.opacity = '1';
+                resultsContainer.style.pointerEvents = 'auto';
+                
+                // Mettre à jour l'URL sans recharger la page
+                window.history.pushState({}, '', url);
+                
+                console.log('Utilisateurs rechargés via AJAX');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des utilisateurs:', error);
+            if (resultsContainer) {
+                resultsContainer.style.opacity = '1';
+                resultsContainer.style.pointerEvents = 'auto';
+            }
+        });
     }
     
-    // Afficher un indicateur de chargement
-    const avatar = document.getElementById('modal_profile_avatar');
-    const name = document.getElementById('modal_profile_name');
-    const email = document.getElementById('modal_profile_email');
-    const profils = document.getElementById('modal_profile_profils');
-    const profilsContainer = document.getElementById('modal_profile_profils_container');
-    const about = document.getElementById('modal_profile_about');
-    
-    // Réinitialiser le contenu
-    if (avatar) avatar.src = '';
-    if (name) name.textContent = 'Chargement...';
-    if (email) email.textContent = '';
-    if (profils) profils.textContent = '';
-    if (profilsContainer) profilsContainer.style.display = 'none';
-    if (about) about.innerHTML = '';
-    
-    fetch(`/utilisateurs/${id}`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
+    // Utiliser la délégation d'événements sur le document pour capturer les changements
+    document.addEventListener('change', function(e) {
+        if (e.target.id === 'filter-statut' || e.target.id === 'filter-profil') {
+            console.log('Filtre changé:', e.target.id, '=', e.target.value);
+            loadUtilisateurs();
         }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Erreur lors du chargement des données');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (!data.success || !data.utilisateur) {
-            throw new Error('Données invalides reçues');
-        }
-        
-        const user = data.utilisateur;
-        
-        // Remplir les informations de base
-        if (avatar) {
-            const avatarContainer = avatar.parentNode;
-            // Supprimer l'ancien div d'initiales s'il existe
-            const oldInitialDiv = avatarContainer.querySelector('.avatar-initial');
-            if (oldInitialDiv) {
-                oldInitialDiv.remove();
-            }
-            
-            if (user.photo_profil_url) {
-                avatar.src = user.photo_profil_url;
-                avatar.style.display = 'block';
-                avatar.alt = `${user.prenom} ${user.nom}`;
-            } else {
-                // Afficher les initiales
-                const initial = (user.prenom ? user.prenom.charAt(0) : user.nom.charAt(0)).toUpperCase();
-                avatar.style.display = 'none';
-                // Créer un div pour les initiales
-                const initialDiv = document.createElement('div');
-                initialDiv.className = 'flex items-center justify-center relative text-2xl text-green-500 w-[100px] h-[100px] ring-1 ring-green-200 dark:ring-green-950 bg-green-50 dark:bg-green-950/30 rounded-full avatar-initial';
-                initialDiv.textContent = initial;
-                initialDiv.style.display = 'flex';
-                avatarContainer.appendChild(initialDiv);
-            }
-        }
-        
-        if (name) {
-            name.textContent = `${user.prenom} ${user.nom}`;
-        }
-        
-        if (email) {
-            email.textContent = user.email;
-            email.href = `mailto:${user.email}`;
-        }
-        
-        // Afficher les profils
-        if (user.profils && user.profils.length > 0) {
-            if (profils) {
-                profils.textContent = user.profils.map(p => p.libelle).join(', ');
-            }
-            if (profilsContainer) {
-                profilsContainer.style.display = 'flex';
-            }
-        } else {
-            if (profilsContainer) {
-                profilsContainer.style.display = 'none';
-            }
-        }
-        
-        // Remplir la section "About"
-        if (about) {
-            let aboutHtml = '';
-            if (user.telephone) {
-                aboutHtml += `
-                    <tr>
-                        <td class="text-sm text-secondary-foreground pb-3.5 pe-3">Téléphone:</td>
-                        <td class="text-sm text-mono pb-3.5">${user.telephone}</td>
-                    </tr>
-                `;
-            }
-            if (user.statut) {
-                const statutLabels = {
-                    'actif': 'Actif',
-                    'inactif': 'Inactif',
-                    'suspendu': 'Suspendu'
-                };
-                aboutHtml += `
-                    <tr>
-                        <td class="text-sm text-secondary-foreground pb-3.5 pe-3">Statut:</td>
-                        <td class="text-sm text-mono pb-3.5">${statutLabels[user.statut] || user.statut}</td>
-                    </tr>
-                `;
-            }
-            if (user.dernier_connexion) {
-                aboutHtml += `
-                    <tr>
-                        <td class="text-sm text-secondary-foreground pb-3.5 pe-3">Dernière connexion:</td>
-                        <td class="text-sm text-mono pb-3.5">${user.dernier_connexion}</td>
-                    </tr>
-                `;
-            }
-            if (user.created_at) {
-                aboutHtml += `
-                    <tr>
-                        <td class="text-sm text-secondary-foreground pb-3.5 pe-3">Membre depuis:</td>
-                        <td class="text-sm text-mono pb-3.5">${user.created_at}</td>
-                    </tr>
-                `;
-            }
-            if (user.profils && user.profils.length > 0) {
-                aboutHtml += `
-                    <tr>
-                        <td class="text-sm text-secondary-foreground pb-3.5 pe-3">Profils:</td>
-                        <td class="text-sm text-mono pb-3.5">${user.profils.map(p => p.libelle).join(', ')}</td>
-                    </tr>
-                `;
-            }
-            about.innerHTML = aboutHtml || '<tr><td colspan="2" class="text-sm text-secondary-foreground text-center py-4">Aucune information disponible</td></tr>';
-        }
-        
-        // Ouvrir le modal après un court délai pour s'assurer que le contenu est rendu
-        setTimeout(() => {
-            try {
-                // Essayer d'obtenir l'instance existante
-                let modalInstance = KTModal.getInstance(modal);
-                
-                if (!modalInstance) {
-                    // Initialiser le modal si nécessaire
-                    if (typeof KTModal !== 'undefined') {
-                        modalInstance = new KTModal(modal);
-                    }
-                }
-                
-                if (modalInstance) {
-                    modalInstance.show();
-                } else {
-                    // Fallback: utiliser l'approche manuelle
-                    modal.style.display = 'flex';
-                    modal.classList.add('show');
-                    document.body.classList.add('modal-open');
-                }
-            } catch (error) {
-                console.error('Erreur lors de l\'ouverture du modal:', error);
-                // Fallback simple
-                modal.style.display = 'flex';
-                modal.classList.add('show');
-            }
-        }, 100);
-    })
-    .catch(error => {
-        console.error('Erreur lors du chargement du profil utilisateur:', error);
-        alert('Une erreur est survenue lors du chargement des données: ' + error.message);
     });
-};
+    
+    // Pour le champ de recherche, utiliser input avec debounce
+    document.addEventListener('input', function(e) {
+        if (e.target.id === 'filter-search') {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function() {
+                console.log('Recherche:', e.target.value);
+                loadUtilisateurs();
+            }, 500);
+        }
+    });
+    
+    // Support de la touche Entrée pour recherche immédiate
+    document.addEventListener('keydown', function(e) {
+        if (e.target.id === 'filter-search' && e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(searchTimeout);
+            loadUtilisateurs();
+        }
+    });
+    
+    console.log('Filtrage en temps réel activé pour les utilisateurs (avec délégation d\'événements)');
+})();
 </script>
 @endsection

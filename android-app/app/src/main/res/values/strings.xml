@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PDV Connect SMS</string>
+    <string name="privacy_title">Confidentialité et paramètres</string>
+    <string name="privacy_description">Cette application lit les SMS provenant d’un numéro ou d’une conversation que vous configurez, afin d’extraire les notifications de transaction (Mobile Money) et de les envoyer au serveur PDV Connect. Aucun autre SMS n’est lu ni stocké. Les données envoyées sont : montant, type, référence, date et texte pertinent.</string>
+    <string name="consent_label">J’accepte que l’application lise les SMS de transaction et les envoie au serveur</string>
+    <string name="service_enabled_label">Service de transfert SMS activé</string>
+    <string name="api_url_hint">URL de l’API (ex. https://votredomaine.com)</string>
+    <string name="api_token_hint">Token API (fourni par l’administrateur)</string>
+    <string name="filter_number_hint">Numéro ou shortcode à filtrer (ex. 8282). Vide = tous les SMS</string>
+    <string name="filters_label">Filtres SMS (numéros ou noms de discussions, ex. FLOOZ)</string>
+    <string name="add_filter_line">+ Ajouter une ligne</string>
+    <string name="code_config_hint">Code d\'accès à cette page (saisir le code fourni par l\'admin)</string>
+    <string name="code_entry_title">Accès à la configuration</string>
+    <string name="code_entry_hint">Saisissez le code pour accéder aux paramètres.</string>
+    <string name="code_entry_field_hint">Code</string>
+    <string name="code_access_button">Accéder</string>
+    <string name="save">Enregistrer</string>
+    <string name="notification_channel_name">Transfert SMS</string>
+    <string name="notification_channel_description">Notifications du service de transfert des SMS de transaction.</string>
+</resources>

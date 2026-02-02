@@ -19,7 +19,7 @@
          Carte des kiosques
         </a>
         <form method="GET" action="{{ route('kiosques.index') }}" class="flex items-center gap-2.5">
-         <select name="statut" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner un statut" onchange="this.form.submit()">
+         <select name="statut" id="filter-kiosque-statut" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner un statut">
           <option value="">Tous les statuts</option>
           <option value="actif" {{ request('statut') == 'actif' ? 'selected' : '' }}>
            Actif
@@ -31,7 +31,7 @@
            En travaux
           </option>
          </select>
-         <select name="type" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner un type" onchange="this.form.submit()">
+         <select name="type" id="filter-kiosque-type" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner un type">
           <option value="">Tous les types</option>
           <option value="fixe" {{ request('type') == 'fixe' ? 'selected' : '' }}>
            Fixe
@@ -41,7 +41,7 @@
           </option>
          </select>
          @if($villes && $villes->count() > 0)
-         <select name="ville" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner une ville" onchange="this.form.submit()">
+         <select name="ville" id="filter-kiosque-ville" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner une ville">
           <option value="">Toutes les villes</option>
           @foreach($villes as $ville)
           <option value="{{ $ville }}" {{ request('ville') == $ville ? 'selected' : '' }}>
@@ -56,7 +56,7 @@
          <label class="kt-input">
           <i class="ki-filled ki-magnifier">
           </i>
-          <input placeholder="Rechercher par nom, code, quartier" type="text" name="search" value="{{ request('search') }}" onkeyup="if(event.key === 'Enter') this.form.submit()"/>
+          <input placeholder="Rechercher par nom, code, quartier" type="text" name="search" id="filter-kiosque-search" value="{{ request('search') }}"/>
           @if(request('statut'))
           <input type="hidden" name="statut" value="{{ request('statut') }}">
           @endif
@@ -289,4 +289,128 @@
     </div>
     <!-- End of Container -->
    </main>
+
+<script>
+// Filtrage en temps réel via AJAX pour les kiosques
+(function() {
+    let searchTimeout;
+    
+    // Fonction pour charger les kiosques via AJAX
+    function loadKiosques() {
+        const filterStatut = document.getElementById('filter-kiosque-statut');
+        const filterType = document.getElementById('filter-kiosque-type');
+        const filterVille = document.getElementById('filter-kiosque-ville');
+        const filterSearch = document.getElementById('filter-kiosque-search');
+        
+        if (!filterStatut || !filterType || !filterSearch) {
+            console.error('Éléments de filtre non trouvés');
+            return;
+        }
+        
+        const statut = filterStatut.value;
+        const type = filterType.value;
+        const ville = filterVille ? filterVille.value : '';
+        const search = filterSearch.value;
+        
+        console.log('Chargement avec filtres:', { statut, type, ville, search });
+        
+        // Construire l'URL avec les paramètres
+        const params = new URLSearchParams();
+        if (statut) params.append('statut', statut);
+        if (type) params.append('type', type);
+        if (ville) params.append('ville', ville);
+        if (search) params.append('search', search);
+        
+        const url = '{{ route("kiosques.index") }}' + (params.toString() ? '?' + params.toString() : '');
+        
+        // Récupérer la section des résultats
+        const resultsContainer = document.querySelector('#kiosques_card, #kiosques_list').parentElement;
+        const countElement = document.querySelector('h3.text-base.text-mono');
+        
+        if (resultsContainer) {
+            resultsContainer.style.opacity = '0.6';
+            resultsContainer.style.pointerEvents = 'none';
+        }
+        
+        // Faire la requête AJAX
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Erreur de chargement');
+            return response.text();
+        })
+        .then(html => {
+            // Parser le HTML reçu
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Extraire seulement la section des résultats
+            const newResults = doc.querySelector('#kiosques_card, #kiosques_list').parentElement;
+            const newCount = doc.querySelector('h3.text-base.text-mono');
+            
+            if (newResults && resultsContainer) {
+                // Remplacer seulement les résultats
+                resultsContainer.innerHTML = newResults.innerHTML;
+                
+                // Mettre à jour le compteur
+                if (newCount && countElement) {
+                    countElement.textContent = newCount.textContent;
+                }
+                
+                // Restaurer l'opacité
+                resultsContainer.style.opacity = '1';
+                resultsContainer.style.pointerEvents = 'auto';
+                
+                // Mettre à jour l'URL sans recharger la page
+                window.history.pushState({}, '', url);
+                
+                console.log('Kiosques rechargés via AJAX');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des kiosques:', error);
+            if (resultsContainer) {
+                resultsContainer.style.opacity = '1';
+                resultsContainer.style.pointerEvents = 'auto';
+            }
+        });
+    }
+    
+    // Utiliser la délégation d'événements sur le document
+    document.addEventListener('change', function(e) {
+        if (e.target.id === 'filter-kiosque-statut' || 
+            e.target.id === 'filter-kiosque-type' || 
+            e.target.id === 'filter-kiosque-ville') {
+            console.log('Filtre changé:', e.target.id, '=', e.target.value);
+            loadKiosques();
+        }
+    });
+    
+    // Pour le champ de recherche, utiliser input avec debounce
+    document.addEventListener('input', function(e) {
+        if (e.target.id === 'filter-kiosque-search') {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function() {
+                console.log('Recherche:', e.target.value);
+                loadKiosques();
+            }, 500);
+        }
+    });
+    
+    // Support de la touche Entrée pour recherche immédiate
+    document.addEventListener('keydown', function(e) {
+        if (e.target.id === 'filter-kiosque-search' && e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(searchTimeout);
+            loadKiosques();
+        }
+    });
+    
+    console.log('Filtrage en temps réel activé pour les kiosques');
+})();
+</script>
 @endsection

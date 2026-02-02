@@ -16,7 +16,7 @@ class TransactionController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Transaction::with(['agent', 'operateur']);
+        $query = Transaction::with(['agent.utilisateur', 'operateur']);
 
         // Filtres
         if ($request->filled('statut')) {
@@ -113,6 +113,82 @@ class TransactionController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Erreur lors de la création de la transaction.'])->withInput();
+        }
+    }
+
+    /**
+     * Créer une transaction depuis l'application Android (SMS).
+     * Authentification : Bearer token (config sms_api.token).
+     */
+    public function storeFromSms(Request $request)
+    {
+        $validated = $request->validate([
+            'montant' => 'required|numeric|min:0.01',
+            'type' => 'required|in:depot,retrait,transfert,paiement',
+            'description' => 'nullable|string|max:500',
+            'client_nom' => 'nullable|string|max:100',
+            'client_telephone' => 'nullable|string|max:20',
+            'reference' => 'nullable|string|max:50',
+            'operator_txn_id' => 'nullable|string|max:50',
+            'source' => 'nullable|string|max:20',
+            'raw_sms' => 'nullable|string|max:1000',
+            'agent_id' => 'nullable|exists:agents,id',
+            'operateur_id' => 'nullable|exists:operateurs,id',
+        ]);
+
+        $agentId = $validated['agent_id'] ?? config('sms_api.default_agent_id');
+        $operateurId = $validated['operateur_id'] ?? config('sms_api.default_operateur_id');
+
+        $agent = Agent::find($agentId);
+        $operateur = Operateur::find($operateurId);
+        if (!$agent || !$operateur) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Agent ou opérateur par défaut introuvable. Vérifiez la config sms_api.',
+            ], 422);
+        }
+
+        $data = [
+            'montant' => $validated['montant'],
+            'type' => $validated['type'],
+            'operateur_id' => $operateur->id,
+            'agent_id' => $agent->id,
+            'statut' => 'valide',
+            'description' => $validated['description'] ?? ($validated['raw_sms'] ?? null),
+            'client_nom' => $validated['client_nom'] ?? null,
+            'client_telephone' => $validated['client_telephone'] ?? null,
+            'operator_txn_id' => $validated['operator_txn_id'] ?? null,
+        ];
+        if (!empty($validated['reference'])) {
+            $data['reference'] = $validated['reference'];
+        }
+
+        DB::beginTransaction();
+        try {
+            $transaction = Transaction::create($data);
+            if ($transaction->statut === 'valide') {
+                $this->updateAgentBalance($transaction);
+            }
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaction enregistrée.',
+                'transaction_id' => $transaction->id,
+                'transaction' => [
+                    'id' => $transaction->id,
+                    'reference' => $transaction->reference,
+                    'montant' => (float) $transaction->montant,
+                    'type' => $transaction->type,
+                    'statut' => $transaction->statut,
+                ],
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'enregistrement : ' . $e->getMessage(),
+            ], 500);
         }
     }
 

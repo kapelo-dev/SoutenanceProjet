@@ -5,26 +5,23 @@
 		<div class="flex flex-col md:flex-row justify-center md:justify-between items-center gap-3 py-5">
 			<div class="flex order-2 md:order-1 gap-2 font-normal text-sm">
 				<span class="text-muted-foreground">
-					2025©
+					{{ date('Y') }}©
 				</span>
-				<a class="text-secondary-foreground hover:text-primary" href="https://keenthemes.com">
-					Keenthemes Inc.
+				<a class="text-secondary-foreground hover:text-primary" href="#">
+					Soft-Optimum-Services
 				</a>
 			</div>
 			<nav class="flex order-1 md:order-2 gap-4 font-normal text-sm text-secondary-foreground">
-				<a class="hover:text-primary" href="https://keenthemes.com/metronic/tailwind/docs">
-					Docs
+				<a class="hover:text-primary" href="{{ route('public.documentation') }}" data-ajax="false">
+					Documentation
 				</a>
-				<a class="hover:text-primary" href="https://1.envato.market/Vm7VRE">
-					Purchase
-				</a>
-				<a class="hover:text-primary" href="https://keenthemes.com/metronic/tailwind/docs/getting-started/license">
+				<a class="hover:text-primary" href="{{ route('public.faq') }}" data-ajax="false">
 					FAQ
 				</a>
-				<a class="hover:text-primary" href="https://devs.keenthemes.com">
+				<a class="hover:text-primary" href="{{ route('public.support') }}" data-ajax="false">
 					Support
 				</a>
-				<a class="hover:text-primary" href="https://keenthemes.com/metronic/tailwind/docs/getting-started/license">
+				<a class="hover:text-primary" href="{{ route('public.license') }}" data-ajax="false">
 					License
 				</a>
 			</nav>

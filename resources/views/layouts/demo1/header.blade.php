@@ -23,8 +23,6 @@
         @include('partials.mega-menu')
         <!-- Topbar -->
         <div class="flex items-center gap-2.5">
-            @include('partials.topbar-search-modal')
-            @include('partials.topbar-notification-dropdown')
             @include('partials.topbar-chat')
             @include('partials.topbar-apps')
             @include('partials.topbar-user-dropdown')

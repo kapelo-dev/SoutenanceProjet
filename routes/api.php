@@ -59,6 +59,9 @@ Route::prefix('agents')->group(function () {
 // Transactions
 Route::prefix('transactions')->group(function () {
     Route::get('/statistiques', [TransactionController::class, 'statistiques']);
+    // Ingestion depuis l'application Android (SMS) — authentification par token
+    Route::post('/from-sms', [TransactionController::class, 'storeFromSms'])
+        ->middleware('sms.api.token');
 });
 
 // Utilisateurs

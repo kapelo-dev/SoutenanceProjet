@@ -83,15 +83,71 @@ const AjaxNavigation = {
         }
     },
     
+    /**
+     * Ferme tout modal ouvert et retire l'état "modal ouvert" du body.
+     * À appeler après injection AJAX pour éviter que l'écran reste flou (backdrop/overflow).
+     */
+    closeModalsAndBackdrop() {
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        // Thème Metronic: .kt-modal avec .open ET .kt-modal-backdrop (élément séparé avec blur)
+        document.querySelectorAll('.kt-modal.open, .kt-modal.show, .kt-modal[style*="flex"]').forEach(modal => {
+            modal.classList.remove('open', 'show');
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        });
+        // Supprimer le backdrop du thème (classe kt-modal-backdrop = flou/overlay)
+        document.querySelectorAll('.kt-modal-backdrop').forEach(el => {
+            if (el.parentNode) el.parentNode.removeChild(el);
+        });
+        document.querySelectorAll('body > .modal-backdrop, body > [id*="backdrop"]').forEach(el => {
+            if (el.parentNode) el.parentNode.removeChild(el);
+        });
+    },
+
     // Gérer la réponse HTML
     handleHtmlResponse(html, url) {
-        // Si la réponse est déjà du HTML pur (sans layout), l'utiliser directement
+        // Si la réponse est déjà du HTML pur (sans layout), il faut quand même exécuter les <script>
+        // (sinon les fonctions onclick comme saveAllPermissions ne sont pas définies après navigation AJAX)
         if (html.trim().startsWith('<') && !html.includes('<!DOCTYPE')) {
-            // C'est probablement juste le contenu du main
             if (this.contentContainer) {
-                this.contentContainer.innerHTML = html;
+                // Utiliser un conteneur temporaire pour extraire les scripts
+                const temp = document.createElement('div');
+                temp.innerHTML = html;
+
+                const scripts = Array.from(temp.querySelectorAll('script'));
+                const scriptsToExecute = [];
+
+                scripts.forEach(script => {
+                    if (script.src) {
+                        scriptsToExecute.push({
+                            type: 'external',
+                            src: script.src,
+                            async: script.async,
+                            defer: script.defer
+                        });
+                    } else {
+                        scriptsToExecute.push({
+                            type: 'inline',
+                            content: script.textContent
+                        });
+                    }
+                    script.remove();
+                });
+
+                // Injecter le HTML sans les scripts
+                this.contentContainer.innerHTML = temp.innerHTML;
                 window.history.pushState({}, '', url);
-                this.reinitialize();
+                this.closeModalsAndBackdrop();
+
+                // Exécuter les scripts APRÈS l'injection du HTML pour que les onclick fonctionnent
+                // Utiliser un petit délai pour s'assurer que le DOM est complètement mis à jour
+                setTimeout(() => {
+                    this.executeScripts(scriptsToExecute).then(() => {
+                        this.reinitialize();
+                    });
+                }, 10);
                 return;
             }
         }
@@ -135,12 +191,16 @@ const AjaxNavigation = {
             
             // Mettre à jour l'URL sans recharger la page
             window.history.pushState({}, '', url);
+            this.closeModalsAndBackdrop();
             
-            // Exécuter les scripts
-            this.executeScripts(scriptsToExecute).then(() => {
-                // Réinitialiser les scripts et composants après l'exécution des scripts
-                this.reinitialize();
-            });
+            // Exécuter les scripts APRÈS l'injection du HTML pour que les onclick fonctionnent
+            // Utiliser un petit délai pour s'assurer que le DOM est complètement mis à jour
+            setTimeout(() => {
+                this.executeScripts(scriptsToExecute).then(() => {
+                    // Réinitialiser les scripts et composants après l'exécution des scripts
+                    this.reinitialize();
+                });
+            }, 10);
         } else {
             // Si on ne trouve pas le conteneur, recharger la page normalement
             window.location.href = url;
@@ -152,13 +212,32 @@ const AjaxNavigation = {
         for (const script of scripts) {
             if (script.type === 'external') {
                 await this.loadScript(script.src, script.async, script.defer);
-            } else {
+                } else {
                 // Exécuter le script inline
                 try {
-                    // Utiliser Function pour exécuter dans le contexte global
-                    new Function(script.content)();
+                    // Créer un élément script temporaire et l'injecter dans le DOM
+                    // IMPORTANT: Ne PAS wrapper dans une fonction anonyme pour que les fonctions
+                    // déclarées avec 'function nom() {}' soient disponibles dans le scope global (window)
+                    const scriptElement = document.createElement('script');
+                    scriptElement.textContent = script.content;
+                    document.head.appendChild(scriptElement);
+                    
+                    // Retirer après exécution pour éviter l'encombrement
+                    setTimeout(() => {
+                        if (scriptElement.parentNode) {
+                            document.head.removeChild(scriptElement);
+                        }
+                    }, 0);
                 } catch (e) {
                     console.error('Erreur lors de l\'exécution du script inline:', e);
+                    // En cas d'échec, essayer avec eval dans un try-catch (fallback)
+                    try {
+                        // Exécuter directement dans le scope global (pas dans une fonction anonyme)
+                        // eslint-disable-next-line no-eval
+                        eval(script.content);
+                    } catch (evalError) {
+                        console.error('Erreur même avec eval:', evalError);
+                    }
                 }
             }
         }
@@ -220,11 +299,58 @@ const AjaxNavigation = {
             window.MetronicCore.initTabs && window.MetronicCore.initTabs();
         }
         
+        // Réinitialiser les événements onclick pour les boutons
+        this.reinitializeButtonEvents();
+        
         // Réinitialiser les cartes Leaflet
         this.reinitializeMaps();
         
+        // Appeler toutes les fonctions d'initialisation de pages (pattern window.init*)
+        this.reinitializePageFunctions();
+        
         // Déclencher un événement personnalisé
         document.dispatchEvent(new CustomEvent('ajax-content-loaded'));
+    },
+    
+    // Réinitialiser les événements des boutons après chargement AJAX
+    reinitializeButtonEvents() {
+        // Les événements onclick inline devraient fonctionner automatiquement
+        // Mais on s'assure que les fonctions sont disponibles dans le scope global
+        
+        // Réattacher les événements sur les formulaires avec onsubmit
+        const forms = this.contentContainer.querySelectorAll('form[onsubmit]');
+        forms.forEach(form => {
+            // Les onsubmit inline devraient fonctionner, mais on vérifie
+            if (!form._ajaxFormHandler) {
+                form._ajaxFormHandler = true;
+                // Le gestionnaire setupForms() devrait déjà gérer cela via délégation d'événements
+            }
+        });
+        
+        // S'assurer que les fonctions globales communes sont disponibles
+        // Par exemple, toggleDropdown qui est déjà exposée globalement dans app.js
+        // Les autres fonctions doivent être définies dans les scripts inline de chaque page
+    },
+    
+    // Réinitialiser toutes les fonctions d'initialisation de pages
+    reinitializePageFunctions() {
+        // Chercher toutes les fonctions window.init* et les appeler
+        const initFunctions = [];
+        for (let key in window) {
+            if (key.startsWith('init') && typeof window[key] === 'function') {
+                initFunctions.push(key);
+            }
+        }
+        
+        console.log('Réinitialisation des fonctions de page:', initFunctions);
+        
+        initFunctions.forEach(funcName => {
+            try {
+                window[funcName]();
+            } catch (e) {
+                console.warn(`Erreur lors de l'appel de ${funcName}:`, e);
+            }
+        });
     },
     
     // Réinitialiser les cartes Leaflet
@@ -320,6 +446,20 @@ const AjaxNavigation = {
         }
     },
     
+    /**
+     * Récupère le token CSRF (meta ou champ _token du formulaire)
+     * @param {HTMLFormElement} [form] - Formulaire optionnel pour lire input _token
+     * @returns {string|null}
+     */
+    getCsrfToken(form) {
+        if (form) {
+            const input = form.querySelector('input[name="_token"]');
+            if (input && input.value) return input.value;
+        }
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : null;
+    },
+
     // Gérer les formulaires avec AJAX
     setupForms() {
         document.addEventListener('submit', async (e) => {
@@ -353,14 +493,15 @@ const AjaxNavigation = {
     // Soumettre un formulaire via AJAX
     async submitForm(form) {
         try {
+            this.closeModalsAndBackdrop();
             this.showLoading();
             
             const formData = new FormData(form);
             const url = form.action || window.location.href;
             const method = form.method || 'POST';
             
-            // Ajouter le token CSRF si disponible
-            const csrfToken = this.getCsrfToken();
+            // Ajouter le token CSRF si disponible (formulaire ou meta)
+            const csrfToken = this.getCsrfToken(form);
             if (csrfToken) {
                 formData.append('_token', csrfToken);
             }

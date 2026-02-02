@@ -220,6 +220,76 @@
                 <div class="kt-menu-item pt-2.25 pb-px">
                     <span
                         class="kt-menu-heading pe-[10px] ps-[10px] text-xs font-medium uppercase text-muted-foreground">
+                        Entreprise
+                    </span>
+                </div>
+                <div class="kt-menu-item" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
+                    <div class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px]"
+                        tabindex="0">
+                        <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
+                            <i class="ki-filled ki-office-bag text-lg">
+                            </i>
+                        </span>
+                        <span
+                            class="kt-menu-title kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary text-sm font-medium text-foreground">
+                            Gestion d'entreprise
+                        </span>
+                        <span
+                            class="kt-menu-arrow me-[-10px] ms-1 w-[20px] shrink-0 justify-end text-muted-foreground">
+                            <span class="kt-menu-item-show:hidden inline-flex">
+                                <i class="ki-filled ki-plus text-[11px]">
+                                </i>
+                            </span>
+                            <span class="kt-menu-item-show:inline-flex hidden">
+                                <i class="ki-filled ki-minus text-[11px]">
+                                </i>
+                            </span>
+                        </span>
+                    </div>
+                    <div
+                        class="kt-menu-accordion relative gap-1 ps-[10px] before:absolute before:bottom-0 before:start-[20px] before:top-0 before:border-s before:border-border">
+                        <div class="kt-menu-item">
+                            <a href="{{ url('/gestion-entreprise?onglet=salaires') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                                tabindex="0">
+                                <span
+                                    class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
+                                </span>
+                                <span
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    Salaires
+                                </span>
+                            </a>
+                        </div>
+                        <div class="kt-menu-item">
+                            <a href="{{ url('/gestion-entreprise?onglet=parametres') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                                tabindex="0">
+                                <span
+                                    class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
+                                </span>
+                                <span
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    Paramètres Salaire
+                                </span>
+                            </a>
+                        </div>
+                        <div class="kt-menu-item">
+                            <a href="{{ url('/gestion-entreprise?onglet=tresorerie') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                                tabindex="0">
+                                <span
+                                    class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
+                                </span>
+                                <span
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    Trésorerie
+                                </span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kt-menu-item pt-2.25 pb-px">
+                    <span
+                        class="kt-menu-heading pe-[10px] ps-[10px] text-xs font-medium uppercase text-muted-foreground">
                         Configuration
                     </span>
                 </div>
@@ -284,6 +354,18 @@
                                 </span>
                             </a>
                         </div>
+                        <div class="kt-menu-item">
+                            <a href="{{ url('/parametres-app-mobile') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                                tabindex="0">
+                                <span
+                                    class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
+                                </span>
+                                <span
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    Configuration App Mobile
+                                </span>
+                            </a>
+                        </div>
                     </div>
                 </div>
                 <div class="kt-menu-item">
@@ -306,81 +388,3 @@
     </div>
 </div>
 <!-- End of Sidebar -->
-
-<script>
-// Fonction pour marquer le menu actif dans le sidebar
-function initActiveMenu() {
-    const currentUrl = window.location.href;
-    const currentPath = window.location.pathname;
-    
-    // Sélectionner tous les liens du menu
-    const menuLinks = document.querySelectorAll('#sidebar_menu .kt-menu-link[href]');
-    
-    // Retirer toutes les classes actives d'abord
-    document.querySelectorAll('#sidebar_menu .kt-menu-item').forEach(item => {
-        item.classList.remove('kt-menu-item-active');
-    });
-    
-    menuLinks.forEach(link => {
-        const href = link.getAttribute('href');
-        if (!href) return;
-        
-        // Créer une URL à partir du href pour comparer
-        let linkUrl;
-        try {
-            linkUrl = new URL(href, window.location.origin);
-        } catch (e) {
-            // Si href est relatif, utiliser le pathname directement
-            linkUrl = { pathname: href };
-        }
-        
-        // Comparer les chemins
-        const linkPath = linkUrl.pathname || href;
-        
-        // Vérifier si le chemin actuel correspond
-        let isActive = false;
-        
-        // Correspondance exacte
-        if (currentPath === linkPath) {
-            isActive = true;
-        }
-        // Correspondance partielle (pour les sous-pages)
-        else if (linkPath !== '/' && currentPath.startsWith(linkPath)) {
-            isActive = true;
-        }
-        
-        if (isActive) {
-            // Ajouter la classe active au parent kt-menu-item
-            const menuItem = link.closest('.kt-menu-item');
-            if (menuItem) {
-                menuItem.classList.add('kt-menu-item-active');
-                
-                // Si c'est un sous-menu, ouvrir le menu parent
-                const parentAccordion = menuItem.closest('.kt-menu-accordion');
-                if (parentAccordion) {
-                    const parentToggle = parentAccordion.previousElementSibling;
-                    if (parentToggle && parentToggle.classList.contains('kt-menu-link')) {
-                        const parentMenuItem = parentToggle.closest('.kt-menu-item');
-                        if (parentMenuItem) {
-                            parentMenuItem.classList.add('kt-menu-item-show');
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-// Initialiser au chargement de la page
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initActiveMenu);
-} else {
-    initActiveMenu();
-}
-
-// Réinitialiser après navigation AJAX
-document.addEventListener('ajax-content-loaded', function() {
-    // Réinitialiser le menu actif après un court délai pour s'assurer que le DOM est mis à jour
-    setTimeout(initActiveMenu, 100);
-});
-</script>

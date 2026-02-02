@@ -23,7 +23,7 @@ class DashboardMonthMap {
         // Vérifier si l'élément existe
         const mapElement = document.getElementById('dashboard_month_map');
         if (!mapElement) {
-            console.debug('[DashboardMap] Élément #dashboard_month_map introuvable');
+            // Ne pas logger si l'élément n'existe pas (page normale sans carte)
             return;
         }
 

@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 
-class Utilisateur extends Model
+class Utilisateur extends Authenticatable
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Notifiable;
 
     protected $table = 'utilisateurs';
 
@@ -37,10 +38,36 @@ class Utilisateur extends Model
         'email_verified_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'deleted_at' => 'datetime',
     ];
 
-    // Générer automatiquement un UUID lors de la création
+    /**
+     * Récupérer le mot de passe pour l'authentification
+     * Laravel utilise "password" par défaut, mais nous utilisons "mot_de_passe"
+     */
+    public function getAuthPassword()
+    {
+        return $this->mot_de_passe;
+    }
+
+    /**
+     * Accessor pour le champ password (compatibilité Laravel)
+     */
+    public function getPasswordAttribute()
+    {
+        return $this->mot_de_passe;
+    }
+
+    /**
+     * Mutator pour le champ password (compatibilité Laravel)
+     */
+    public function setPasswordAttribute($value)
+    {
+        $this->attributes['mot_de_passe'] = $value;
+    }
+
+    /**
+     * Générer automatiquement un UUID lors de la création
+     */
     protected static function boot()
     {
         parent::boot();
@@ -88,5 +115,13 @@ class Utilisateur extends Model
     public function scopeSuspendu($query)
     {
         return $query->where('statut', 'suspendu');
+    }
+
+    /**
+     * Accesseurs
+     */
+    public function getNomCompletAttribute()
+    {
+        return trim($this->nom . ' ' . $this->prenom);
     }
 }

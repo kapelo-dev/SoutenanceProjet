@@ -13,9 +13,8 @@ class RouteController extends Controller
      */
     public function index()
     {
-        // Récupérer tous les liens visibles, triés par ordre, avec la relation parent
-        $liens = Lien::where('visible', true)
-            ->with('parent')
+        // Récupérer tous les liens (visibles et non visibles), triés par ordre, avec la relation parent
+        $liens = Lien::with('parent')
             ->orderBy('ordre')
             ->orderBy('libelle')
             ->get();
@@ -89,6 +88,56 @@ class RouteController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Une erreur est survenue lors de la création de la route: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Met à jour la visibilité des routes/liens
+     */
+    public function updateVisibility(Request $request)
+    {
+        // Validation
+        $validator = Validator::make($request->all(), [
+            'routes' => 'required|array',
+            'routes.*.id' => 'required|exists:liens,id',
+            'routes.*.visible' => 'required|boolean',
+        ], [
+            'routes.required' => 'Les données des routes sont requises.',
+            'routes.array' => 'Les routes doivent être un tableau.',
+            'routes.*.id.required' => 'L\'ID de la route est requis.',
+            'routes.*.id.exists' => 'Une ou plusieurs routes n\'existent pas.',
+            'routes.*.visible.required' => 'L\'état de visibilité est requis.',
+            'routes.*.visible.boolean' => 'L\'état de visibilité doit être un booléen.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $updated = 0;
+            foreach ($request->routes as $routeData) {
+                $lien = Lien::find($routeData['id']);
+                if ($lien) {
+                    $lien->visible = $routeData['visible'];
+                    $lien->save();
+                    $updated++;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $updated . ' route(s) mise(s) à jour avec succès.',
+                'updated' => $updated
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la mise à jour: ' . $e->getMessage()
             ], 500);
         }
     }

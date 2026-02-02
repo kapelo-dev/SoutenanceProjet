@@ -14,14 +14,14 @@
 	<div class="flex grow flex-col in-data-kt-[sticky-header=on]:pt-(--header-height)">
 		@include('layouts.demo9.header')
 
-		@include('layouts.demo9.navbar')
+		
 
 		<!-- Wrapper Container -->
 		<div class="container-fixed w-full flex px-0">
 			<!-- Content -->
 			<main class="flex flex-col grow" id="content" role="content">
 				<!-- Toolbar -->
-				@include('layouts.demo9.toolbar')
+				
 				<!-- End of Toolbar -->
 				<!-- Container -->
 				<div class="kt-container-fixed">

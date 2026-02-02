@@ -74,6 +74,12 @@ class Agent extends Model
         return $this->hasMany(Solde::class, 'agent_id');
     }
 
+    // Un agent a plusieurs salaires
+    public function salaires()
+    {
+        return $this->hasMany(Salaire::class, 'agent_id');
+    }
+
     /**
      * Scopes
      */
