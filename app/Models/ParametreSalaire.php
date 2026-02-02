@@ -33,4 +33,13 @@ class ParametreSalaire extends Model
     {
         return $this->hasMany(Salaire::class);
     }
+
+    /**
+     * Profils (rôles) auxquels ce paramètre est destiné. Vide = tous les profils.
+     */
+    public function profils()
+    {
+        return $this->belongsToMany(Profil::class, 'parametre_salaire_profil', 'parametre_salaire_id', 'profil_id')
+            ->withTimestamps();
+    }
 }

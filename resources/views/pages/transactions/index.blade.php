@@ -61,10 +61,18 @@
                                         <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
-                                <th class="min-w-[140px] text-center" style="width: 15%;">
+                                <th class="min-w-[140px] text-center" style="width: 14%;">
                                     <span class="kt-table-col">
                                         <span class="kt-table-col-label">
                                             Montant
+                                        </span>
+                                        <span class="kt-table-col-sort"></span>
+                                    </span>
+                                </th>
+                                <th class="min-w-[100px] text-center" style="width: 10%;">
+                                    <span class="kt-table-col">
+                                        <span class="kt-table-col-label">
+                                            Commission
                                         </span>
                                         <span class="kt-table-col-sort"></span>
                                     </span>
@@ -145,6 +153,13 @@
                                         <span class="text-primary">{{ number_format($transaction->montant, 0, ',', ' ') }} FCFA</span>
                                     @endif
                                 </td>
+                                <td class="text-center text-foreground font-medium">
+                                    @if($transaction->commission !== null && $transaction->commission > 0)
+                                        {{ number_format($transaction->commission, 0, ',', ' ') }} FCFA
+                                    @else
+                                        <span class="text-muted-foreground">—</span>
+                                    @endif
+                                </td>
                                 <td class="text-center">
                                     @if($transaction->statut == 'valide')
                                         <span class="kt-badge kt-badge-sm kt-badge-outline kt-badge-success">
@@ -170,7 +185,7 @@
                             </tr>
                             @empty
                             <tr class="empty-row">
-                                <td colspan="6" class="text-center py-20 !border-0" style="width: 100% !important; padding: 5rem 0 !important; border: none !important; border-left: none !important; border-right: none !important;">
+                                <td colspan="7" class="text-center py-20 !border-0" style="width: 100% !important; padding: 5rem 0 !important; border: none !important; border-left: none !important; border-right: none !important;">
                                     <div class="flex flex-col items-center justify-center gap-5 w-full">
                                         <div class="flex items-center justify-center rounded-full bg-gray-100 size-20 dark:bg-gray-900">
                                             <i class="ki-filled ki-file text-4xl text-gray-500 dark:text-gray-400"></i>

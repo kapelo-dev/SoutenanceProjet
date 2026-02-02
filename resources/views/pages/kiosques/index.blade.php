@@ -14,6 +14,10 @@
         Affichage de {{ $kiosques->total() }} kiosque{{ $kiosques->total() > 1 ? 's' : '' }}
        </h3>
        <div class="flex items-center flex-wrap gap-5">
+        <a href="{{ route('kiosques.create') }}" class="kt-btn kt-btn-primary">
+         <i class="ki-filled ki-plus"></i>
+         Créer un kiosque
+        </a>
         <a href="{{ route('kiosques.carte') }}" class="kt-btn kt-btn-outline">
          <i class="ki-filled ki-geolocation"></i>
          Carte des kiosques

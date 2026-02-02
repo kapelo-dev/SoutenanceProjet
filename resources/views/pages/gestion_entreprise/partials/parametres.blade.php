@@ -29,6 +29,13 @@
                             @endif
                         </div>
                     </div>
+                    @if($parametre->profils->isNotEmpty())
+                        <div class="text-xs text-muted-foreground mb-2">
+                            Destiné à : {{ $parametre->profils->pluck('libelle')->join(', ') }}
+                        </div>
+                    @else
+                        <div class="text-xs text-muted-foreground mb-2">Tous les profils</div>
+                    @endif
                     <div class="flex items-center gap-1">
                         <button type="button" 
                                 class="kt-btn kt-btn-xs kt-btn-icon kt-btn-outline"
@@ -128,13 +135,29 @@
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <label class="text-sm font-medium">
-                            Statut
-                        </label>
-                        <label class="kt-switch">
-                            <input type="checkbox" name="actif" id="parametre_actif" value="1" checked>
-                            <span class="kt-switch-label">Actif</span>
-                        </label>
+                        <span class="text-sm font-medium text-foreground">Statut</span>
+                        <div class="flex items-center gap-3 p-3 rounded-lg border-2 border-border bg-muted/30">
+                            <label class="flex items-center gap-2 cursor-pointer shrink-0">
+                                <input type="checkbox" name="actif" id="parametre_actif" value="1" checked class="kt-switch kt-switch-lg">
+                                <span class="kt-switch-label text-sm font-semibold text-foreground">Actif</span>
+                            </label>
+                        </div>
+                        <span class="text-xs text-muted-foreground">Inactif = exclu de la génération des salaires.</span>
+                    </div>
+
+                    <div class="flex flex-col gap-2 lg:col-span-2">
+                        <span class="text-sm font-medium text-foreground">Profils destinataires</span>
+                        <p class="text-xs text-muted-foreground">Choisir les profils (rôles) pour lesquels ce paramètre s'applique. Aucune sélection = tous les profils.</p>
+                        <div class="flex flex-wrap gap-3 p-4 rounded-lg border border-border bg-muted/20">
+                            @forelse($profils ?? [] as $profil)
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" name="profil_ids[]" value="{{ $profil->id }}" class="kt-checkbox profil-destinataire" id="profil_param_{{ $profil->id }}">
+                                    <span class="text-sm font-medium">{{ $profil->libelle }}</span>
+                                </label>
+                            @empty
+                                <span class="text-sm text-muted-foreground">Aucun profil défini.</span>
+                            @endforelse
+                        </div>
                     </div>
 
                     <div class="flex flex-col gap-2" id="field_montant_fixe">
@@ -159,7 +182,8 @@
                         </label>
                         <select name="base_calcul" id="parametre_base_calcul" class="kt-select" data-kt-select="true">
                             <option value="">Sélectionner...</option>
-                            <option value="transactions">Total des transactions</option>
+                            <option value="transactions">Total des transactions (% commission)</option>
+                            <option value="commissions">Somme des commissions des transactions</option>
                             <option value="soldes">Évolution des soldes</option>
                             <option value="objectifs">Atteinte d'objectifs</option>
                         </select>
@@ -180,14 +204,15 @@
                         </label>
                         <div class="flex flex-wrap items-end gap-2 p-3 rounded-lg bg-muted/20 border border-border">
                             <span class="text-xs font-medium text-muted-foreground w-full mb-1">Construire la formule :</span>
-                            <select id="formule_builder_variable" class="kt-select flex-1 min-w-[140px]" data-kt-select="true">
+                            <select id="formule_builder_variable" class="kt-select flex-1 min-w-[180px]" data-kt-select="true">
                                 <option value="">Variable...</option>
-                                <option value="montant_transactions">montant_transactions</option>
-                                <option value="nb_transactions">nb_transactions</option>
-                                <option value="solde_final">solde_final</option>
-                                <option value="montant_fixe">montant_fixe</option>
-                                <option value="taux_commission">taux_commission</option>
-                                <option value="objectif_atteint">objectif_atteint</option>
+                                <option value="montant_transactions">montant_transactions (total des montants)</option>
+                                <option value="nb_transactions">nb_transactions (nombre de transactions)</option>
+                                <option value="commissions">commissions (somme des commissions des transactions)</option>
+                                <option value="montant_fixe">montant_fixe (salaire fixe)</option>
+                                <option value="taux_commission">taux_commission (% commission)</option>
+                                <option value="solde_final">solde_final (solde agent)</option>
+                                <option value="objectif_atteint">objectif_atteint (0 ou 1)</option>
                             </select>
                             <select id="formule_builder_operator" class="kt-select w-20 shrink-0" data-kt-select="true">
                                 <option value="+">+</option>
@@ -204,9 +229,9 @@
                             </button>
                         </div>
                         <textarea name="formule" id="parametre_formule" class="kt-textarea mt-2" rows="3"
-                                  placeholder="Ex: (montant_transactions * 0.02) + bonus_objectif"></textarea>
+                                  placeholder="Ex: montant_fixe + commissions ou (montant_transactions * taux_commission / 100)"></textarea>
                         <span class="text-xs text-muted-foreground">
-                            Variables: montant_transactions, nb_transactions, solde_final — ou construire ci-dessus.
+                            Variables: montant_transactions, nb_transactions, commissions (somme des commissions des transactions), solde_final, montant_fixe, taux_commission — ou construire ci-dessus.
                         </span>
                     </div>
                 </div>
@@ -306,6 +331,12 @@ function editParametre(parametre) {
     document.getElementById('parametre_formule').value = parametre.formule || '';
     document.getElementById('parametre_conditions').value = parametre.conditions ? JSON.stringify(parametre.conditions) : '';
     document.getElementById('parametre_actif').checked = parametre.actif;
+
+    // Profils destinataires
+    var profilIds = parametre.profils && parametre.profils.map(function(p) { return String(p.id); }) || [];
+    document.querySelectorAll('input[name="profil_ids[]"]').forEach(function(cb) {
+        cb.checked = profilIds.indexOf(cb.value) !== -1;
+    });
     
     // Trigger change event to show/hide fields
     document.getElementById('parametre_type').dispatchEvent(new Event('change'));

@@ -45,6 +45,13 @@ class Profil extends Model
                     ->withPivot('deleted_at');
     }
 
+    // Paramètres de salaire destinés à ce profil
+    public function parametresSalaire()
+    {
+        return $this->belongsToMany(ParametreSalaire::class, 'parametre_salaire_profil', 'profil_id', 'parametre_salaire_id')
+            ->withTimestamps();
+    }
+
     /**
      * Scopes
      */

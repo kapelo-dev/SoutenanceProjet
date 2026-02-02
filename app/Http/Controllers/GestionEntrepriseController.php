@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Agent;
 use App\Models\ParametreSalaire;
+use App\Models\Profil;
 use App\Models\Salaire;
 use App\Models\MouvementTresorerie;
 use App\Models\Transaction;
@@ -26,9 +27,12 @@ class GestionEntrepriseController extends Controller
             ->paginate(15);
 
         // Données pour l'onglet Paramètres
-        $parametres = ParametreSalaire::orderBy('actif', 'desc')
+        $parametres = ParametreSalaire::with('profils')
+            ->orderBy('actif', 'desc')
             ->orderBy('nom')
             ->get();
+
+        $profils = Profil::ordreParNiveau()->get();
 
         $agents = Agent::with('utilisateur')->where('statut', 'actif')->get();
 
@@ -56,6 +60,7 @@ class GestionEntrepriseController extends Controller
             'onglet',
             'salaires',
             'parametres',
+            'profils',
             'agents',
             'mouvements',
             'stats',
@@ -78,9 +83,12 @@ class GestionEntrepriseController extends Controller
             'formule' => 'nullable|string',
             'conditions' => 'nullable|json',
             'actif' => 'boolean',
+            'profil_ids' => 'nullable|array',
+            'profil_ids.*' => 'exists:profils,id',
         ]);
 
         $parametre = ParametreSalaire::create($validated);
+        $parametre->profils()->sync($request->input('profil_ids', []));
 
         return redirect()->route('gestion-entreprise.index', ['onglet' => 'parametres'])
             ->with('success', 'Paramètre de salaire créé avec succès.');
@@ -100,9 +108,12 @@ class GestionEntrepriseController extends Controller
             'formule' => 'nullable|string',
             'conditions' => 'nullable|json',
             'actif' => 'boolean',
+            'profil_ids' => 'nullable|array',
+            'profil_ids.*' => 'exists:profils,id',
         ]);
 
         $parametre->update($validated);
+        $parametre->profils()->sync($request->input('profil_ids', []));
 
         return redirect()->route('gestion-entreprise.index', ['onglet' => 'parametres'])
             ->with('success', 'Paramètre mis à jour avec succès.');
@@ -135,12 +146,14 @@ class GestionEntrepriseController extends Controller
         $dateFin = Carbon::parse($validated['date_fin']);
         $periode = $dateDebut->format('Y-m');
 
-        // Sélectionner les agents
-        $query = Agent::with('utilisateur')->where('statut', 'actif');
+        // Sélectionner les agents (avec profils de l'utilisateur pour le paramètre salaire)
+        $query = Agent::with(['utilisateur.profils'])->where('statut', 'actif');
         if (!empty($validated['agent_ids'])) {
             $query->whereIn('id', $validated['agent_ids']);
         }
         $agents = $query->get();
+
+        $parametresActifs = ParametreSalaire::where('actif', true)->with('profils')->orderBy('nom')->get();
 
         $salairesCreates = 0;
 
@@ -156,22 +169,62 @@ class GestionEntrepriseController extends Controller
                     continue; // Skip si déjà créé
                 }
 
-                // Récupérer le paramètre de salaire actif (ou créer une logique pour assigner)
-                $parametre = ParametreSalaire::where('actif', true)->first();
+                // Paramètre de salaire destiné aux profils de l'agent (ou paramètre global si aucun profil)
+                $agentProfilIds = $agent->utilisateur ? $agent->utilisateur->profils->pluck('id')->toArray() : [];
+                $parametre = null;
+                foreach ($parametresActifs as $p) {
+                    if ($p->profils->isEmpty()) {
+                        if ($parametre === null) {
+                            $parametre = $p;
+                        }
+                    } else {
+                        $parametreProfilIds = $p->profils->pluck('id')->toArray();
+                        if (array_intersect($agentProfilIds, $parametreProfilIds)) {
+                            $parametre = $p;
+                            break;
+                        }
+                    }
+                }
+                if ($parametre === null && $parametresActifs->isNotEmpty()) {
+                    $parametre = $parametresActifs->first(fn ($p) => $p->profils->isEmpty());
+                }
 
                 // Calculer les commissions basées sur les transactions de l'agent
                 $transactions = Transaction::where('agent_id', $agent->id)
                     ->whereBetween('created_at', [$dateDebut, $dateFin])
                     ->get();
 
-                $montantCommission = 0;
-                if ($parametre && $parametre->type !== 'fixe') {
-                    $totalTransactions = $transactions->sum('montant');
-                    $montantCommission = ($totalTransactions * $parametre->taux_commission) / 100;
-                }
+                $totalTransactions = $transactions->sum('montant');
+                $commissions = $transactions->sum('commission'); // Somme des colonnes commission de chaque transaction
 
-                $montantFixe = $parametre ? $parametre->montant_fixe : 0;
-                $montantTotal = $montantFixe + $montantCommission;
+                $montantCommission = 0;
+                $montantFixe = $parametre ? (float) $parametre->montant_fixe : 0;
+
+                if ($parametre && ! empty(trim((string) $parametre->formule))) {
+                    // Formule personnalisée : évaluer avec les variables (montant_transactions, commissions, etc.)
+                    $montantTotal = $this->evaluateFormuleSalaire(
+                        $parametre->formule,
+                        [
+                            'montant_transactions' => $totalTransactions,
+                            'nb_transactions' => $transactions->count(),
+                            'commissions' => $commissions,
+                            'montant_fixe' => $montantFixe,
+                            'taux_commission' => $parametre ? (float) $parametre->taux_commission : 0,
+                            'solde_final' => $agent->soldeTotal(),
+                            'objectif_atteint' => 0,
+                        ]
+                    );
+                    $montantCommission = max(0, $montantTotal - $montantFixe);
+                } else {
+                    if ($parametre && $parametre->type !== 'fixe') {
+                        if ($parametre->base_calcul === 'commissions') {
+                            $montantCommission = $commissions;
+                        } else {
+                            $montantCommission = ($totalTransactions * $parametre->taux_commission) / 100;
+                        }
+                    }
+                    $montantTotal = $montantFixe + $montantCommission;
+                }
 
                 // Créer le salaire
                 Salaire::create([
@@ -187,7 +240,8 @@ class GestionEntrepriseController extends Controller
                     'montant_total' => $montantTotal,
                     'details_calcul' => [
                         'transactions_count' => $transactions->count(),
-                        'transactions_total' => $transactions->sum('montant'),
+                        'transactions_total' => $totalTransactions,
+                        'commissions' => $commissions,
                         'taux_commission' => $parametre ? $parametre->taux_commission : 0,
                     ],
                     'statut' => 'en_attente',
@@ -248,6 +302,39 @@ class GestionEntrepriseController extends Controller
             DB::rollBack();
             return redirect()->route('gestion-entreprise.index', ['onglet' => 'salaires'])
                 ->with('error', 'Erreur lors du paiement: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Évalue la formule personnalisée du salaire avec les variables fournies.
+     * Variables autorisées : montant_transactions, nb_transactions, commissions,
+     * montant_fixe, taux_commission, solde_final, objectif_atteint.
+     */
+    private function evaluateFormuleSalaire(string $formule, array $variables): float
+    {
+        $expr = trim(preg_replace('/\s+/', ' ', $formule));
+        if ($expr === '') {
+            return 0.0;
+        }
+
+        foreach ($variables as $name => $value) {
+            $num = is_numeric($value) ? (float) $value : 0;
+            $expr = preg_replace('/\b' . preg_quote($name, '/') . '\b/', (string) $num, $expr);
+        }
+
+        // Remplacer × (unicode) par * si présent dans la formule
+        $expr = str_replace(['×', '−'], ['*', '-'], $expr);
+
+        // Ne garder que chiffres, ., +, -, *, /, (, ), espaces
+        if (preg_match('/[^0-9.\s+\-*\/()]/', $expr)) {
+            return 0.0;
+        }
+
+        try {
+            $result = @eval('return (' . $expr . ');');
+            return is_numeric($result) ? (float) $result : 0.0;
+        } catch (\Throwable $e) {
+            return 0.0;
         }
     }
 

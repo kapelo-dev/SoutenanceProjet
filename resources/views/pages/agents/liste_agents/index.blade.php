@@ -642,7 +642,7 @@
                                     </button>
                                 </div>
                                 <div id="map" style="height: 400px; width: 100%; border-radius: 8px; border: 1px solid var(--border);"></div>
-                                <span class="text-xs text-secondary-foreground">Cliquez sur la carte pour définir l'emplacement du kiosque</span>
+                                <span class="text-xs text-secondary-foreground">Cliquez sur la carte ou déplacez le marqueur pour définir l'emplacement. Adresse, quartier et ville seront remplis automatiquement.</span>
                                 <span class="text-xs text-destructive hidden" id="error_kiosque_location"></span>
                             </div>
                         </div>
@@ -825,11 +825,44 @@ function initMap() {
     });
 }
 
+function updateKiosqueAddressFields(adresse, quartier, ville) {
+    const adresseEl = document.getElementById('kiosque_adresse');
+    const quartierEl = document.getElementById('kiosque_quartier');
+    const villeEl = document.getElementById('kiosque_ville');
+    if (adresseEl) adresseEl.value = adresse || '';
+    if (quartierEl) quartierEl.value = quartier || '';
+    if (villeEl) villeEl.value = ville || '';
+}
+
+function reverseGeocodeKiosque(lat, lng, callback) {
+    const url = 'https://nominatim.openstreetmap.org/reverse?lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng) + '&format=json&accept-language=fr';
+    fetch(url, {
+        headers: { 'Accept': 'application/json', 'User-Agent': 'PDVConnect-Agent/1.0' }
+    }).then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data || !data.address) {
+            if (callback) callback('', '', '');
+            return;
+        }
+        var addr = data.address;
+        var adresse = [addr.road, addr.house_number].filter(Boolean).join(' ') || addr.display_name.split(',')[0] || '';
+        var quartier = addr.suburb || addr.neighbourhood || addr.quarter || addr.village || addr.district || '';
+        var ville = addr.city || addr.town || addr.municipality || addr.state || addr.county || '';
+        if (callback) callback(adresse, quartier, ville);
+      })
+      .catch(function() {
+        if (callback) callback('', '', '');
+      });
+}
+
 function updateCoordinates(lat, lng) {
     const latInput = document.getElementById('kiosque_latitude');
     const lngInput = document.getElementById('kiosque_longitude');
     if (latInput) latInput.value = lat.toFixed(8);
     if (lngInput) lngInput.value = lng.toFixed(8);
+    reverseGeocodeKiosque(lat, lng, function(adresse, quartier, ville) {
+        updateKiosqueAddressFields(adresse, quartier, ville);
+    });
 }
 
 // Mettre à jour le marqueur quand les coordonnées sont modifiées manuellement
