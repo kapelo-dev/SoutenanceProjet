@@ -380,7 +380,7 @@
           <span class="text-xs text-muted-foreground">Type sans opérateur figé ; l'opérateur (T-Money, Flooz…) se choisit à part si le type est « virtuel ».</span>
          </div>
          <div class="flex flex-col gap-2 relative" id="operation_operateur_block" style="display: block;">
-          <label class="kt-label" for="operation_operateur_trigger">
+          <label class="kt-label mb-2" for="operation_operateur_trigger">
            Opérateur (T-Money, Flooz…) <span class="text-destructive" id="operation_operateur_required_star" style="display:none">*</span>
           </label>
           <input type="hidden" name="operateur_id" id="operation_operateur_id" value="" />

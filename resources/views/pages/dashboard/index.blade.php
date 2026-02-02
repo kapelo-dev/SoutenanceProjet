@@ -347,10 +347,3 @@
     <!-- End of Container -->
 
 @endsection
-
-@push('scripts')
-<!-- Leaflet CSS & JS pour la carte de performance du mois -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- Le module JS dashboard-month-map.js est chargé via app.js (Vite) -->
-@endpush

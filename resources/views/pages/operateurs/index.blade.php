@@ -205,6 +205,20 @@
                         </table>
                     </div>
                 </div>
+                <div class="kt-card-footer justify-center md:justify-between flex-col md:flex-row gap-5 text-secondary-foreground text-sm font-medium">
+                    <div class="flex items-center gap-2 order-2 md:order-1">
+                        Afficher
+                        <select class="kt-select w-16" data-kt-datatable-size="true" data-kt-select="" name="perpage">
+                        </select>
+                        par page
+                    </div>
+                    <div class="flex items-center gap-4 order-1 md:order-2">
+                        <span data-kt-datatable-info="true">
+                        </span>
+                        <div class="kt-datatable-pagination" data-kt-datatable-pagination="true">
+                        </div>
+                    </div>
+                </div>
             @else
                 <div class="flex flex-col items-center justify-center py-16">
                     <div class="flex flex-col items-center gap-3 max-w-md text-center">

@@ -112,37 +112,15 @@ const AjaxNavigation = {
         // (sinon les fonctions onclick comme saveAllPermissions ne sont pas définies après navigation AJAX)
         if (html.trim().startsWith('<') && !html.includes('<!DOCTYPE')) {
             if (this.contentContainer) {
-                // Utiliser un conteneur temporaire pour extraire les scripts
-                const temp = document.createElement('div');
-                temp.innerHTML = html;
+                // Extraire les scripts depuis le HTML brut pour éviter la troncature au premier
+                // </script> (le parseur ferme la balise même dans une chaîne JS)
+                const { scriptsToExecute, htmlWithoutScripts } = this.extractScriptsFromRawHtml(html);
 
-                const scripts = Array.from(temp.querySelectorAll('script'));
-                const scriptsToExecute = [];
-
-                scripts.forEach(script => {
-                    if (script.src) {
-                        scriptsToExecute.push({
-                            type: 'external',
-                            src: script.src,
-                            async: script.async,
-                            defer: script.defer
-                        });
-                    } else {
-                        scriptsToExecute.push({
-                            type: 'inline',
-                            content: script.textContent
-                        });
-                    }
-                    script.remove();
-                });
-
-                // Injecter le HTML sans les scripts
-                this.contentContainer.innerHTML = temp.innerHTML;
+                // Injecter le HTML sans les scripts (ou avec scripts vides pour garder l'ordre)
+                this.contentContainer.innerHTML = htmlWithoutScripts;
                 window.history.pushState({}, '', url);
                 this.closeModalsAndBackdrop();
 
-                // Exécuter les scripts APRÈS l'injection du HTML pour que les onclick fonctionnent
-                // Utiliser un petit délai pour s'assurer que le DOM est complètement mis à jour
                 setTimeout(() => {
                     this.executeScripts(scriptsToExecute).then(() => {
                         this.reinitialize();
@@ -152,61 +130,170 @@ const AjaxNavigation = {
             }
         }
         
-        // Parser le HTML complet
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        
-        // Extraire SEULEMENT le contenu principal (pas le layout)
-        const newContent = doc.querySelector('main[role="content"]') || 
-                          doc.querySelector('#content') || 
-                          doc.querySelector('main');
-        
-        if (newContent && this.contentContainer) {
-            // Extraire les scripts avant de remplacer le contenu
-            const scripts = Array.from(newContent.querySelectorAll('script'));
-            const scriptsToExecute = [];
-            
-            scripts.forEach(script => {
-                if (script.src) {
-                    // Script externe - le charger
-                    scriptsToExecute.push({
-                        type: 'external',
-                        src: script.src,
-                        async: script.async,
-                        defer: script.defer
-                    });
-                } else {
-                    // Script inline - l'exécuter
-                    scriptsToExecute.push({
-                        type: 'inline',
-                        content: script.textContent
-                    });
-                }
-                // Retirer le script du contenu pour éviter la double exécution
-                script.remove();
-            });
-            
-            // Remplacer SEULEMENT le contenu du main, pas tout le body
-            this.contentContainer.innerHTML = newContent.innerHTML;
-            
-            // Mettre à jour l'URL sans recharger la page
+        // Extraire le main depuis le HTML brut (évite troncature des scripts au premier </script>)
+        const mainMatch = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i);
+        const mainContent = mainMatch ? mainMatch[1] : null;
+
+        if (mainContent && this.contentContainer) {
+            const { scriptsToExecute, htmlWithoutScripts } = this.extractScriptsFromRawHtml(mainContent);
+
+            this.contentContainer.innerHTML = htmlWithoutScripts;
             window.history.pushState({}, '', url);
             this.closeModalsAndBackdrop();
-            
-            // Exécuter les scripts APRÈS l'injection du HTML pour que les onclick fonctionnent
-            // Utiliser un petit délai pour s'assurer que le DOM est complètement mis à jour
+
             setTimeout(() => {
                 this.executeScripts(scriptsToExecute).then(() => {
-                    // Réinitialiser les scripts et composants après l'exécution des scripts
                     this.reinitialize();
                 });
             }, 10);
+        } else if (this.contentContainer) {
+            // Fallback : parser avec DOMParser
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newContent = doc.querySelector('main[role="content"]') || doc.querySelector('#content') || doc.querySelector('main');
+            if (newContent) {
+                const scripts = Array.from(newContent.querySelectorAll('script'));
+                const scriptsToExecute = [];
+                scripts.forEach(script => {
+                    if (script.src) {
+                        scriptsToExecute.push({ type: 'external', src: script.src, async: script.async, defer: script.defer });
+                    } else {
+                        scriptsToExecute.push({ type: 'inline', content: script.textContent });
+                    }
+                    script.remove();
+                });
+                this.contentContainer.innerHTML = newContent.innerHTML;
+                window.history.pushState({}, '', url);
+                this.closeModalsAndBackdrop();
+                setTimeout(() => {
+                    this.executeScripts(scriptsToExecute).then(() => this.reinitialize());
+                }, 10);
+            } else {
+                window.location.href = url;
+            }
         } else {
-            // Si on ne trouve pas le conteneur, recharger la page normalement
             window.location.href = url;
         }
     },
     
+    /**
+     * Extraire les scripts depuis le HTML brut sans tronquer au premier </script>
+     * (le parseur HTML ferme la balise même dans une chaîne JS).
+     * @param {string} html
+     * @returns {{ scriptsToExecute: Array<{type: string, content?: string, src?: string}>, htmlWithoutScripts: string }}
+     */
+    extractScriptsFromRawHtml(html) {
+        const scriptsToExecute = [];
+        let htmlWithoutScripts = '';
+        let i = 0;
+        const len = html.length;
+
+        while (i < len) {
+            const scriptStart = html.indexOf('<script', i);
+            if (scriptStart === -1) {
+                htmlWithoutScripts += html.slice(i);
+                break;
+            }
+            htmlWithoutScripts += html.slice(i, scriptStart);
+            const tagEnd = html.indexOf('>', scriptStart);
+            if (tagEnd === -1) {
+                htmlWithoutScripts += html.slice(scriptStart);
+                break;
+            }
+            const openTag = html.slice(scriptStart, tagEnd + 1);
+            const hasSrc = /src\s*=/i.test(openTag);
+            i = tagEnd + 1;
+
+            if (hasSrc) {
+                const srcMatch = openTag.match(/src\s*=\s*["']([^"']+)["']/i);
+                if (srcMatch && srcMatch[1]) {
+                    scriptsToExecute.push({
+                        type: 'external',
+                        src: srcMatch[1],
+                        async: /async\b/i.test(openTag),
+                        defer: /defer\b/i.test(openTag)
+                    });
+                }
+            }
+
+            const contentStart = i;
+            let inString = null;
+            let escape = false;
+            let blockComment = false;
+            let lineComment = false;
+            let endScript = -1;
+
+            while (i < len) {
+                const c = html[i];
+                if (lineComment) {
+                    if (c === '\n' || c === '\r') lineComment = false;
+                    i++;
+                    continue;
+                }
+                if (blockComment) {
+                    if (c === '*' && html[i + 1] === '/') {
+                        blockComment = false;
+                        i += 2;
+                    } else i++;
+                    continue;
+                }
+                if (escape) {
+                    escape = false;
+                    i++;
+                    continue;
+                }
+                if (inString) {
+                    if (c === '\\' && (inString === '"' || inString === "'" || inString === '`')) {
+                        escape = true;
+                        i++;
+                        continue;
+                    }
+                    if (c === inString) {
+                        inString = null;
+                        i++;
+                        continue;
+                    }
+                    i++;
+                    continue;
+                }
+                if (c === '/' && html[i + 1] === '/') {
+                    lineComment = true;
+                    i += 2;
+                    continue;
+                }
+                if (c === '/' && html[i + 1] === '*') {
+                    blockComment = true;
+                    i += 2;
+                    continue;
+                }
+                if (c === '"' || c === "'" || c === '`') {
+                    inString = c;
+                    i++;
+                    continue;
+                }
+                if (html.slice(i, i + 9).toLowerCase() === '</script>') {
+                    endScript = i;
+                    i += 9;
+                    break;
+                }
+                i++;
+            }
+
+            if (endScript === -1) {
+                htmlWithoutScripts += html.slice(scriptStart);
+                break;
+            }
+
+            if (!hasSrc) {
+                const content = html.slice(contentStart, endScript);
+                scriptsToExecute.push({ type: 'inline', content });
+            }
+            htmlWithoutScripts += '<script></script>';
+        }
+
+        return { scriptsToExecute, htmlWithoutScripts };
+    },
+
     // Exécuter les scripts extraits
     async executeScripts(scripts) {
         for (const script of scripts) {
@@ -305,13 +392,42 @@ const AjaxNavigation = {
         // Réinitialiser les cartes Leaflet
         this.reinitializeMaps();
         
+        // Réinitialiser les datatables (pagination, etc.) pour le contenu chargé en AJAX
+        this.reinitializeDatatables();
+        
         // Appeler toutes les fonctions d'initialisation de pages (pattern window.init*)
         this.reinitializePageFunctions();
         
         // Déclencher un événement personnalisé
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/26370817-2ad4-48a9-8621-53fe8856d785',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ajax-navigation.js:reinitialize',message:'before ajax-content-loaded dispatch',data:{hasDashboardEl:!!document.getElementById('dashboard_month_map'),hasL:typeof L!=='undefined'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
         document.dispatchEvent(new CustomEvent('ajax-content-loaded'));
     },
     
+    // Réinitialiser les datatables KTUI (pagination, select size, etc.) après chargement AJAX
+    reinitializeDatatables() {
+        if (!this.contentContainer) return;
+        setTimeout(() => {
+            const KTDatatable = window.KTDataTable || window.KTDatatable;
+            if (typeof KTDatatable === 'undefined') return;
+            try {
+                if (typeof KTDatatable.createInstances === 'function') {
+                    KTDatatable.createInstances();
+                } else {
+                    this.contentContainer.querySelectorAll('[data-kt-datatable="true"]').forEach(el => {
+                        if (el.getAttribute('data-kt-datatable-initialized') === 'true') return;
+                        if (typeof KTDatatable.getOrCreateInstance === 'function') {
+                            KTDatatable.getOrCreateInstance(el);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.debug('[AjaxNav] Datatable init:', e);
+            }
+        }, 50);
+    },
+
     // Réinitialiser les événements des boutons après chargement AJAX
     reinitializeButtonEvents() {
         // Les événements onclick inline devraient fonctionner automatiquement
@@ -431,6 +547,9 @@ const AjaxNavigation = {
         
         // Carte du dashboard (performance du mois) - utiliser la nouvelle instance de classe
         const dashboardMapElement = document.getElementById('dashboard_month_map');
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/26370817-2ad4-48a9-8621-53fe8856d785',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ajax-navigation.js:initAllMaps',message:'dashboard map check',data:{hasEl:!!dashboardMapElement,hasInstance:!!window.dashboardMonthMapInstance,hasL:typeof L!=='undefined'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
         if (dashboardMapElement && window.dashboardMonthMapInstance) {
             // Détruire l'ancienne carte si elle existe
             window.dashboardMonthMapInstance.destroy();

@@ -82,7 +82,7 @@
                                         <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
-                                <th class="w-[50px]"></th>
+                                <th class="min-w-[72px] w-[72px] text-right pr-3 border-l border-border/50 bg-muted/30">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -145,10 +145,10 @@
                                 <td class="text-foreground font-normal">
                                     {{ $agent->created_at->locale('fr')->isoFormat('D MMM Y') }}
                                 </td>
-                                <td>
-                                    <div class="kt-menu" data-kt-menu="true">
+                                <td class="agents-table-actions-cell">
+                                    <div class="kt-menu agents-row-menu" data-kt-menu="true">
                                         <div class="kt-menu-item" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end" data-kt-menu-offset="0, 10px">
-                                            <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
+                                            <button type="button" class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost agents-action-btn">
                                                 <i class="ki-filled ki-dots-vertical text-lg"></i>
                                             </button>
                                             <div class="kt-menu-dropdown kt-menu-default w-full max-w-[175px]" data-kt-menu-dismiss="true">
@@ -275,15 +275,85 @@
         display: none;
     }
     
-    /* Styles pour les menus déroulants */
-    .kt-menu {
+    /* Colonne Actions : bien distincte du tableau, cliquable */
+    #agents_table .agents-table-actions-cell {
+        width: 72px !important;
+        min-width: 72px !important;
+        max-width: 72px !important;
+        overflow: visible !important;
+        position: relative !important;
+        z-index: 2 !important;
+        border-left: 1px solid #e5e7eb !important;
+        background: #f9fafb !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        vertical-align: middle !important;
+    }
+    .dark #agents_table .agents-table-actions-cell {
+        border-left-color: #374151 !important;
+        background: #1f2937 !important;
+    }
+    #agents_table thead th:last-child {
+        border-left: 1px solid #e5e7eb !important;
+        background: #f3f4f6 !important;
+    }
+    .dark #agents_table thead th:last-child {
+        border-left-color: #374151 !important;
+        background: #111827 !important;
+    }
+    /* Bouton d'action : zone de clic nette, pas confondu avec les cellules */
+    #agents_table .agents-action-btn {
+        min-width: 2rem !important;
+        min-height: 2rem !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+        border-radius: 0.375rem !important;
+        border: 1px solid #e5e7eb !important;
+        background: #fff !important;
+    }
+    #agents_table .agents-action-btn:hover {
+        background: #f3f4f6 !important;
+        border-color: #d1d5db !important;
+    }
+    .dark #agents_table .agents-action-btn {
+        border-color: #374151 !important;
+        background: #374151 !important;
+    }
+    .dark #agents_table .agents-action-btn:hover {
+        background: #4b5563 !important;
+        border-color: #4b5563 !important;
+    }
+    /* Ligne active : menu au-dessus des autres cellules */
+    #agents_table tbody tr {
         position: relative;
+        z-index: 1;
+    }
+    #agents_table tbody tr:hover .agents-table-actions-cell {
+        z-index: 3 !important;
+    }
+    /* Quand le menu est ouvert, toute la ligne passe au-dessus des lignes suivantes
+       pour que "Voir" et "Modifier" soient cliquables (sinon les lignes en dessous
+       interceptent les clics) */
+    #agents_table tbody tr.agents-row-menu-open {
+        position: relative;
+        z-index: 10000 !important;
+    }
+    #agents_table tbody tr.agents-row-menu-open .agents-table-actions-cell {
+        z-index: 10001 !important;
+    }
+    
+    /* Styles pour les menus déroulants */
+    #agents_table .kt-menu {
+        position: relative;
+        display: inline-flex;
     }
     
     .kt-menu-dropdown {
         display: none !important;
-        position: fixed !important; /* Fixed au lieu d'absolute pour être au-dessus de tout */
-        z-index: 99999 !important; /* Z-index très élevé */
+        position: fixed !important; /* Fixed pour être au-dessus de tout et ne pas être coupé */
+        z-index: 99999 !important;
         background: white;
         border: 1px solid #e5e7eb;
         border-radius: 0.5rem;
@@ -296,19 +366,13 @@
         display: block !important;
     }
     
-    /* S'assurer que le conteneur parent ne limite pas le z-index */
+    /* Conteneurs : ne pas créer de clipping sur le dropdown (il est en fixed) */
     .kt-card,
-    .kt-card-content,
-    .kt-scrollable-x-auto {
+    .kt-card-content {
         position: relative;
         z-index: auto;
     }
-    
-    /* Les lignes du tableau doivent avoir un z-index bas */
-    #agents_table tbody tr {
-        position: relative;
-        z-index: 1;
-    }
+    /* Le dropdown est en position: fixed donc il n'est pas coupé par le scroll */
     
     /* Le modal doit avoir un z-index très élevé pour être au-dessus de tout */
     .kt-modal,
@@ -320,51 +384,43 @@
         z-index: 100001 !important;
     }
     
-    /* Mode sombre */
-    .dark .kt-menu-dropdown {
+    /* Mode sombre - uniquement les menus du tableau agents (pas la sidebar) */
+    #agents_table .dark .kt-menu-dropdown {
         background: #1f2937;
         border-color: #374151;
     }
     
-    .kt-menu-item {
+    #agents_table .kt-menu-item {
         position: relative;
     }
     
-    .kt-menu-link {
+    #agents_table .kt-menu-link {
         display: flex;
         align-items: center;
         padding: 0.5rem 1rem;
         color: #374151;
         text-decoration: none;
-        transition: background-color 0.15s ease;
+        transition: color 0.15s ease;
         cursor: pointer;
     }
     
-    .kt-menu-link:hover {
-        background-color: #f3f4f6;
-    }
-    
-    .dark .kt-menu-link {
+    #agents_table .dark .kt-menu-link {
         color: #d1d5db;
     }
     
-    .dark .kt-menu-link:hover {
-        background-color: #374151;
-    }
-    
-    .kt-menu-icon {
+    #agents_table .kt-menu-icon {
         margin-right: 0.75rem;
         display: flex;
         align-items: center;
     }
     
-    .kt-menu-separator {
+    #agents_table .kt-menu-separator {
         height: 1px;
         background-color: #e5e7eb;
         margin: 0.25rem 0;
     }
     
-    .dark .kt-menu-separator {
+    #agents_table .dark .kt-menu-separator {
         background-color: #374151;
     }
 </style>
@@ -685,93 +741,105 @@ let map;
 let marker;
 let isCreatingKiosque = false;
 
-// Initialiser la carte quand le modal s'ouvre
-document.addEventListener('DOMContentLoaded', function() {
+// Exécuter le setup du modal (tabs + toggle kiosque) — appelé au chargement initial OU après navigation AJAX
+function setupAgentModalOnce() {
     const modal = document.querySelector('#modal_nouvel_agent');
-    if (modal) {
-        // Gestion manuelle des onglets Agent / Kiosque pour éviter que le contenu kiosque s'affiche sous l'onglet Agent
-        const tabAgentBtn = document.querySelector('[data-kt-tab-toggle="#tab_agent"]');
-        const tabKiosqueBtn = document.querySelector('[data-kt-tab-toggle="#tab_kiosque"]');
-        const tabAgent = document.getElementById('tab_agent');
-        const tabKiosque = document.getElementById('tab_kiosque');
+    if (!modal) return;
+    // Éviter de ré-attacher les listeners aux tabs à chaque appel (éviter doublons après AJAX)
+    if (modal._agentModalSetupDone) return;
+    modal._agentModalSetupDone = true;
 
-        if (tabAgentBtn && tabKiosqueBtn && tabAgent && tabKiosque) {
-            // État initial : onglet Agent visible, Kiosque caché
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/26370817-2ad4-48a9-8621-53fe8856d785',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'liste_agents:setupAgentModalOnce',message:'running',data:{readyState:document.readyState},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(function(){});
+    // #endregion
+
+    // Gestion manuelle des onglets Agent / Kiosque pour éviter que le contenu kiosque s'affiche sous l'onglet Agent
+    const tabAgentBtn = document.querySelector('[data-kt-tab-toggle="#tab_agent"]');
+    const tabKiosqueBtn = document.querySelector('[data-kt-tab-toggle="#tab_kiosque"]');
+    const tabAgent = document.getElementById('tab_agent');
+    const tabKiosque = document.getElementById('tab_kiosque');
+
+    if (tabAgentBtn && tabKiosqueBtn && tabAgent && tabKiosque) {
+        // État initial : onglet Agent visible, Kiosque caché
+        tabAgentBtn.classList.add('active');
+        tabAgent.classList.add('active');
+        tabKiosqueBtn.classList.remove('active');
+        tabKiosque.classList.add('hidden');
+
+        tabAgentBtn.addEventListener('click', function (e) {
+            e.preventDefault();
             tabAgentBtn.classList.add('active');
-            tabAgent.classList.add('active');
             tabKiosqueBtn.classList.remove('active');
+            tabAgent.classList.remove('hidden');
+            tabAgent.classList.add('active');
             tabKiosque.classList.add('hidden');
-
-            tabAgentBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                tabAgentBtn.classList.add('active');
-                tabKiosqueBtn.classList.remove('active');
-                tabAgent.classList.remove('hidden');
-                tabAgent.classList.add('active');
-                tabKiosque.classList.add('hidden');
-                tabKiosque.classList.remove('active');
-            });
-
-            tabKiosqueBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                tabKiosqueBtn.classList.add('active');
-                tabAgentBtn.classList.remove('active');
-                tabKiosque.classList.remove('hidden');
-                tabKiosque.classList.add('active');
-                tabAgent.classList.add('hidden');
-                tabAgent.classList.remove('active');
-
-                // Si on a déjà coché "créer kiosque" et que la carte n'est pas initialisée, on l'initialise
-                const creerKiosqueCheckbox = document.getElementById('creer_kiosque');
-                if (creerKiosqueCheckbox && creerKiosqueCheckbox.checked && !map) {
-                    setTimeout(function() {
-                        initMap();
-                    }, 200);
-                }
-            });
-        }
-
-        // Toggle création kiosque
-        // IMPORTANT (AJAX): KTUI/Metronic peut recréer le DOM du switch,
-        // donc on utilise une délégation d'événements (robuste après navigation AJAX).
-        if (!window.__agentCreerKiosqueListenerAttached) {
-            window.__agentCreerKiosqueListenerAttached = true;
-
-            document.addEventListener('change', function (e) {
-                const target = e.target;
-                if (!target || target.id !== 'creer_kiosque') return;
-
-                const kiosqueForm = document.getElementById('kiosque_form');
-                const kiosqueExistant = document.getElementById('kiosque_existant');
-                if (!kiosqueForm || !kiosqueExistant) return;
-
-                isCreatingKiosque = target.checked;
-                if (target.checked) {
-                    kiosqueForm.classList.remove('hidden');
-                    kiosqueExistant.classList.add('hidden');
-
-                    // Réinitialiser la carte après que le formulaire soit visible
-                    setTimeout(function () {
-                        initMap();
-                    }, 300);
-                } else {
-                    kiosqueForm.classList.add('hidden');
-                    kiosqueExistant.classList.remove('hidden');
-
-                    // Détruire la carte si elle existe
-                    if (map) {
-                        map.remove();
-                        map = null;
-                        marker = null;
-                    }
-                }
-            }, true);
-        }
-        
-        // Réinitialiser le formulaire quand le modal se ferme
-        modal.addEventListener('kt-modal-dismiss', function() {
-            resetAgentModal();
+            tabKiosque.classList.remove('active');
         });
+
+        tabKiosqueBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            tabKiosqueBtn.classList.add('active');
+            tabAgentBtn.classList.remove('active');
+            tabKiosque.classList.remove('hidden');
+            tabKiosque.classList.add('active');
+            tabAgent.classList.add('hidden');
+            tabAgent.classList.remove('active');
+
+            const creerKiosqueCheckbox = document.getElementById('creer_kiosque');
+            if (creerKiosqueCheckbox && creerKiosqueCheckbox.checked && !map) {
+                setTimeout(function() {
+                    initMap();
+                }, 200);
+            }
+        });
+    }
+
+    // Toggle création kiosque — délégation sur document (une seule fois globalement)
+    if (!window.__agentCreerKiosqueListenerAttached) {
+        window.__agentCreerKiosqueListenerAttached = true;
+        document.addEventListener('change', function (e) {
+            const target = e.target;
+            if (!target || target.id !== 'creer_kiosque') return;
+
+            const kiosqueForm = document.getElementById('kiosque_form');
+            const kiosqueExistant = document.getElementById('kiosque_existant');
+            if (!kiosqueForm || !kiosqueExistant) return;
+
+            isCreatingKiosque = target.checked;
+            if (target.checked) {
+                kiosqueForm.classList.remove('hidden');
+                kiosqueExistant.classList.add('hidden');
+                setTimeout(function () {
+                    initMap();
+                }, 300);
+            } else {
+                kiosqueForm.classList.add('hidden');
+                kiosqueExistant.classList.remove('hidden');
+                if (map) {
+                    map.remove();
+                    map = null;
+                    marker = null;
+                }
+            }
+        }, true);
+    }
+
+    // Réinitialiser le formulaire quand le modal se ferme
+    modal.addEventListener('kt-modal-dismiss', function() {
+        resetAgentModal();
+    });
+}
+
+// Chargement initial : DOMContentLoaded a déjà pu avoir lieu (navigation AJAX)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupAgentModalOnce);
+} else {
+    setupAgentModalOnce();
+}
+// Après injection AJAX, le contenu est déjà "loaded" donc on ré-attache au nouvel élément (flag par modal)
+document.addEventListener('ajax-content-loaded', function() {
+    if (document.querySelector('#modal_nouvel_agent')) {
+        setupAgentModalOnce();
     }
 });
 
@@ -1674,7 +1742,11 @@ function initAgentsPageActions() {
             // Fermer le menu déroulant
             const menu = viewLink.closest('.kt-menu-dropdown');
             if (menu) {
+                menu.classList.remove('show');
                 menu.classList.add('hidden');
+                menu.style.display = 'none';
+                const row = menu.closest('tr');
+                if (row) row.classList.remove('agents-row-menu-open');
                 setTimeout(() => {
                     const id = viewLink.getAttribute('data-id');
                     if (id && typeof window.loadAgentDetails === 'function') {
@@ -1700,7 +1772,11 @@ function initAgentsPageActions() {
             // Fermer le menu déroulant
             const menu = editLink.closest('.kt-menu-dropdown');
             if (menu) {
+                menu.classList.remove('show');
                 menu.classList.add('hidden');
+                menu.style.display = 'none';
+                const row = menu.closest('tr');
+                if (row) row.classList.remove('agents-row-menu-open');
                 setTimeout(() => {
                     const id = editLink.getAttribute('data-id');
                     if (id && typeof window.loadAgentEdit === 'function') {
@@ -1772,6 +1848,8 @@ function initKTMenus() {
                     if (d !== dropdown) {
                         d.classList.remove('show');
                         d.style.display = 'none';
+                        const r = d.closest('tr');
+                        if (r) r.classList.remove('agents-row-menu-open');
                     }
                 });
                 
@@ -1782,8 +1860,18 @@ function initKTMenus() {
                 if (isOpen) {
                     dropdown.classList.remove('show');
                     dropdown.style.display = 'none';
+                    const openRow = dropdown.closest('tr');
+                    if (openRow) openRow.classList.remove('agents-row-menu-open');
                     console.log('Fermeture du dropdown');
                 } else {
+                    // Retirer la classe des autres lignes
+                    document.querySelectorAll('#agents_table tbody tr.agents-row-menu-open').forEach(function(r) {
+                        r.classList.remove('agents-row-menu-open');
+                    });
+                    // Mettre la ligne du menu ouvert au-dessus des autres (z-index) pour que Voir/Modifier soient cliquables
+                    const currentRow = menuToggle.closest('tr');
+                    if (currentRow) currentRow.classList.add('agents-row-menu-open');
+
                     // Positionner le dropdown en fixed pour qu'il soit au-dessus de tout
                     const rect = menuToggle.getBoundingClientRect();
                     dropdown.style.position = 'fixed';
@@ -1807,6 +1895,8 @@ function initKTMenus() {
                 openDropdowns.forEach(d => {
                     d.classList.remove('show');
                     d.style.display = 'none';
+                    const row = d.closest('tr');
+                    if (row) row.classList.remove('agents-row-menu-open');
                 });
             }
         }

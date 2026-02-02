@@ -20,43 +20,9 @@ trait HandlesAjaxRequests
             if (!str_contains($fullHtml, '<!DOCTYPE') && !str_contains($fullHtml, '<html')) {
                 $content = $fullHtml;
             } else {
-                // Extraire le contenu du main depuis le HTML complet
-                $dom = new \DOMDocument();
-                @$dom->loadHTML('<?xml encoding="UTF-8">' . $fullHtml);
-                $xpath = new \DOMXPath($dom);
-                
-                // Chercher le conteneur principal
-                $mainNodes = $xpath->query('//main[@role="content"] | //main[@id="content"] | //main');
-                
-                if ($mainNodes->length > 0) {
-                    $mainNode = $mainNodes->item(0);
-                    $content = '';
-                    foreach ($mainNode->childNodes as $child) {
-                        $content .= $dom->saveHTML($child);
-                    }
-                    
-                    // Extraire aussi les scripts du body (pour @push('scripts'))
-                    $bodyNodes = $xpath->query('//body');
-                    if ($bodyNodes->length > 0) {
-                        $bodyNode = $bodyNodes->item(0);
-                        $scriptNodes = $xpath->query('.//script', $bodyNode);
-                        foreach ($scriptNodes as $scriptNode) {
-                            $content .= $dom->saveHTML($scriptNode);
-                        }
-                    }
-                } else {
-                    // Si on ne trouve pas de main, retourner tout le body
-                    $bodyNodes = $xpath->query('//body');
-                    if ($bodyNodes->length > 0) {
-                        $bodyNode = $bodyNodes->item(0);
-                        $content = '';
-                        foreach ($bodyNode->childNodes as $child) {
-                            $content .= $dom->saveHTML($child);
-                        }
-                    } else {
-                        $content = $fullHtml;
-                    }
-                }
+                // Extraire le contenu du main depuis le HTML brut (sans DOM) pour ne pas tronquer
+                // les scripts au premier </script> (le parseur HTML ferme la balise même dans une chaîne JS)
+                $content = $this->extractMainContentFromRawHtml($fullHtml);
             }
             
             // Si on veut retourner du JSON avec le HTML
@@ -75,6 +41,28 @@ trait HandlesAjaxRequests
         return view($view, $data);
     }
     
+    /**
+     * Extraire le contenu du main depuis le HTML brut sans parser (évite la troncature
+     * des scripts au premier </script> rencontré dans une chaîne JS).
+     */
+    protected function extractMainContentFromRawHtml(string $fullHtml): string
+    {
+        // Contenu du premier <main>...</main> (extraction brute, pas de DOM)
+        if (preg_match('/<main\b[^>]*>([\s\S]*?)<\/main>/iu', $fullHtml, $m)) {
+            $content = $m[1];
+        } else {
+            $content = '';
+        }
+
+        // Scripts du body (ex: @push('scripts')) : entre </main> et </body>
+        $afterMain = $content === '' ? $fullHtml : preg_replace('/<main\b[^>]*>[\s\S]*?<\/main>/iu', '', $fullHtml, 1);
+        if (preg_match_all('/<script\b[^>]*>[\s\S]*?<\/script>/iu', $afterMain, $scripts)) {
+            $content .= "\n" . implode("\n", $scripts[0]);
+        }
+
+        return $content ?: $fullHtml;
+    }
+
     /**
      * Retourner une réponse JSON standardisée
      */

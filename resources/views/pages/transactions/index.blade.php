@@ -12,12 +12,7 @@
                 Vue d'ensemble de toutes les transactions effectuées.
             </div>
         </div>
-        <div class="flex items-center gap-2.5">
-            <a class="kt-btn kt-btn-primary" href="{{ route('transactions.create') }}">
-                <i class="ki-filled ki-plus"></i>
-                Nouvelle Transaction
-            </a>
-        </div>
+        
     </div>
 </div>
 <!-- End of Container -->

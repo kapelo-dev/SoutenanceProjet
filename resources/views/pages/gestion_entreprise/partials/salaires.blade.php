@@ -68,81 +68,103 @@
 </div>
 
 <!-- Table des salaires -->
-<div class="kt-scrollable-x-auto">
-    <table class="kt-table kt-table-border">
-        <thead>
-            <tr>
-                <th>Agent</th>
-                <th>Période</th>
-                <th>Fixe</th>
-                <th>Commission</th>
-                <th>Total</th>
-                <th>Statut</th>
-                <th>Date Paiement</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($salaires as $salaire)
-                <tr>
-                    <td>
-                        <div class="flex items-center gap-2">
-                            @if($salaire->agent->utilisateur->photo_profil)
-                                <img src="{{ asset('storage/' . $salaire->agent->utilisateur->photo_profil) }}" 
-                                     class="size-8 rounded-full object-cover" 
-                                     alt="{{ $salaire->agent->utilisateur->nom_complet }}">
-                            @else
-                                <div class="size-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                    <span class="text-xs font-semibold text-primary">
-                                        {{ strtoupper(substr($salaire->agent->utilisateur->prenom ?? $salaire->agent->utilisateur->nom, 0, 1)) }}
-                                    </span>
+<div class="kt-card">
+    <div class="kt-card-content p-0">
+        <div class="kt-scrollable-x-auto">
+            <table class="kt-table kt-table-border">
+                <thead>
+                    <tr>
+                        <th>Agent</th>
+                        <th>Période</th>
+                        <th>Fixe</th>
+                        <th>Commission</th>
+                        <th>Total</th>
+                        <th>Statut</th>
+                        <th>Date Paiement</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($salaires as $salaire)
+                        <tr>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    @if($salaire->agent->utilisateur->photo_profil)
+                                        <img src="{{ asset('storage/' . $salaire->agent->utilisateur->photo_profil) }}" 
+                                             class="size-8 rounded-full object-cover" 
+                                             alt="{{ $salaire->agent->utilisateur->nom_complet }}">
+                                    @else
+                                        <div class="size-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                            <span class="text-xs font-semibold text-primary">
+                                                {{ strtoupper(substr($salaire->agent->utilisateur->prenom ?? $salaire->agent->utilisateur->nom, 0, 1)) }}
+                                            </span>
+                                        </div>
+                                    @endif
+                                    <span class="font-medium">{{ $salaire->agent->utilisateur->nom_complet }}</span>
                                 </div>
-                            @endif
-                            <span class="font-medium">{{ $salaire->agent->utilisateur->nom_complet }}</span>
-                        </div>
-                    </td>
-                    <td>{{ $salaire->periode }}</td>
-                    <td>{{ number_format($salaire->montant_fixe, 0, ',', ' ') }} FCFA</td>
-                    <td>{{ number_format($salaire->montant_commission, 0, ',', ' ') }} FCFA</td>
-                    <td class="font-bold">{{ number_format($salaire->montant_total, 0, ',', ' ') }} FCFA</td>
-                    <td>
-                        @if($salaire->statut === 'paye')
-                            <span class="kt-badge kt-badge-success">Payé</span>
-                        @elseif($salaire->statut === 'en_attente')
-                            <span class="kt-badge kt-badge-warning">En attente</span>
-                        @else
-                            <span class="kt-badge kt-badge-secondary">{{ $salaire->statut }}</span>
-                        @endif
-                    </td>
-                    <td>{{ $salaire->date_paiement ? $salaire->date_paiement->format('d/m/Y') : '-' }}</td>
-                    <td>
-                        @if($salaire->statut === 'en_attente')
-                            <button type="button" 
-                                    class="kt-btn kt-btn-xs kt-btn-success"
-                                    onclick="openPayerModal({{ $salaire->id }})">
-                                <i class="ki-filled ki-check-circle me-1"></i>
-                                Payer
-                            </button>
-                        @endif
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="8" class="text-center text-muted-foreground py-10">
-                        Aucun salaire trouvé
-                    </td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
-</div>
-
-<!-- Pagination -->
-@if($salaires->hasPages())
-    <div class="flex justify-center mt-5">
-        {{ $salaires->links() }}
+                            </td>
+                            <td>{{ $salaire->periode }}</td>
+                            <td>{{ number_format($salaire->montant_fixe, 0, ',', ' ') }} FCFA</td>
+                            <td>{{ number_format($salaire->montant_commission, 0, ',', ' ') }} FCFA</td>
+                            <td class="font-bold">{{ number_format($salaire->montant_total, 0, ',', ' ') }} FCFA</td>
+                            <td>
+                                @if($salaire->statut === 'paye')
+                                    <span class="kt-badge kt-badge-success">Payé</span>
+                                @elseif($salaire->statut === 'en_attente')
+                                    <span class="kt-badge kt-badge-warning">En attente</span>
+                                @else
+                                    <span class="kt-badge kt-badge-secondary">{{ $salaire->statut }}</span>
+                                @endif
+                            </td>
+                            <td>{{ $salaire->date_paiement ? $salaire->date_paiement->format('d/m/Y') : '-' }}</td>
+                            <td>
+                                @if($salaire->statut === 'en_attente')
+                                    <button type="button" 
+                                            class="kt-btn kt-btn-xs kt-btn-success"
+                                            onclick="openPayerModal({{ $salaire->id }})">
+                                        <i class="ki-filled ki-check-circle me-1"></i>
+                                        Payer
+                                    </button>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="8" class="text-center text-muted-foreground py-10">
+                                Aucun salaire trouvé
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
-@endif
+    <!-- Pagination en bas du tableau (comme les autres pages) -->
+    <div class="kt-card-footer justify-center md:justify-between flex-col md:flex-row gap-5 text-secondary-foreground text-sm font-medium">
+        <div class="flex items-center gap-2 order-2 md:order-1">
+            Afficher
+            <form method="GET" action="{{ route('gestion-entreprise.index') }}" class="inline" id="form-perpage-salaires">
+                <input type="hidden" name="onglet" value="salaires">
+                <select name="per_page_salaires" class="kt-select w-16" data-kt-select="" onchange="this.form.submit()">
+                    @foreach([10, 15, 25, 50] as $n)
+                        <option value="{{ $n }}" {{ $salaires->perPage() == $n ? 'selected' : '' }}>{{ $n }}</option>
+                    @endforeach
+                </select>
+            </form>
+            par page
+        </div>
+        <div class="flex items-center gap-4 order-1 md:order-2">
+            <span>
+                {{ $salaires->firstItem() ? $salaires->firstItem() . '-' . $salaires->lastItem() . ' sur ' . $salaires->total() : '0' }}
+            </span>
+            @if($salaires->hasPages())
+                <div class="flex items-center gap-1">
+                    {{ $salaires->links() }}
+                </div>
+            @endif
+        </div>
+    </div>
+</div>
 
 <!-- Modal: Générer Salaires -->
 <div class="kt-modal" data-kt-modal="true" id="modal_generer_salaires">

@@ -22,9 +22,12 @@ class GestionEntrepriseController extends Controller
         $onglet = $request->get('onglet', 'salaires');
 
         // Données pour l'onglet Salaires
+        $perPageSalaires = (int) $request->get('per_page_salaires', 15);
+        $perPageSalaires = in_array($perPageSalaires, [10, 15, 25, 50], true) ? $perPageSalaires : 15;
         $salaires = Salaire::with(['agent.utilisateur', 'parametreSalaire'])
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->paginate($perPageSalaires)
+            ->withQueryString();
 
         // Données pour l'onglet Paramètres
         $parametres = ParametreSalaire::with('profils')
@@ -40,10 +43,13 @@ class GestionEntrepriseController extends Controller
         $dateDebut = $request->get('date_debut', now()->startOfMonth()->format('Y-m-d'));
         $dateFin = $request->get('date_fin', now()->endOfMonth()->format('Y-m-d'));
 
+        $perPageTresorerie = (int) $request->get('per_page_tresorerie', 20);
+        $perPageTresorerie = in_array($perPageTresorerie, [10, 15, 20, 25, 50], true) ? $perPageTresorerie : 20;
         $mouvements = MouvementTresorerie::with(['agent.utilisateur', 'salaire', 'utilisateur'])
             ->whereBetween('date_mouvement', [$dateDebut, $dateFin])
             ->orderBy('date_mouvement', 'desc')
-            ->paginate(20);
+            ->paginate($perPageTresorerie)
+            ->withQueryString();
 
         // Statistiques trésorerie
         $stats = [

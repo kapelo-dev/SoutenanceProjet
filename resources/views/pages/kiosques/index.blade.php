@@ -6,51 +6,51 @@
     <div class="kt-container-fixed" id="contentContainer">
     </div>
     <!-- End of Container -->
-    <!-- Container -->
+    <!-- Titre + boutons en haut (comme les autres pages) -->
     <div class="kt-container-fixed">
-     <div class="flex flex-col items-stretch gap-5 lg:gap-7.5">
-      <div class="flex flex-wrap items-center gap-5 justify-between">
-       <h3 class="text-base text-mono font-medium">
-        Affichage de {{ $kiosques->total() }} kiosque{{ $kiosques->total() > 1 ? 's' : '' }}
-       </h3>
-       <div class="flex items-center flex-wrap gap-5">
-        <a href="{{ route('kiosques.create') }}" class="kt-btn kt-btn-primary">
-         <i class="ki-filled ki-plus"></i>
-         Créer un kiosque
-        </a>
-        <a href="{{ route('kiosques.carte') }}" class="kt-btn kt-btn-outline">
-         <i class="ki-filled ki-geolocation"></i>
-         Carte des kiosques
-        </a>
-        <form method="GET" action="{{ route('kiosques.index') }}" class="flex items-center gap-2.5">
+     <div class="flex flex-wrap items-center lg:items-end justify-between gap-5 pb-7.5">
+      <div class="flex flex-col justify-center gap-2">
+       <h1 class="text-2xl font-semibold leading-none text-mono">
+        Liste des kiosques
+       </h1>
+       <div id="kiosques-count" class="flex items-center gap-2 text-sm font-normal text-secondary-foreground">
+        Affichage de {{ $kiosques->total() }} kiosque{{ $kiosques->total() > 1 ? 's' : '' }}.
+       </div>
+      </div>
+      <div class="flex items-center gap-2.5">
+       <a href="{{ route('kiosques.create') }}" class="kt-btn kt-btn-primary">
+        <i class="ki-filled ki-plus"></i>
+        Créer un kiosque
+       </a>
+       <a href="{{ route('kiosques.carte') }}" class="kt-btn kt-btn-outline">
+        <i class="ki-filled ki-geolocation"></i>
+        Carte des kiosques
+       </a>
+      </div>
+     </div>
+    </div>
+    <!-- Filtres dans une carte -->
+    <div class="kt-container-fixed">
+     <div class="kt-card kt-card-grid min-w-full">
+      <div class="kt-card-header py-5 flex-wrap gap-2">
+       <div class="flex items-center flex-wrap gap-5 ml-auto">
+        <form method="GET" action="{{ route('kiosques.index') }}" class="flex items-center gap-2.5" id="form-filters-kiosques">
          <select name="statut" id="filter-kiosque-statut" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner un statut">
           <option value="">Tous les statuts</option>
-          <option value="actif" {{ request('statut') == 'actif' ? 'selected' : '' }}>
-           Actif
-          </option>
-          <option value="inactif" {{ request('statut') == 'inactif' ? 'selected' : '' }}>
-           Inactif
-          </option>
-          <option value="en_travaux" {{ request('statut') == 'en_travaux' ? 'selected' : '' }}>
-           En travaux
-          </option>
+          <option value="actif" {{ request('statut') == 'actif' ? 'selected' : '' }}>Actif</option>
+          <option value="inactif" {{ request('statut') == 'inactif' ? 'selected' : '' }}>Inactif</option>
+          <option value="en_travaux" {{ request('statut') == 'en_travaux' ? 'selected' : '' }}>En travaux</option>
          </select>
          <select name="type" id="filter-kiosque-type" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner un type">
           <option value="">Tous les types</option>
-          <option value="fixe" {{ request('type') == 'fixe' ? 'selected' : '' }}>
-           Fixe
-          </option>
-          <option value="mobile" {{ request('type') == 'mobile' ? 'selected' : '' }}>
-           Mobile
-          </option>
+          <option value="fixe" {{ request('type') == 'fixe' ? 'selected' : '' }}>Fixe</option>
+          <option value="mobile" {{ request('type') == 'mobile' ? 'selected' : '' }}>Mobile</option>
          </select>
          @if($villes && $villes->count() > 0)
          <select name="ville" id="filter-kiosque-ville" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner une ville">
           <option value="">Toutes les villes</option>
           @foreach($villes as $ville)
-          <option value="{{ $ville }}" {{ request('ville') == $ville ? 'selected' : '' }}>
-           {{ $ville }}
-          </option>
+          <option value="{{ $ville }}" {{ request('ville') == $ville ? 'selected' : '' }}>{{ $ville }}</option>
           @endforeach
          </select>
          @endif
@@ -58,32 +58,21 @@
         </form>
         <form method="GET" action="{{ route('kiosques.index') }}" class="flex">
          <label class="kt-input">
-          <i class="ki-filled ki-magnifier">
-          </i>
+          <i class="ki-filled ki-magnifier"></i>
           <input placeholder="Rechercher par nom, code, quartier" type="text" name="search" id="filter-kiosque-search" value="{{ request('search') }}"/>
-          @if(request('statut'))
-          <input type="hidden" name="statut" value="{{ request('statut') }}">
-          @endif
-          @if(request('type'))
-          <input type="hidden" name="type" value="{{ request('type') }}">
-          @endif
-          @if(request('ville'))
-          <input type="hidden" name="ville" value="{{ request('ville') }}">
-          @endif
+          @if(request('statut'))<input type="hidden" name="statut" value="{{ request('statut') }}">@endif
+          @if(request('type'))<input type="hidden" name="type" value="{{ request('type') }}">@endif
+          @if(request('ville'))<input type="hidden" name="ville" value="{{ request('ville') }}">@endif
          </label>
         </form>
         <div class="kt-toggle-group kt-toggle-group-sm" data-kt-tabs="true">
-         <a class="kt-btn kt-btn-icon active" data-kt-tab-toggle="#kiosques_card" href="#">
-          <i class="ki-filled ki-category">
-          </i>
-         </a>
-         <a class="kt-btn kt-btn-icon" data-kt-tab-toggle="#kiosques_list" href="#">
-          <i class="ki-filled ki-row-horizontal">
-          </i>
-         </a>
+         <a class="kt-btn kt-btn-icon active" data-kt-tab-toggle="#kiosques_card" href="#"><i class="ki-filled ki-category"></i></a>
+         <a class="kt-btn kt-btn-icon" data-kt-tab-toggle="#kiosques_list" href="#"><i class="ki-filled ki-row-horizontal"></i></a>
         </div>
        </div>
       </div>
+      <div class="kt-card-content">
+       <div class="flex flex-col items-stretch gap-5 lg:gap-7.5">
       <div class="flex flex-col gap-5 lg:gap-7.5" id="kiosques_card">
        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-7.5">
         @forelse($kiosques as $kiosque)
@@ -291,6 +280,7 @@
       </div>
      </div>
     </div>
+   </div>
     <!-- End of Container -->
    </main>
 
@@ -329,7 +319,7 @@
         
         // Récupérer la section des résultats
         const resultsContainer = document.querySelector('#kiosques_card, #kiosques_list').parentElement;
-        const countElement = document.querySelector('h3.text-base.text-mono');
+        const countElement = document.getElementById('kiosques-count');
         
         if (resultsContainer) {
             resultsContainer.style.opacity = '0.6';
@@ -354,7 +344,7 @@
             
             // Extraire seulement la section des résultats
             const newResults = doc.querySelector('#kiosques_card, #kiosques_list').parentElement;
-            const newCount = doc.querySelector('h3.text-base.text-mono');
+            const newCount = doc.getElementById('kiosques-count');
             
             if (newResults && resultsContainer) {
                 // Remplacer seulement les résultats

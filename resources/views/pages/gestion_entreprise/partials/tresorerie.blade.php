@@ -162,14 +162,34 @@
             </table>
         </div>
     </div>
-</div>
-
-<!-- Pagination -->
-@if($mouvements->hasPages())
-    <div class="flex justify-center mt-5">
-        {{ $mouvements->appends(['onglet' => 'tresorerie', 'date_debut' => $dateDebut, 'date_fin' => $dateFin])->links() }}
+    <!-- Pagination en bas du tableau (comme les autres pages) -->
+    <div class="kt-card-footer justify-center md:justify-between flex-col md:flex-row gap-5 text-secondary-foreground text-sm font-medium">
+        <div class="flex items-center gap-2 order-2 md:order-1">
+            Afficher
+            <form method="GET" action="{{ route('gestion-entreprise.index') }}" class="inline" id="form-perpage-tresorerie">
+                <input type="hidden" name="onglet" value="tresorerie">
+                <input type="hidden" name="date_debut" value="{{ $dateDebut }}">
+                <input type="hidden" name="date_fin" value="{{ $dateFin }}">
+                <select name="per_page_tresorerie" class="kt-select w-16" data-kt-select="" onchange="this.form.submit()">
+                    @foreach([10, 15, 20, 25, 50] as $n)
+                        <option value="{{ $n }}" {{ $mouvements->perPage() == $n ? 'selected' : '' }}>{{ $n }}</option>
+                    @endforeach
+                </select>
+            </form>
+            par page
+        </div>
+        <div class="flex items-center gap-4 order-1 md:order-2">
+            <span>
+                {{ $mouvements->firstItem() ? $mouvements->firstItem() . '-' . $mouvements->lastItem() . ' sur ' . $mouvements->total() : '0' }}
+            </span>
+            @if($mouvements->hasPages())
+                <div class="flex items-center gap-1">
+                    {{ $mouvements->appends(['onglet' => 'tresorerie', 'date_debut' => $dateDebut, 'date_fin' => $dateFin, 'per_page_tresorerie' => $mouvements->perPage()])->links() }}
+                </div>
+            @endif
+        </div>
     </div>
-@endif
+</div>
 
 <!-- Modal: Nouveau Mouvement -->
 <div class="kt-modal" data-kt-modal="true" id="modal_nouveau_mouvement">

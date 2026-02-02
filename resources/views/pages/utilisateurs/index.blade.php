@@ -6,12 +6,31 @@
     <div class="kt-container-fixed" id="contentContainer">
     </div>
     <!-- End of Container -->
-    <!-- Container -->
+    <!-- Titre + bouton Ajouter -->
+    <div class="kt-container-fixed">
+     <div class="flex flex-wrap items-center lg:items-end justify-between gap-5 pb-7.5">
+      <div class="flex flex-col justify-center gap-2">
+       <h1 class="text-2xl font-semibold leading-none text-mono">
+        Utilisateurs
+       </h1>
+       <div class="flex items-center gap-2 text-sm font-normal text-secondary-foreground">
+        Affichage de {{ $utilisateurs->total() }} utilisateur{{ $utilisateurs->total() > 1 ? 's' : '' }}.
+       </div>
+      </div>
+      <div class="flex items-center gap-2.5">
+       <button type="button" class="kt-btn kt-btn-primary" data-kt-modal-toggle="#modal_nouvel_utilisateur">
+        <i class="ki-filled ki-plus"></i>
+        Ajouter
+       </button>
+      </div>
+     </div>
+    </div>
+    <!-- Filtres -->
     <div class="kt-container-fixed">
      <div class="flex flex-col items-stretch gap-5 lg:gap-7.5">
       <div class="flex flex-wrap items-center gap-5 justify-between">
-       <h3 class="text-base text-mono font-medium">
-        Affichage de {{ $utilisateurs->total() }} utilisateur{{ $utilisateurs->total() > 1 ? 's' : '' }}
+       <h3 class="text-base text-mono font-medium sr-only">
+        Filtres
        </h3>
        <div class="flex items-center flex-wrap gap-5">
         <form method="GET" action="{{ route('utilisateurs.index') }}" class="flex items-center gap-2.5" id="utilisateurs-filter-form">
@@ -277,6 +296,90 @@
     <!-- End of Container -->
    </main>
 
+   <!-- Modal Nouvel Utilisateur -->
+   <div class="kt-modal" data-kt-modal="true" id="modal_nouvel_utilisateur" style="display: none;">
+    <div class="kt-modal-content max-w-2xl">
+     <div class="kt-modal-header">
+      <h3 class="kt-modal-title">Créer un utilisateur</h3>
+      <button type="button" class="kt-modal-close" data-kt-modal-dismiss="true">
+       <i class="ki-filled ki-cross"></i>
+      </button>
+     </div>
+     <form action="{{ route('utilisateurs.store') }}" method="POST" enctype="multipart/form-data" id="form_nouvel_utilisateur">
+      @csrf
+      <div class="kt-modal-body flex flex-col gap-5">
+       @if($errors->any())
+        <div class="kt-alert kt-alert-danger">
+         <i class="ki-filled ki-information-2"></i>
+         <ul class="list-disc list-inside text-sm">
+          @foreach($errors->all() as $err)
+           <li>{{ $err }}</li>
+          @endforeach
+         </ul>
+        </div>
+       @endif
+       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="flex flex-col gap-2">
+         <label class="kt-label" for="create_nom">Nom <span class="text-destructive">*</span></label>
+         <input type="text" name="nom" id="create_nom" class="kt-input" value="{{ old('nom') }}" required maxlength="100" placeholder="Nom de famille">
+        </div>
+        <div class="flex flex-col gap-2">
+         <label class="kt-label" for="create_prenom">Prénom <span class="text-destructive">*</span></label>
+         <input type="text" name="prenom" id="create_prenom" class="kt-input" value="{{ old('prenom') }}" required maxlength="100" placeholder="Prénom">
+        </div>
+       </div>
+       <div class="flex flex-col gap-2">
+        <label class="kt-label" for="create_email">Email <span class="text-destructive">*</span></label>
+        <input type="email" name="email" id="create_email" class="kt-input" value="{{ old('email') }}" required maxlength="100" placeholder="email@exemple.com">
+       </div>
+       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="flex flex-col gap-2">
+         <label class="kt-label" for="create_mot_de_passe">Mot de passe <span class="text-destructive">*</span></label>
+         <input type="password" name="mot_de_passe" id="create_mot_de_passe" class="kt-input" required minlength="8" placeholder="Min. 8 caractères">
+        </div>
+        <div class="flex flex-col gap-2">
+         <label class="kt-label" for="create_mot_de_passe_confirmation">Confirmer le mot de passe <span class="text-destructive">*</span></label>
+         <input type="password" name="mot_de_passe_confirmation" id="create_mot_de_passe_confirmation" class="kt-input" required minlength="8" placeholder="Répéter le mot de passe">
+        </div>
+       </div>
+       <div class="flex flex-col gap-2">
+        <label class="kt-label" for="create_telephone">Téléphone</label>
+        <input type="text" name="telephone" id="create_telephone" class="kt-input" value="{{ old('telephone') }}" maxlength="20" placeholder="Optionnel">
+       </div>
+       <div class="flex flex-col gap-2">
+        <label class="kt-label" for="create_statut">Statut <span class="text-destructive">*</span></label>
+        <select name="statut" id="create_statut" class="kt-select" data-kt-select="true" required>
+         <option value="actif" {{ old('statut') == 'actif' ? 'selected' : '' }}>Actif</option>
+         <option value="inactif" {{ old('statut') == 'inactif' ? 'selected' : '' }}>Inactif</option>
+         <option value="suspendu" {{ old('statut') == 'suspendu' ? 'selected' : '' }}>Suspendu</option>
+        </select>
+       </div>
+       <div class="flex flex-col gap-2">
+        <label class="kt-label" for="create_profils">Profils <span class="text-destructive">*</span></label>
+        <select name="profils[]" id="create_profils" class="kt-select" data-kt-select="true" multiple required>
+         @foreach($profils ?? [] as $profil)
+          <option value="{{ $profil->id }}" {{ in_array($profil->id, old('profils', [])) ? 'selected' : '' }}>{{ $profil->libelle }}</option>
+         @endforeach
+        </select>
+        <span class="text-xs text-muted-foreground">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs profils.</span>
+       </div>
+       <div class="flex flex-col gap-2">
+        <label class="kt-label" for="create_photo_profil">Photo de profil</label>
+        <input type="file" name="photo_profil" id="create_photo_profil" class="kt-input" accept="image/jpeg,image/png,image/jpg">
+        <span class="text-xs text-muted-foreground">JPEG, PNG ou JPG, max. 2 Mo.</span>
+       </div>
+      </div>
+      <div class="kt-modal-footer">
+       <button type="button" class="kt-btn kt-btn-outline" data-kt-modal-dismiss="true">Annuler</button>
+       <button type="submit" class="kt-btn kt-btn-primary">
+        <i class="ki-filled ki-check me-1"></i>
+        Créer l'utilisateur
+       </button>
+      </div>
+     </form>
+    </div>
+   </div>
+
    <!-- Modal de Profil Utilisateur -->
    <div class="kt-modal" data-kt-modal="true" data-kt-modal-disable-scroll="false" id="modal_profile" style="display: none;">
       <div class="kt-modal-content kt-container-fixed p-0" id="modal_profile_content">
@@ -340,6 +443,19 @@
 <script>
 // La fonction loadUserProfile est définie dans resources/js/page-init.js
 // et est disponible globalement via window.loadUserProfile
+
+// Réouvrir le modal de création si des erreurs de validation (après soumission)
+document.addEventListener('DOMContentLoaded', function() {
+    @if($errors->any())
+    var modal = document.getElementById('modal_nouvel_utilisateur');
+    if (modal && (window.KTModal || typeof KTModal !== 'undefined')) {
+        var inst = window.KTModal ? KTModal.getInstance(modal) : null;
+        if (inst) inst.show(); else if (modal) modal.style.display = 'flex';
+    } else if (modal) {
+        modal.style.display = 'flex';
+    }
+    @endif
+});
 
 // Filtrage en temps réel via AJAX
 (function() {

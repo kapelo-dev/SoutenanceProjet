@@ -61,6 +61,11 @@ class DashboardMonthMap {
 
             // Charger les données
             this.loadData();
+
+            // Après injection AJAX le conteneur peut avoir une taille 0 ; forcer le recalcul après layout
+            setTimeout(() => {
+                if (this.map) this.map.invalidateSize();
+            }, 250);
         } catch (error) {
             console.error('[DashboardMap] Erreur lors de l\'initialisation:', error);
             this.isInitializing = false;
@@ -211,13 +216,10 @@ if (document.readyState === 'loading') {
     setTimeout(() => dashboardMonthMapInstance.init(), 200);
 }
 
-// Réinitialisation après navigation AJAX
+// Réinitialisation après navigation AJAX : ne faire que destroy, l'init est géré par ajax-navigation (initAllMaps)
 document.addEventListener('ajax-content-loaded', () => {
     console.debug('[DashboardMap] ajax-content-loaded déclenché');
-    // Détruire l'ancienne carte si elle existe
     dashboardMonthMapInstance.destroy();
-    // Réinitialiser après un court délai
-    setTimeout(() => dashboardMonthMapInstance.init(), 200);
 });
 
 export default dashboardMonthMapInstance;
