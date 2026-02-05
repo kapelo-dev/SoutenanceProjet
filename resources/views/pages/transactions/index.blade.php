@@ -12,7 +12,12 @@
                 Vue d'ensemble de toutes les transactions effectuées.
             </div>
         </div>
-        
+        <div class="flex items-center gap-2.5">
+            <a class="kt-btn kt-btn-outline" href="#">
+                <i class="ki-filled ki-file-down"></i>
+                Exporter
+            </a>
+        </div>
     </div>
 </div>
 <!-- End of Container -->
@@ -25,11 +30,9 @@
                     <i class="ki-filled ki-magnifier"></i>
                     <input data-kt-datatable-search="#transactions_table" placeholder="Rechercher une transaction" type="text" value=""/>
                 </label>
-                <label class="kt-label whitespace-nowrap">
-                    Transactions Validées
-                    <input class="kt-switch kt-switch-sm" name="check" type="checkbox" value="1"/>
-                </label>
+                
             </div>
+
         </div>
         <div class="kt-card-content">
             <div class="grid" data-kt-datatable="true" data-kt-datatable-page-size="10">

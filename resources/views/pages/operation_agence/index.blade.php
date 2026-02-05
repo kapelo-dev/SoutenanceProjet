@@ -30,10 +30,7 @@
                     <i class="ki-filled ki-magnifier"></i>
                     <input data-kt-datatable-search="#transactions_table" placeholder="Rechercher une transaction" type="text" value=""/>
                 </label>
-                <label class="kt-label whitespace-nowrap">
-                    Transactions Validées
-                    <input class="kt-switch kt-switch-sm" name="check" type="checkbox" value="1"/>
-                </label>
+                
             </div>
         </div>
         <div class="kt-card-content">

@@ -11,8 +11,14 @@
             <div class="flex items-center gap-2 text-sm font-normal text-secondary-foreground">
                 Vue d'ensemble de tous les agents.
             </div>
-        </div>
+        </div>      
         <div class="flex items-center gap-2.5">
+        
+            <a class="kt-btn kt-btn-outline" href="#">
+                <i class="ki-filled ki-file-down"></i>
+                Exporter
+            </a>
+        
             <button class="kt-btn kt-btn-primary" data-kt-modal-toggle="#modal_nouvel_agent">
                 <i class="ki-filled ki-plus"></i>
                 Nouvel Agent

@@ -5,8 +5,11 @@
     <div class="kt-container-fixed flex items-stretch justify-between lg:gap-4" id="headerContainer">
         <!-- Mobile Logo -->
         <div class="-ms-1 flex items-center gap-2.5 lg:hidden">
-            <a class="shrink-0" href="#">
-                <img class="max-h-[25px] w-full" src="assets/media/app/mini-logo.svg" />
+            <a class="shrink-0 dark:hidden" href="{{ url('/') }}" title="PDV Connect">
+                <img class="h-9 max-h-[40px] w-auto" src="{{ asset('assets/media/app/mini-logo.svg') }}" alt="PDV Connect" />
+            </a>
+            <a class="shrink-0 hidden dark:block" href="{{ url('/') }}" title="PDV Connect">
+                <img class="h-6 max-h-[40px] w-auto" src="{{ asset('assets/media/app/mini-logo-dark.svg') }}" alt="PDV Connect" />
             </a>
             <div class="flex items-center">
                 <button class="kt-btn kt-btn-icon kt-btn-ghost" data-kt-drawer-toggle="#sidebar">

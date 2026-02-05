@@ -30,10 +30,7 @@
                     <i class="ki-filled ki-magnifier"></i>
                     <input data-kt-datatable-search="#operateurs_table" placeholder="Rechercher un opérateur" type="text" value=""/>
                 </label>
-                <label class="kt-label whitespace-nowrap">
-                    Opérateurs Actifs
-                    <input class="kt-switch kt-switch-sm" name="filter_actifs" id="filter_actifs" type="checkbox" value="1"/>
-                </label>
+                
             </div>
         </div>
         <div class="kt-card-content">
@@ -139,7 +136,7 @@
                                             data-kt-menu-item-placement-rtl="bottom-start"
                                             data-kt-menu-item-toggle="dropdown"
                                             data-kt-menu-item-trigger="click">
-                                            <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
+                                            <button type="button" class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
                                                 <i class="ki-filled ki-dots-vertical text-lg"></i>
                                             </button>
                                             <div class="kt-menu-dropdown kt-menu-default w-full max-w-[200px]"
@@ -209,6 +206,10 @@
                     <div class="flex items-center gap-2 order-2 md:order-1">
                         Afficher
                         <select class="kt-select w-16" data-kt-datatable-size="true" data-kt-select="" name="perpage">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
                         </select>
                         par page
                     </div>
@@ -240,11 +241,33 @@
     </div>
 </div>
 <!-- End of Container -->
+<style>
+    /* Menu déroulant opérateurs : affichage et z-index (comme page agents) */
+    #operateurs_table .kt-menu-dropdown {
+        display: none !important;
+        position: fixed !important;
+        z-index: 99999 !important;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        min-width: 200px;
+        padding: 0.5rem 0;
+    }
+    #operateurs_table .kt-menu-dropdown.show { display: block !important; }
+    #operateurs_table tbody tr.operateurs-row-menu-open { position: relative; z-index: 10000 !important; }
+    .dark #operateurs_table .kt-menu-dropdown { background: #1f2937; border-color: #374151; }
+</style>
 @endsection
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
+    var operateursPageInited = false;
+    function initOperateursPage() {
+        if (operateursPageInited) return;
+        operateursPageInited = true;
+
     // Filtre des opérateurs actifs
     const filterActifs = document.getElementById('filter_actifs');
     if (filterActifs) {
@@ -336,35 +359,82 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Gestion de la suppression
-    const deleteLinks = document.querySelectorAll('.delete-operateur');
-    deleteLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
+    // Gestion de la suppression (délégation pour fonctionner après AJAX / datatable)
+    document.addEventListener('click', function(e) {
+        const deleteLink = e.target.closest('.delete-operateur');
+        if (deleteLink) {
             e.preventDefault();
-            const url = this.getAttribute('data-url');
-            
+            e.stopPropagation();
+            const url = deleteLink.getAttribute('data-url');
+            if (!url) return;
             if (confirm('Êtes-vous sûr de vouloir supprimer cet opérateur ?')) {
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = url;
-                
                 const csrfToken = document.createElement('input');
                 csrfToken.type = 'hidden';
                 csrfToken.name = '_token';
                 csrfToken.value = '{{ csrf_token() }}';
                 form.appendChild(csrfToken);
-                
                 const methodInput = document.createElement('input');
                 methodInput.type = 'hidden';
                 methodInput.name = '_method';
                 methodInput.value = 'DELETE';
                 form.appendChild(methodInput);
-                
                 document.body.appendChild(form);
                 form.submit();
             }
-        });
-    });
+            return false;
+        }
+    }, true);
+
+    // Fallback menu déroulant : ouvrir/fermer au clic sur le bouton trois points (si KTMenu non initialisé)
+    document.addEventListener('click', function(e) {
+        const menuToggle = e.target.closest('.kt-menu-toggle');
+        if (menuToggle && menuToggle.closest('#operateurs_table')) {
+            e.preventDefault();
+            e.stopPropagation();
+            const menuItem = menuToggle.closest('.kt-menu-item');
+            const dropdown = menuItem ? menuItem.querySelector('.kt-menu-dropdown') : null;
+            if (dropdown) {
+                document.querySelectorAll('#operateurs_table .kt-menu-dropdown.show').forEach(function(d) {
+                    if (d !== dropdown) {
+                        d.classList.remove('show');
+                        d.style.display = 'none';
+                        const row = d.closest('tr');
+                        if (row) row.classList.remove('operateurs-row-menu-open');
+                    }
+                });
+                const isOpen = dropdown.classList.contains('show');
+                if (isOpen) {
+                    dropdown.classList.remove('show');
+                    dropdown.style.display = 'none';
+                    const row = dropdown.closest('tr');
+                    if (row) row.classList.remove('operateurs-row-menu-open');
+                } else {
+                    const row = menuToggle.closest('tr');
+                    if (row) row.classList.add('operateurs-row-menu-open');
+                    var rect = menuToggle.getBoundingClientRect();
+                    dropdown.style.position = 'fixed';
+                    dropdown.style.top = (rect.bottom + 5) + 'px';
+                    dropdown.style.left = rect.left + 'px';
+                    dropdown.style.right = 'auto';
+                    dropdown.style.zIndex = '99999';
+                    dropdown.classList.add('show');
+                    dropdown.style.display = 'block';
+                }
+            }
+            return false;
+        }
+        if (!e.target.closest('.kt-menu') || !e.target.closest('#operateurs_table')) {
+            document.querySelectorAll('#operateurs_table .kt-menu-dropdown.show').forEach(function(d) {
+                d.classList.remove('show');
+                d.style.display = 'none';
+                const row = d.closest('tr');
+                if (row) row.classList.remove('operateurs-row-menu-open');
+            });
+        }
+    }, true);
 
     // Définir les fonctions AVANT les event listeners
     // Fonction pour charger et afficher les détails d'un opérateur
@@ -560,6 +630,13 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
+            const menu = viewLink.closest('.kt-menu-dropdown');
+            if (menu) {
+                menu.classList.remove('show');
+                menu.style.display = 'none';
+                const row = menu.closest('tr');
+                if (row) row.classList.remove('operateurs-row-menu-open');
+            }
             const id = viewLink.getAttribute('data-id');
             console.log('Clic détecté sur voir détails, ID:', id);
             if (id && typeof window.loadOperateurDetails === 'function') {
@@ -583,6 +660,13 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
+            const menu = editLink.closest('.kt-menu-dropdown');
+            if (menu) {
+                menu.classList.remove('show');
+                menu.style.display = 'none';
+                const row = menu.closest('tr');
+                if (row) row.classList.remove('operateurs-row-menu-open');
+            }
             const id = editLink.getAttribute('data-id');
             console.log('Clic détecté sur modifier, ID:', id);
             if (id && typeof window.loadOperateurEdit === 'function') {
@@ -642,7 +726,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-});
+    } // fin initOperateursPage
+
+    document.addEventListener('DOMContentLoaded', initOperateursPage);
+    document.addEventListener('ajax-content-loaded', function() {
+        if (document.getElementById('operateurs_table')) initOperateursPage();
+    });
+})();
 </script>
 @endpush
 

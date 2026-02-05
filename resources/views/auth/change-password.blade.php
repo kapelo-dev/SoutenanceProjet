@@ -7,7 +7,8 @@
     <meta content="follow, index" name="robots"/>
     <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport"/>
     <meta content="Page de changement de mot de passe" name="description"/>
-    <link href="{{ asset('assets/media/app/favicon.ico') }}" rel="shortcut icon"/>
+    <link href="{{ asset('assets/media/app/favicon.svg') }}" rel="icon" type="image/svg+xml" />
+<link href="{{ asset('assets/media/app/favicon.ico') }}" rel="shortcut icon"/>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="{{ asset('assets/vendors/apexcharts/apexcharts.css') }}" rel="stylesheet"/>
     <link href="{{ asset('assets/vendors/keenicons/styles.bundle.css') }}" rel="stylesheet"/>
