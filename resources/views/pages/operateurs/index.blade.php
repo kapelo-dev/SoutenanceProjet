@@ -615,6 +615,25 @@
         });
     }
 
+    // Fermer le modal de détails même si KTModal n'est pas disponible
+    document.addEventListener('click', function(e) {
+        const dismissBtn = e.target.closest('#modal_view_operateur [data-kt-modal-dismiss=\"true\"]');
+        if (dismissBtn) {
+            const modal = document.getElementById('modal_view_operateur');
+            if (!modal) return;
+            if (typeof KTModal !== 'undefined') {
+                const inst = KTModal.getInstance(modal);
+                if (inst) {
+                    inst.hide();
+                    return;
+                }
+            }
+            // Fallback manuel
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+        }
+    });
+
     // Vérifier que les fonctions sont bien définies
     console.log('Fonctions définies:', {
         loadOperateurDetails: typeof window.loadOperateurDetails,

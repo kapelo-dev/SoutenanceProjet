@@ -15,9 +15,8 @@ class KiosqueController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Kiosque::with(['agents' => function($q) {
-            $q->where('statut', 'actif');
-        }]);
+        // Charger tous les agents assignés (tous statuts) pour affichage et places disponibles
+        $query = Kiosque::with('agents');
 
         // Filtres
         if ($request->filled('ville')) {
@@ -138,8 +137,9 @@ class KiosqueController extends Controller
             $q->with('utilisateur', 'soldes');
         }]);
 
-        // Statistiques
+        // Statistiques (agents assignés = tous statuts, agents actifs = statut actif uniquement)
         $stats = [
+            'agents_assignes' => $kiosque->agents()->count(),
             'agents_actifs' => $kiosque->agentsActifs()->count(),
             'places_disponibles' => $kiosque->placesDisponibles(),
             'est_sature' => $kiosque->estSature(),

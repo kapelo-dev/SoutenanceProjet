@@ -1,12 +1,12 @@
 @extends('layouts.demo1.base')
 
 @section('content')
-<div class="kt-container-fixed">
+    <div class="kt-container-fixed">
     <div class="flex items-center justify-between mb-7.5">
         <div>
             <h1 class="text-2xl font-bold text-mono">Configuration App Mobile</h1>
             <p class="text-sm text-muted-foreground mt-1">
-                Paramètres pour l'application Android : endpoint API, token et filtres SMS (numéros ou noms de discussions).
+                Générez le token ici, puis dans l'app Android saisissez uniquement l'URL de l'API, collez le token et le code d'accès.
             </p>
         </div>
     </div>
@@ -56,14 +56,24 @@
                     <label class="text-sm font-medium" for="api_token">
                         Token API (Bearer)
                     </label>
-                    <input type="text"
-                           name="api_token"
-                           id="api_token"
-                           class="kt-input"
-                           value="{{ old('api_token', $config->api_token) }}"
-                           placeholder="Clé secrète partagée avec l'app">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input type="text"
+                               name="api_token"
+                               id="api_token"
+                               class="kt-input flex-1 min-w-[200px]"
+                               value="{{ old('api_token', $config->api_token) }}"
+                               placeholder="Générez un token puis copiez-le dans l'app">
+                        <button type="button" id="btn_generate_token" class="kt-btn kt-btn-outline kt-btn-sm whitespace-nowrap">
+                            <i class="ki-filled ki-key me-1"></i>
+                            Générer un token
+                        </button>
+                        <button type="button" id="btn_copy_token" class="kt-btn kt-btn-outline kt-btn-sm whitespace-nowrap" title="Copier le token">
+                            <i class="ki-filled ki-copy me-1"></i>
+                            Copier
+                        </button>
+                    </div>
                     <span class="text-xs text-muted-foreground">
-                        Ce token doit être saisi dans l'app Android pour s'authentifier auprès de l'API.
+                        Générez un token ici, enregistrez la configuration, puis copiez-collez ce token dans l'application Android.
                     </span>
                 </div>
 
@@ -141,7 +151,7 @@
         </div>
         <div class="kt-card-content p-5 lg:p-7.5">
             <p class="text-sm text-muted-foreground mb-4">
-                Saisissez ces valeurs dans les paramètres de l'app Android (écran de configuration ou confidentialité).
+                Dans l'app mobile, configurez uniquement : <strong>URL de l'API</strong>, <strong>Token</strong> (collez celui ci-dessous) et <strong>Code d'accès</strong>.
             </p>
             <div class="space-y-3 font-mono text-sm">
                 @if($config->api_base_url)
@@ -180,6 +190,54 @@
 
 <script>
 (function() {
+    // Générer un token via l'API et le mettre dans le champ + copier dans le presse-papier
+    var btnGenerate = document.getElementById('btn_generate_token');
+    var btnCopy = document.getElementById('btn_copy_token');
+    var inputToken = document.getElementById('api_token');
+    if (btnGenerate && inputToken) {
+        btnGenerate.addEventListener('click', function() {
+            btnGenerate.disabled = true;
+            btnGenerate.querySelector('i')?.classList.add('animate-spin');
+            fetch('{{ route("parametres-app-mobile.generate-token") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || document.querySelector('input[name="_token"]')?.value,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.token) {
+                    inputToken.value = data.token;
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(data.token).then(function() {
+                            if (btnCopy) btnCopy.focus();
+                        });
+                    }
+                }
+            })
+            .finally(function() {
+                btnGenerate.disabled = false;
+                btnGenerate.querySelector('i')?.classList.remove('animate-spin');
+            });
+        });
+    }
+    if (btnCopy && inputToken) {
+        btnCopy.addEventListener('click', function() {
+            var token = inputToken.value;
+            if (!token) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(token).then(function() {
+                    var label = btnCopy.querySelector('span') || btnCopy;
+                    var orig = btnCopy.innerHTML;
+                    btnCopy.innerHTML = '<i class="ki-filled ki-check me-1"></i> Copié !';
+                    setTimeout(function() { btnCopy.innerHTML = orig; }, 1500);
+                });
+            }
+        });
+    }
+
     var container = document.getElementById('filtres_sms_container');
     var btnPlus = document.getElementById('filtre_sms_plus');
     if (!container || !btnPlus) return;

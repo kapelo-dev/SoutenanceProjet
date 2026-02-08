@@ -52,10 +52,42 @@ Le parseur extrait notamment :
 
 Les formats réels dépendent des opérateurs Mobile Money. Vous pouvez adapter les regex dans `SmsParser.kt` selon les SMS reçus.
 
+## Tester l’envoi de SMS (émulateur ou téléphone)
+
+Voir **[TEST_SMS.md](TEST_SMS.md)** pour les outils et la procédure : émulateur (Extended Controls ou `adb emu sms send`), deuxième téléphone pour SMS réel, et script `scripts/send-test-sms.sh` qui envoie des SMS type Mix/FLOOZ à l’émulateur.
+
 ## Build
 
 - **Debug** : `./gradlew assembleDebug` → APK dans `app/build/outputs/apk/debug/`.
 - **Release** : configurer la signature dans `app/build.gradle.kts` puis `./gradlew assembleRelease`.
+
+### Générer l’APK pour installation sur téléphone Android
+
+1. **Prérequis sur la machine de build**
+   - **JDK 17** (ou plus) installé.
+   - **Android SDK** : soit via [Android Studio](https://developer.android.com/studio) (recommandé), soit [outils en ligne de commande](https://developer.android.com/studio#command-tools).  
+   - Variable d’environnement **`ANDROID_HOME`** (ou `ANDROID_SDK_ROOT`) pointant vers le SDK :
+     - Linux/macOS (Android Studio) : souvent `$HOME/Android/Sdk`
+     - Exemple : `export ANDROID_HOME=$HOME/Android/Sdk`
+
+2. **Lancer la génération de l’APK**
+   - Depuis le dossier **`android-app`** :
+     ```bash
+     ./gradlew assembleDebug
+     ```
+   - Ou utiliser le script fourni :
+     ```bash
+     ./build-apk.sh
+     ```
+
+3. **Récupérer l’APK**
+   - Fichier généré : **`app/build/outputs/apk/debug/app-debug.apk`**
+   - Copier ce fichier sur le téléphone (USB, cloud, etc.) et l’installer (autoriser l’installation depuis « sources inconnues » si demandé).
+
+4. **Version Release (optionnel, pour distribution)**
+   - Configurer la signature dans `app/build.gradle.kts` (keystore, mots de passe).
+   - Puis : `./gradlew assembleRelease`  
+   - APK : `app/build/outputs/apk/release/app-release.apk`
 
 ## Structure du projet
 

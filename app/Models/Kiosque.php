@@ -121,16 +121,16 @@ class Kiosque extends Model
         return $angle * $earthRadius;
     }
 
-    // Vérifier si le kiosque est saturé
+    // Vérifier si le kiosque est saturé (tous les agents assignés comptent, pas seulement actifs)
     public function estSature()
     {
-        return $this->agents()->where('statut', 'actif')->count() >= $this->capacite_agents;
+        return $this->agents()->count() >= $this->capacite_agents;
     }
 
-    // Nombre de places disponibles
+    // Nombre de places disponibles (tous les agents assignés occupent une place)
     public function placesDisponibles()
     {
-        return max(0, $this->capacite_agents - $this->agents()->where('statut', 'actif')->count());
+        return max(0, $this->capacite_agents - $this->agents()->count());
     }
 
     /**

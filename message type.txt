@@ -1,0 +1,31 @@
+ mix by yas
+
+message Retrait :
+
+ retrait de 4 900 FCFA effectue par 91069102 le 01-11-25 12:36
+commission : 21 FCFA votre nouveau solde Mixx : 287734 FCFA (commission incluse) REF 13990966494
+
+message Depot :
+
+Depot de 2 000 FCFA effectue pour 90513298(AHIAKPOR) le 01-11-25 12:45 
+Commission: 14 FCFA nouveau solde mix : 275 784 (commission incluse) REF 13990436494
+
+
+FLOOZ money
+
+message retrait : 
+
+Txn ID 040228895463 07/02/2025
+retrait valider par le client FABIO ,79984409
+Veillez remettre l'argent au client 
+Montant: 2 000,00 FCFA Commission Net : 24,32 FCFA 
+Code Agent: 5150328
+Date:07/02/2025 12:47:22. Nouveau solde FLOOZ : 28 703,00 FCFA.
+Txn ID 040228895463
+Facilitez vos transactions en telechargeant l'appli Moov money sur: https://onelink.to/dgg3cs
+
+message Depot :
+
+Depot reussi Montant:2600,00 FCFA beneficiaire : 96096844 Date : 01/11/2025 14:13:04 
+Commission Net : 13,44 FCFA Nouveau solde : 26 103,00 FCFA Txn ID: 040229031027
+Facilitez vos transactions en telechargeant l'appli Moov money sur: https://onelink.to/dgg3cs

@@ -43,7 +43,7 @@
                                 <th class="w-[50px] text-center">
                                     <input class="kt-checkbox kt-checkbox-sm" data-kt-datatable-check="true" type="checkbox"/>
                                 </th>
-                                <th class="min-w-[180px] text-center" style="width: 18%;">
+                                <th class="min-w-[160px] text-center" style="width: 14%;">
                                     <span class="kt-table-col">
                                         <span class="kt-table-col-label">
                                             N° Transaction
@@ -51,7 +51,7 @@
                                         <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
-                                <th class="min-w-[200px] text-center" style="width: 25%;">
+                                <th class="min-w-[180px] text-center" style="width: 18%;">
                                     <span class="kt-table-col">
                                         <span class="kt-table-col-label">
                                             Client
@@ -59,7 +59,15 @@
                                         <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
-                                <th class="min-w-[140px] text-center" style="width: 14%;">
+                                <th class="min-w-[180px] text-center" style="width: 18%;">
+                                    <span class="kt-table-col">
+                                        <span class="kt-table-col-label">
+                                            Agent
+                                        </span>
+                                        <span class="kt-table-col-sort"></span>
+                                    </span>
+                                </th>
+                                <th class="min-w-[120px] text-center" style="width: 12%;">
                                     <span class="kt-table-col">
                                         <span class="kt-table-col-label">
                                             Montant
@@ -110,36 +118,50 @@
                                     </div>
                                 </td>
                                 <td class="text-center">
+                                    <div class="flex flex-col gap-0.5 items-center">
+                                        <span class="leading-none font-medium text-sm">
+                                            @if($transaction->operateur)
+                                                {{ $transaction->operateur->libelle }}
+                                            @else
+                                                —
+                                            @endif
+                                        </span>
+                                        @if($transaction->client_telephone || $transaction->client_nom)
+                                            <span class="text-xs text-secondary-foreground font-normal">
+                                                @if($transaction->client_nom){{ $transaction->client_nom }}@endif
+                                                @if($transaction->client_nom && $transaction->client_telephone) · @endif
+                                                @if($transaction->client_telephone){{ $transaction->client_telephone }}@endif
+                                            </span>
+                                        @else
+                                            <span class="text-xs text-muted-foreground">—</span>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td class="text-center">
                                     <div class="flex items-center justify-center gap-2.5">
-                                        <div class="">
+                                        @if($transaction->agent)
                                             @php
-                                                $avatar = asset('assets/media/avatars/300-3.png'); // Défaut
-                                                if ($transaction->agent && $transaction->agent->utilisateur && $transaction->agent->utilisateur->photo_profil) {
-                                                    $avatar = asset('storage/' . $transaction->agent->utilisateur->photo_profil);
+                                                $agentAvatar = asset('assets/media/avatars/300-3.png');
+                                                if ($transaction->agent->utilisateur && $transaction->agent->utilisateur->photo_profil) {
+                                                    $agentAvatar = asset('storage/' . $transaction->agent->utilisateur->photo_profil);
                                                 }
                                             @endphp
-                                            <img class="h-9 w-9 rounded-full object-cover" src="{{ $avatar }}" alt="{{ $transaction->client_nom ?? 'Agent' }}"/>
-                                        </div>
-                                        <div class="flex flex-col gap-0.5">
-                                            <span class="leading-none font-medium text-sm">
-                                                @if($transaction->client_nom)
-                                                    {{ $transaction->client_nom }}
-                                                @elseif($transaction->agent && $transaction->agent->utilisateur)
-                                                    {{ $transaction->agent->utilisateur->prenom }} {{ $transaction->agent->utilisateur->nom }}
-                                                @else
-                                                    N/A
-                                                @endif
-                                            </span>
-                                            <span class="text-xs text-secondary-foreground font-normal">
-                                                @if($transaction->client_telephone)
-                                                    {{ $transaction->client_telephone }}
-                                                @elseif($transaction->agent && $transaction->agent->utilisateur && $transaction->agent->utilisateur->telephone)
-                                                    {{ $transaction->agent->utilisateur->telephone }}
-                                                @else
-                                                    N/A
-                                                @endif
-                                            </span>
-                                        </div>
+                                            <img class="h-9 w-9 rounded-full object-cover flex-shrink-0" src="{{ $agentAvatar }}" alt=""/>
+                                            <div class="flex flex-col gap-0.5 text-left">
+                                                <span class="leading-none font-medium text-sm">
+                                                    @if($transaction->agent->utilisateur)
+                                                        {{ $transaction->agent->utilisateur->prenom }} {{ $transaction->agent->utilisateur->nom }}
+                                                    @else
+                                                        {{ $transaction->agent->nomComplet }}
+                                                    @endif
+                                                </span>
+                                                <span class="text-xs text-secondary-foreground font-normal">
+                                                    {{ $transaction->agent->code_agent ?? '—' }}
+                                                </span>
+                                            </div>
+                                        @else
+                                            <span class="text-muted-foreground">—</span>
+                                        @endif
                                     </div>
                                 </td>
                                 <td class="text-center text-foreground font-semibold">
@@ -183,7 +205,7 @@
                             </tr>
                             @empty
                             <tr class="empty-row">
-                                <td colspan="7" class="text-center py-20 !border-0" style="width: 100% !important; padding: 5rem 0 !important; border: none !important; border-left: none !important; border-right: none !important;">
+                                <td colspan="8" class="text-center py-20 !border-0" style="width: 100% !important; padding: 5rem 0 !important; border: none !important; border-left: none !important; border-right: none !important;">
                                     <div class="flex flex-col items-center justify-center gap-5 w-full">
                                         <div class="flex items-center justify-center rounded-full bg-gray-100 size-20 dark:bg-gray-900">
                                             <i class="ki-filled ki-file text-4xl text-gray-500 dark:text-gray-400"></i>
@@ -250,7 +272,7 @@
         width: 100% !important;
     }
     
-    #transactions_table tbody tr.empty-row td[colspan="7"] {
+    #transactions_table tbody tr.empty-row td[colspan="8"] {
         display: table-cell !important;
         width: 100% !important;
     }
@@ -266,8 +288,8 @@
         const emptyRow = document.querySelector('#transactions_table tbody tr.empty-row');
         if (emptyRow) {
             const td = emptyRow.querySelector('td');
-            if (td && td.getAttribute('colspan') !== '7') {
-                td.setAttribute('colspan', '7');
+            if (td && td.getAttribute('colspan') !== '8') {
+                td.setAttribute('colspan', '8');
                 td.style.width = '100%';
                 td.style.border = 'none';
             }
@@ -280,8 +302,8 @@
             const emptyRow = document.querySelector('#transactions_table tbody tr.empty-row');
             if (emptyRow) {
                 const td = emptyRow.querySelector('td');
-                if (td && td.getAttribute('colspan') !== '7') {
-                    td.setAttribute('colspan', '7');
+                if (td && td.getAttribute('colspan') !== '8') {
+                    td.setAttribute('colspan', '8');
                     td.style.width = '100%';
                     td.style.border = 'none';
                 }

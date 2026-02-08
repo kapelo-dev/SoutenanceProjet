@@ -83,7 +83,11 @@ class SmsForwarderService : Service() {
                         reference = parsed.reference,
                         operatorTxnId = sender.take(50),
                         source = "sms",
-                        rawSms = parsed.rawBody.take(500)
+                        rawSms = parsed.rawBody.take(500),
+                        commission = parsed.commission,
+                        agentCode = parsed.agentCode,
+                        operatorCode = parsed.operatorName,
+                        virtualBalanceAfter = parsed.virtualBalanceAfter
                     )
                     val response = api.sendTransactionFromSms(request)
                     withContext(Dispatchers.Main) {

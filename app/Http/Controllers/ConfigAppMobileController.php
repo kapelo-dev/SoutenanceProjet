@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ConfigAppMobile;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ConfigAppMobileController extends Controller
 {
@@ -55,5 +56,15 @@ class ConfigAppMobileController extends Controller
         return redirect()
             ->route('parametres-app-mobile.index')
             ->with('success', $message);
+    }
+
+    /**
+     * Génère un nouveau token API (pour copier-coller dans l'app mobile).
+     */
+    public function generateToken(Request $request)
+    {
+        $token = Str::random(64);
+
+        return response()->json(['token' => $token]);
     }
 }

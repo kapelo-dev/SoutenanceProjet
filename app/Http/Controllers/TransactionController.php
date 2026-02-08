@@ -133,18 +133,42 @@ class TransactionController extends Controller
             'source' => 'nullable|string|max:20',
             'raw_sms' => 'nullable|string|max:1000',
             'agent_id' => 'nullable|exists:agents,id',
+            'agent_code' => 'nullable|string|max:50',
             'operateur_id' => 'nullable|exists:operateurs,id',
+            'operator_code' => 'nullable|string|max:50',
+            'commission' => 'nullable|numeric|min:0',
+            'virtual_balance_after' => 'nullable|numeric|min:0',
         ]);
 
-        $agentId = $validated['agent_id'] ?? config('sms_api.default_agent_id');
-        $operateurId = $validated['operateur_id'] ?? config('sms_api.default_operateur_id');
+        $agent = null;
+        if (!empty($validated['agent_id'])) {
+            $agent = Agent::find($validated['agent_id']);
+        }
+        if (!$agent && !empty($validated['agent_code'])) {
+            $agent = Agent::where('code_agent', $validated['agent_code'])->first();
+        }
+        if (!$agent) {
+            $agent = Agent::find(config('sms_api.default_agent_id'));
+        }
 
-        $agent = Agent::find($agentId);
-        $operateur = Operateur::find($operateurId);
+        $operateur = null;
+        if (!empty($validated['operateur_id'])) {
+            $operateur = Operateur::find($validated['operateur_id']);
+        }
+        if (!$operateur && !empty($validated['operator_code'])) {
+            $code = trim($validated['operator_code']);
+            $operateur = Operateur::where('code', $code)
+                ->orWhere('libelle', 'like', '%' . $code . '%')
+                ->first();
+        }
+        if (!$operateur) {
+            $operateur = Operateur::find(config('sms_api.default_operateur_id'));
+        }
+
         if (!$agent || !$operateur) {
             return response()->json([
                 'success' => false,
-                'message' => 'Agent ou opérateur par défaut introuvable. Vérifiez la config sms_api.',
+                'message' => 'Agent ou opérateur introuvable (vérifiez agent_code, operator_code ou config sms_api).',
             ], 422);
         }
 
@@ -158,6 +182,8 @@ class TransactionController extends Controller
             'client_nom' => $validated['client_nom'] ?? null,
             'client_telephone' => $validated['client_telephone'] ?? null,
             'operator_txn_id' => $validated['operator_txn_id'] ?? null,
+            'commission' => $validated['commission'] ?? null,
+            'virtual_balance_after' => $validated['virtual_balance_after'] ?? null,
         ];
         if (!empty($validated['reference'])) {
             $data['reference'] = $validated['reference'];
@@ -422,48 +448,56 @@ class TransactionController extends Controller
     }
 
     /**
-     * Méthode privée pour mettre à jour le solde de l'agent
+     * Méthode privée pour mettre à jour le solde de l'agent (espèce + virtuel).
+     * Retrait : espèce diminue (agent donne du cash), virtuel augmente (opérateur crédite).
+     * Dépôt : espèce diminue (agent envoie au réseau), virtuel augmente (solde opérateur).
      */
     private function updateAgentBalance(Transaction $transaction)
     {
         $agent = $transaction->agent;
         $operateur = $transaction->operateur;
+        $montant = (float) $transaction->montant;
 
-        // Récupérer le dernier solde virtuel pour cet opérateur
-        $dernierSolde = Solde::where('agent_id', $agent->id)
+        // --- Virtuel (solde opérateur) ---
+        $dernierVirtuel = Solde::where('agent_id', $agent->id)
             ->where('operateur_id', $operateur->id)
             ->where('type', 'virtuel')
             ->latest('date')
             ->first();
+        $ancienVirtuel = $dernierVirtuel ? (float) $dernierVirtuel->montant : 0;
 
-        $ancienMontant = $dernierSolde ? $dernierSolde->montant : 0;
-
-        // Calculer le nouveau montant selon le type de transaction
-        switch ($transaction->type) {
-            case 'depot':
-                $nouveauMontant = $ancienMontant + $transaction->montant;
-                break;
-            case 'retrait':
-                $nouveauMontant = $ancienMontant - $transaction->montant;
-                break;
-            case 'transfert':
-            case 'paiement':
-                $nouveauMontant = $ancienMontant - $transaction->montant;
-                break;
-            default:
-                $nouveauMontant = $ancienMontant;
+        if ($transaction->virtual_balance_after !== null && $transaction->virtual_balance_after > 0) {
+            $nouveauVirtuel = (float) $transaction->virtual_balance_after;
+        } else {
+            $nouveauVirtuel = $ancienVirtuel + $montant;
         }
 
-        // Créer un nouveau solde
         Solde::create([
             'agent_id' => $agent->id,
             'operateur_id' => $operateur->id,
-            'montant' => $nouveauMontant,
+            'montant' => $nouveauVirtuel,
             'type' => 'virtuel',
             'description' => "Transaction {$transaction->reference}",
         ]);
+        $transaction->update(['virtual_balance_after' => $nouveauVirtuel]);
 
-        // Mettre à jour le champ virtual_balance_after
-        $transaction->update(['virtual_balance_after' => $nouveauMontant]);
+        // --- Espèce (caisse agent) : retrait et dépôt → espèce diminue ---
+        $dernierEspece = Solde::where('agent_id', $agent->id)
+            ->whereNull('operateur_id')
+            ->where('type', 'espece')
+            ->latest('date')
+            ->first();
+        $ancienEspece = $dernierEspece ? (float) $dernierEspece->montant : 0;
+
+        if (in_array($transaction->type, ['depot', 'retrait'])) {
+            $nouveauEspece = max(0, $ancienEspece - $montant);
+            Solde::create([
+                'agent_id' => $agent->id,
+                'operateur_id' => null,
+                'montant' => $nouveauEspece,
+                'type' => 'espece',
+                'description' => "Transaction {$transaction->reference} ({$transaction->type})",
+            ]);
+        }
     }
 }

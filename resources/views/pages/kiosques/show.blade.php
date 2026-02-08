@@ -111,6 +111,10 @@
                 <div class="kt-card-content">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div class="flex flex-col gap-2">
+                            <label class="kt-form-label text-muted-foreground">Agents assignés</label>
+                            <div class="text-2xl font-semibold">{{ $stats['agents_assignes'] }} / {{ $kiosque->capacite_agents }}</div>
+                        </div>
+                        <div class="flex flex-col gap-2">
                             <label class="kt-form-label text-muted-foreground">Agents actifs</label>
                             <div class="text-2xl font-semibold">{{ $stats['agents_actifs'] }}</div>
                         </div>
@@ -127,6 +131,60 @@
                             <div class="text-2xl font-semibold">{{ number_format($stats['montant_mois'] ?? 0, 0, ',', ' ') }} FCFA</div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Liste des agents du kiosque -->
+            <div class="kt-card mt-5">
+                <div class="kt-card-header">
+                    <h3 class="kt-card-title">Agents du kiosque</h3>
+                    <span class="text-sm text-muted-foreground">{{ $kiosque->agents->count() }} agent{{ $kiosque->agents->count() > 1 ? 's' : '' }} assigné{{ $kiosque->agents->count() > 1 ? 's' : '' }}</span>
+                </div>
+                <div class="kt-card-content">
+                    @if($kiosque->agents->isEmpty())
+                        <p class="text-secondary-foreground py-4 text-center">Aucun agent assigné à ce kiosque.</p>
+                    @else
+                        <div class="kt-scrollable-x-auto">
+                            <table class="kt-table kt-table-border w-full">
+                                <thead>
+                                    <tr>
+                                        <th class="min-w-[200px]">Agent</th>
+                                        <th class="min-w-[100px]">Code</th>
+                                        <th class="min-w-[130px]">Téléphone</th>
+                                        <th class="min-w-[100px]">Statut</th>
+                                       
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($kiosque->agents as $agent)
+                                    <tr>
+                                        <td>
+                                            <div class="flex items-center gap-2.5">
+                                                <img class="h-9 w-9 rounded-full object-cover flex-shrink-0" src="{{ $agent->utilisateur && $agent->utilisateur->photo_profil ? asset('storage/' . $agent->utilisateur->photo_profil) : asset('assets/media/avatars/300-3.png') }}" alt=""/>
+                                                <div class="flex flex-col gap-0.5">
+                                                    <a class="leading-none font-medium text-sm text-mono hover:text-primary" href="{{ route('agents.show', $agent) }}">
+                                                        {{ $agent->nomComplet }}
+                                                    </a>
+                                                    @if($agent->utilisateur)
+                                                    <span class="text-xs text-secondary-foreground">{{ $agent->utilisateur->email }}</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-sm">{{ $agent->code_agent ?? '—' }}</td>
+                                        <td class="text-sm">{{ $agent->telephone ?? '—' }}</td>
+                                        <td>
+                                            <span class="kt-badge kt-badge-sm {{ $agent->statut == 'actif' ? 'kt-badge-success' : ($agent->statut == 'inactif' ? 'kt-badge-secondary' : 'kt-badge-warning') }}">
+                                                {{ ucfirst(str_replace('_', ' ', $agent->statut)) }}
+                                            </span>
+                                        </td>
+                                        
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

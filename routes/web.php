@@ -217,4 +217,5 @@ Route::middleware(['auth', 'require.password.change'])->group(function () {
     // Configuration application Android (endpoint, token, numéro filtre SMS)
     Route::get('/parametres-app-mobile', [ConfigAppMobileController::class, 'index'])->name('parametres-app-mobile.index');
     Route::post('/parametres-app-mobile', [ConfigAppMobileController::class, 'store'])->name('parametres-app-mobile.store');
+    Route::post('/parametres-app-mobile/generate-token', [ConfigAppMobileController::class, 'generateToken'])->name('parametres-app-mobile.generate-token');
 });

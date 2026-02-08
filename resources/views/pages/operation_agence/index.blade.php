@@ -36,7 +36,7 @@
         <div class="kt-card-content">
             <div class="grid" data-kt-datatable="true" data-kt-datatable-page-size="10">
                 <div class="kt-scrollable-x-auto">
-                    <table class="kt-table kt-table-border" data-kt-datatable-table="true" id="transactions_table" style="table-layout: fixed; width: 100%;">
+                    <table class="kt-table kt-table-border" data-kt-datatable-table="true" id="transactions_table?" style="table-layout: fixed; width: 100%;">
                         <thead>
                             <tr>
                                 <th class="w-[50px] text-center">
@@ -82,7 +82,7 @@
                                         <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
-                                <th class="w-[50px] text-center"></th>
+                                
                             </tr>
                         </thead>
                         <tbody>
@@ -150,33 +150,7 @@
                                 <td class="text-center text-foreground font-normal">
                                     {{ optional($transaction->date)->locale('fr')->isoFormat('D MMM Y, HH:mm') }}
                                 </td>
-                                <td class="text-center">
-                                    <div class="kt-menu" data-kt-menu="true">
-                                        <div class="kt-menu-item" data-kt-menu-item-offset="0, 10px" data-kt-menu-item-placement="bottom-end" data-kt-menu-item-placement-rtl="bottom-start" data-kt-menu-item-toggle="dropdown" data-kt-menu-item-trigger="click">
-                                            <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
-                                                <i class="ki-filled ki-dots-vertical text-lg"></i>
-                                            </button>
-                                            <div class="kt-menu-dropdown kt-menu-default w-full max-w-[175px]" data-kt-menu-dismiss="true">
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link" href="{{ route('transactions.show', $transaction->id) }}">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-search-list"></i>
-                                                        </span>
-                                                        <span class="kt-menu-title">Détails</span>
-                                                    </a>
-                                                </div>
-                                                <div class="kt-menu-item">
-                                                    <a class="kt-menu-link" href="{{ route('transactions.index', ['search' => $transaction->reference]) }}">
-                                                        <span class="kt-menu-icon">
-                                                            <i class="ki-filled ki-file-up"></i>
-                                                        </span>
-                                                        <span class="kt-menu-title">Voir dans la liste</span>
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
+                                
                             </tr>
                 @empty
                 <tr class="empty-row">

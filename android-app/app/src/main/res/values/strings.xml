@@ -5,8 +5,9 @@
     <string name="privacy_description">Cette application lit les SMS provenant d’un numéro ou d’une conversation que vous configurez, afin d’extraire les notifications de transaction (Mobile Money) et de les envoyer au serveur PDV Connect. Aucun autre SMS n’est lu ni stocké. Les données envoyées sont : montant, type, référence, date et texte pertinent.</string>
     <string name="consent_label">J’accepte que l’application lise les SMS de transaction et les envoie au serveur</string>
     <string name="service_enabled_label">Service de transfert SMS activé</string>
+    <string name="config_intro">Saisissez l’URL de l’API et le token généré depuis l’application web (Configuration App Mobile), puis le code d’accès fourni par l’administrateur.</string>
     <string name="api_url_hint">URL de l’API (ex. https://votredomaine.com)</string>
-    <string name="api_token_hint">Token API (fourni par l’administrateur)</string>
+    <string name="api_token_hint">Token API (copier-coller depuis l’application web)</string>
     <string name="filter_number_hint">Numéro ou shortcode à filtrer (ex. 8282). Vide = tous les SMS</string>
     <string name="filters_label">Filtres SMS (numéros ou noms de discussions, ex. FLOOZ)</string>
     <string name="add_filter_line">+ Ajouter une ligne</string>
