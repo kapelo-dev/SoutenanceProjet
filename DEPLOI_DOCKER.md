@@ -102,3 +102,31 @@ Tu peux aussi déployer **uniquement** l’image buildée avec `docker-compose.p
 ---
 
 En résumé : **oui**, tu peux dockeriser ton application Laravel complète et la mettre en production **gratuitement** en utilisant le Dockerfile et `docker-compose.prod.yml` fournis, soit sur un VPS gratuit (ex. Oracle Cloud), soit sur des plateformes comme Railway/Render/Fly.io en utilisant leur offre gratuite et une base de données gérée ou externe.
+
+---
+
+## 7. Publier l’image sur Docker Hub et l’utiliser
+
+Pour mettre ton image sur **Docker Hub** (registry public) et la réutiliser partout :
+
+1. **Compte** : [hub.docker.com](https://hub.docker.com) → créer un compte, noter ton **username**.
+2. **Login** : `docker login` (username + mot de passe ou token).
+3. **Build + tag** (remplace `KAPELO_DEV` par ton username) :
+   ```bash
+   docker build -t KAPELO_DEV/pdvconnect-laravel:latest .
+   ```
+4. **Push** :
+   ```bash
+   docker push KAPELO_DEV/pdvconnect-laravel:latest
+   ```
+
+L’image sera visible sur `https://hub.docker.com/r/KAPELO_DEV/pdvconnect-laravel`.
+
+**Utiliser l’image (sans rebuild)** : sur n’importe quel serveur avec Docker, éditer `docker-compose.pull.yml` (remplacer `kapelodev` par ton username), puis :
+
+```bash
+docker compose -f docker-compose.pull.yml pull
+docker compose -f docker-compose.pull.yml up -d
+```
+
+Sur **Render** : si tu déploies à partir d’une **image Docker** au lieu du repo Git, tu peux indiquer l’image Docker Hub dans la config du service (option « Docker » avec image name).
