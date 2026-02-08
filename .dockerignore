@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE / OS
+.idea
+.vscode
+*.swp
+.DS_Store
+
+# Dépendances (réinstallées dans l'image)
+node_modules
+vendor
+
+# Env local (à fournir au run)
+.env
+.env.*
+!.env.example
+
+# Logs et cache local
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+!storage/logs/.gitkeep
+!storage/framework/cache/.gitkeep
+!storage/framework/sessions/.gitkeep
+!storage/framework/views/.gitkeep
+
+# Tests et doc (optionnel, réduit la taille)
+tests
+phpunit.xml
+*.md
+docs
+
+# Android (hors Laravel)
+android-app
+
+# Build frontend local (reconstruit dans l'image)
+public/build
+public/hot
+
+# Divers
+docker-compose.yml
+docker-compose.override.yml
+docker-compose.prod.yml
+Dockerfile
+.dockerignore
