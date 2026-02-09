@@ -88,7 +88,7 @@
                                         <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
-                                <th class="min-w-[72px] w-[72px] text-right pr-3 border-l border-border/50 bg-muted/30">Actions</th>
+                                <th class="w-[50px]"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -151,13 +151,17 @@
                                 <td class="text-foreground font-normal">
                                     {{ $agent->created_at->locale('fr')->isoFormat('D MMM Y') }}
                                 </td>
-                                <td class="agents-table-actions-cell">
-                                    <div class="kt-menu agents-row-menu" data-kt-menu="true">
-                                        <div class="kt-menu-item" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end" data-kt-menu-offset="0, 10px">
-                                            <button type="button" class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost agents-action-btn">
+                                <td>
+                                    <div class="kt-menu" data-kt-menu="true">
+                                        <div class="kt-menu-item" data-kt-menu-item-offset="0, 10px"
+                                            data-kt-menu-item-placement="bottom-end"
+                                            data-kt-menu-item-placement-rtl="bottom-start"
+                                            data-kt-menu-item-toggle="dropdown"
+                                            data-kt-menu-item-trigger="click">
+                                            <button type="button" class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
                                                 <i class="ki-filled ki-dots-vertical text-lg"></i>
                                             </button>
-                                            <div class="kt-menu-dropdown kt-menu-default w-full max-w-[175px]" data-kt-menu-dismiss="true">
+                                            <div class="kt-menu-dropdown kt-menu-default w-full max-w-[200px]" data-kt-menu-dismiss="true">
                                                 <div class="kt-menu-item">
                                                     <a class="kt-menu-link view-agent" 
                                                         href="javascript:void(0)" 
@@ -281,96 +285,21 @@
         display: none;
     }
     
-    /* Colonne Actions : bien distincte du tableau, cliquable */
-    #agents_table .agents-table-actions-cell {
-        width: 72px !important;
-        min-width: 72px !important;
-        max-width: 72px !important;
-        overflow: visible !important;
-        position: relative !important;
-        z-index: 2 !important;
-        border-left: 1px solid #e5e7eb !important;
-        background: #f9fafb !important;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
-        vertical-align: middle !important;
-    }
-    .dark #agents_table .agents-table-actions-cell {
-        border-left-color: #374151 !important;
-        background: #1f2937 !important;
-    }
-    #agents_table thead th:last-child {
-        border-left: 1px solid #e5e7eb !important;
-        background: #f3f4f6 !important;
-    }
-    .dark #agents_table thead th:last-child {
-        border-left-color: #374151 !important;
-        background: #111827 !important;
-    }
-    /* Bouton d'action : zone de clic nette, pas confondu avec les cellules */
-    #agents_table .agents-action-btn {
-        min-width: 2rem !important;
-        min-height: 2rem !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        flex-shrink: 0 !important;
-        border-radius: 0.375rem !important;
-        border: 1px solid #e5e7eb !important;
-        background: #fff !important;
-    }
-    #agents_table .agents-action-btn:hover {
-        background: #f3f4f6 !important;
-        border-color: #d1d5db !important;
-    }
-    .dark #agents_table .agents-action-btn {
-        border-color: #374151 !important;
-        background: #374151 !important;
-    }
-    .dark #agents_table .agents-action-btn:hover {
-        background: #4b5563 !important;
-        border-color: #4b5563 !important;
-    }
-    /* Ligne active : menu au-dessus des autres cellules */
-    #agents_table tbody tr {
-        position: relative;
-        z-index: 1;
-    }
-    #agents_table tbody tr:hover .agents-table-actions-cell {
-        z-index: 3 !important;
-    }
-    /* Quand le menu est ouvert, toute la ligne passe au-dessus des lignes suivantes
-       pour que "Voir" et "Modifier" soient cliquables (sinon les lignes en dessous
-       interceptent les clics) */
-    #agents_table tbody tr.agents-row-menu-open {
-        position: relative;
-        z-index: 10000 !important;
-    }
-    #agents_table tbody tr.agents-row-menu-open .agents-table-actions-cell {
-        z-index: 10001 !important;
-    }
-    
-    /* Styles pour les menus déroulants */
-    #agents_table .kt-menu {
-        position: relative;
-        display: inline-flex;
-    }
-    
-    .kt-menu-dropdown {
+    /* Menu déroulant agents : même style que page Opérateurs */
+    #agents_table .kt-menu-dropdown {
         display: none !important;
-        position: fixed !important; /* Fixed pour être au-dessus de tout et ne pas être coupé */
+        position: fixed !important;
         z-index: 99999 !important;
         background: white;
         border: 1px solid #e5e7eb;
         border-radius: 0.5rem;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        min-width: 175px;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        min-width: 200px;
         padding: 0.5rem 0;
     }
-    
-    .kt-menu-dropdown.show {
-        display: block !important;
-    }
+    #agents_table .kt-menu-dropdown.show { display: block !important; }
+    #agents_table tbody tr.agents-row-menu-open { position: relative; z-index: 10000 !important; }
+    .dark #agents_table .kt-menu-dropdown { background: #1f2937; border-color: #374151; }
     
     /* Conteneurs : ne pas créer de clipping sur le dropdown (il est en fixed) */
     .kt-card,

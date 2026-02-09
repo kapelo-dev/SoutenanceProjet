@@ -29,11 +29,11 @@
       </div>
      </div>
     </div>
-    <!-- Filtres dans une carte -->
+    <!-- Filtres -->
     <div class="kt-container-fixed">
-     <div class="kt-card kt-card-grid min-w-full">
-      <div class="kt-card-header py-5 flex-wrap gap-2">
-       <div class="flex items-center flex-wrap gap-5 ml-auto">
+     <div class="flex flex-col items-stretch gap-5 lg:gap-7.5">
+      <div class="flex flex-wrap items-center gap-5 justify-end">
+       <div class="flex items-center flex-wrap gap-5">
         <form method="GET" action="{{ route('kiosques.index') }}" class="flex items-center gap-2.5" id="form-filters-kiosques">
          <select name="statut" id="filter-kiosque-statut" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner un statut">
           <option value="">Tous les statuts</option>
@@ -71,8 +71,6 @@
         </div>
        </div>
       </div>
-      <div class="kt-card-content">
-       <div class="flex flex-col items-stretch gap-5 lg:gap-7.5">
       <div class="flex flex-col gap-5 lg:gap-7.5" id="kiosques_card">
        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-7.5">
         @forelse($kiosques as $kiosque)
@@ -152,7 +150,7 @@
           </div>
          </div>
          <div class="kt-card-footer justify-center">
-          <a class="kt-btn kt-btn-outline {{ $kiosque->statut == 'actif' ? 'kt-btn-primary' : ($kiosque->statut == 'en_travaux' ? 'kt-btn-warning' : '') }}">
+          <a class="kt-btn kt-btn-sm kt-btn-outline {{ $kiosque->statut == 'actif' ? 'kt-btn-primary' : ($kiosque->statut == 'en_travaux' ? 'kt-btn-warning' : '') }}">
            <i class="ki-filled ki-check-circle">
            </i>
            {{ ucfirst(str_replace('_', ' ', $kiosque->statut)) }}
@@ -256,7 +254,7 @@
            </div>
           </div>
           <div class="text-right">
-           <a class="kt-btn kt-btn-outline {{ $kiosque->statut == 'actif' ? 'kt-btn-primary' : ($kiosque->statut == 'en_travaux' ? 'kt-btn-warning' : '') }}">
+           <a class="kt-btn kt-btn-sm kt-btn-outline {{ $kiosque->statut == 'actif' ? 'kt-btn-primary' : ($kiosque->statut == 'en_travaux' ? 'kt-btn-warning' : '') }}">
             <i class="ki-filled ki-check-circle">
             </i>
             {{ ucfirst(str_replace('_', ' ', $kiosque->statut)) }}

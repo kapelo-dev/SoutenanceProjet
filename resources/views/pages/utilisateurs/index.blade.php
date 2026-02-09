@@ -160,7 +160,7 @@
           </div>
          </div>
          <div class="kt-card-footer justify-center">
-          <a class="kt-btn kt-btn-outline {{ $utilisateur->statut == 'actif' ? 'kt-btn-primary' : '' }}">
+          <a class="kt-btn kt-btn-sm kt-btn-outline {{ $utilisateur->statut == 'actif' ? 'kt-btn-primary' : '' }}">
            <i class="ki-filled ki-check-circle">
            </i>
            {{ $utilisateur->statut == 'actif' ? 'Actif' : ($utilisateur->statut == 'suspendu' ? 'Suspendu' : 'Inactif') }}
@@ -267,7 +267,7 @@
 
           <!-- Colonne 3 : bouton statut -->
           <div class="text-right w-28">
-           <a class="kt-btn kt-btn-outline {{ $utilisateur->statut == 'actif' ? 'kt-btn-primary' : '' }}">
+           <a class="kt-btn kt-btn-sm kt-btn-outline {{ $utilisateur->statut == 'actif' ? 'kt-btn-primary' : '' }}">
             <i class="ki-filled ki-check-circle">
             </i>
             {{ $utilisateur->statut == 'actif' ? 'Actif' : ($utilisateur->statut == 'suspendu' ? 'Suspendu' : 'Inactif') }}
