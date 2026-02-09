@@ -8,6 +8,8 @@ use App\Models\Utilisateur;
 use App\Models\Solde;
 use App\Models\Operateur;
 use App\Models\Profil;
+use App\Models\Transaction;
+use App\Models\TypeOperation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -296,8 +298,7 @@ class AgentController extends Controller
 
             // Créer l'agent
             $agentData = $request->only([
-                'code_agent', 'nom', 'prenom', 'telephone',
-                'espece_initiale', 'statut'
+                'code_agent', 'nom', 'prenom', 'telephone', 'statut'
             ]);
             $agentData['kiosque_id'] = $kiosqueId;
             $agentData['user_id'] = $utilisateur->id;
@@ -315,28 +316,54 @@ class AgentController extends Controller
             
             $agent = Agent::create($agentData);
 
-            // Créer le solde initial en espèces si spécifié
-            if ($request->filled('espece_initiale') && $request->espece_initiale > 0) {
+            // Enregistrer les montants initiaux comme des opérations en agence
+            $typeApportEspece = TypeOperation::where('code', 'apport_espece')->first();
+            $typeApportVirtuel = TypeOperation::where('code', 'apport_virtuel')->first();
+            
+            if ($typeApportEspece && $request->filled('espece_initiale') && $request->espece_initiale > 0) {
+                $transactionEspece = Transaction::create([
+                    'agent_id' => $agent->id,
+                    'type_operation_id' => $typeApportEspece->id,
+                    'operateur_id' => null,
+                    'montant' => $request->espece_initiale,
+                    'type' => 'depot',
+                    'statut' => 'valide',
+                    'description' => 'Montant initial en espèces',
+                ]);
+                
                 Solde::create([
                     'agent_id' => $agent->id,
                     'operateur_id' => null,
                     'montant' => $request->espece_initiale,
                     'type' => 'espece',
-                    'description' => 'Solde initial en espèces',
+                    'date' => now(),
+                    'description' => "Transaction {$transactionEspece->reference} - {$typeApportEspece->libelle}",
                 ]);
             }
-
-            // Créer les soldes virtuels pour chaque opérateur
-            foreach ($operateurs as $operateur) {
-                $montantVirtuel = $request->input('montant_virtuel_' . $operateur->id, 0);
-                if ($montantVirtuel > 0) {
-                    Solde::create([
-                        'agent_id' => $agent->id,
-                        'operateur_id' => $operateur->id,
-                        'montant' => $montantVirtuel,
-                        'type' => 'virtuel',
-                        'description' => 'Solde initial virtuel - ' . $operateur->libelle,
-                    ]);
+            
+            if ($typeApportVirtuel) {
+                foreach ($operateurs as $operateur) {
+                    $montantVirtuel = $request->input('montant_virtuel_' . $operateur->id, 0);
+                    if ($montantVirtuel > 0) {
+                        $transactionVirtuel = Transaction::create([
+                            'agent_id' => $agent->id,
+                            'type_operation_id' => $typeApportVirtuel->id,
+                            'operateur_id' => $operateur->id,
+                            'montant' => $montantVirtuel,
+                            'type' => 'depot',
+                            'statut' => 'valide',
+                            'description' => 'Montant initial virtuel - ' . $operateur->libelle,
+                        ]);
+                        
+                        Solde::create([
+                            'agent_id' => $agent->id,
+                            'operateur_id' => $operateur->id,
+                            'montant' => $montantVirtuel,
+                            'type' => 'virtuel',
+                            'date' => now(),
+                            'description' => "Transaction {$transactionVirtuel->reference} - {$typeApportVirtuel->libelle}",
+                        ]);
+                    }
                 }
             }
 
@@ -663,5 +690,111 @@ class AgentController extends Controller
             'message' => 'Statut modifié avec succès !',
             'statut' => $agent->statut,
         ]);
+    }
+
+    /**
+     * Enregistrer les montants initiaux d'un agent comme des opérations en agence
+     */
+    public function storeMontantsInitiaux(Request $request, $agentId)
+    {
+        try {
+            $agent = Agent::findOrFail($agentId);
+            $operateurs = Operateur::actif()->get();
+            
+            // Validation
+            $rules = [
+                'espece_initiale' => 'nullable|numeric|min:0',
+            ];
+            foreach ($operateurs as $operateur) {
+                $rules['montant_virtuel_' . $operateur->id] = 'nullable|numeric|min:0';
+            }
+            
+            $validated = $request->validate($rules);
+            
+            DB::beginTransaction();
+            
+            // Récupérer les types d'opération
+            $typeApportEspece = TypeOperation::where('code', 'apport_espece')->first();
+            $typeApportVirtuel = TypeOperation::where('code', 'apport_virtuel')->first();
+            
+            if (!$typeApportEspece || !$typeApportVirtuel) {
+                throw new \Exception('Types d\'opération non trouvés. Veuillez exécuter le seeder TypeOperationSeeder.');
+            }
+            
+            // Créer l'opération pour l'espèce initiale
+            if ($request->filled('espece_initiale') && $request->espece_initiale > 0) {
+                $transactionEspece = Transaction::create([
+                    'agent_id' => $agent->id,
+                    'type_operation_id' => $typeApportEspece->id,
+                    'operateur_id' => null,
+                    'montant' => $request->espece_initiale,
+                    'type' => 'depot',
+                    'statut' => 'valide',
+                    'description' => 'Montant initial en espèces',
+                ]);
+                
+                // Créer le solde
+                Solde::create([
+                    'agent_id' => $agent->id,
+                    'operateur_id' => null,
+                    'montant' => $request->espece_initiale,
+                    'type' => 'espece',
+                    'date' => now(),
+                    'description' => "Transaction {$transactionEspece->reference} - {$typeApportEspece->libelle}",
+                ]);
+            }
+            
+            // Créer les opérations pour les montants virtuels
+            foreach ($operateurs as $operateur) {
+                $montantVirtuel = $request->input('montant_virtuel_' . $operateur->id, 0);
+                if ($montantVirtuel > 0) {
+                    $transactionVirtuel = Transaction::create([
+                        'agent_id' => $agent->id,
+                        'type_operation_id' => $typeApportVirtuel->id,
+                        'operateur_id' => $operateur->id,
+                        'montant' => $montantVirtuel,
+                        'type' => 'depot',
+                        'statut' => 'valide',
+                        'description' => 'Montant initial virtuel - ' . $operateur->libelle,
+                    ]);
+                    
+                    // Créer le solde
+                    Solde::create([
+                        'agent_id' => $agent->id,
+                        'operateur_id' => $operateur->id,
+                        'montant' => $montantVirtuel,
+                        'type' => 'virtuel',
+                        'date' => now(),
+                        'description' => "Transaction {$transactionVirtuel->reference} - {$typeApportVirtuel->libelle}",
+                    ]);
+                }
+            }
+            
+            // Mettre à jour le montant initial total de l'agent
+            $montantTotal = $request->espece_initiale ?? 0;
+            foreach ($operateurs as $operateur) {
+                $montantVirtuel = $request->input('montant_virtuel_' . $operateur->id, 0);
+                if ($montantVirtuel > 0) {
+                    $montantTotal += $montantVirtuel;
+                }
+            }
+            $agent->update(['montant_initial_total' => $montantTotal]);
+            
+            DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Montants initiaux enregistrés avec succès comme opérations en agence.',
+            ]);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Erreur lors de l\'enregistrement des montants initiaux: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'enregistrement: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

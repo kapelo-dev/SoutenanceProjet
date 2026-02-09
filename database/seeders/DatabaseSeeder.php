@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             ProfilSeeder::class,
             LienSeeder::class,
             TypeOperationSeeder::class,
+            OperateurSeeder::class,
             // UtilisateurSeeder::class, // À décommenter si besoin
             // KiosqueSeeder::class, // À décommenter si besoin
         ]);

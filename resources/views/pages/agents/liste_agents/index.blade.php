@@ -484,6 +484,9 @@
                     <button class="kt-tab-toggle py-4" data-kt-tab-toggle="#tab_kiosque">
                         Configuration Kiosque
                     </button>
+                    <button class="kt-tab-toggle py-4" data-kt-tab-toggle="#tab_montants">
+                        Montants Initiaux
+                    </button>
                 </div>
             </div>
             
@@ -561,31 +564,6 @@
                             </div>
                             <span class="text-xs text-secondary-foreground">Format: JPEG, PNG, JPG (max 2MB)</span>
                             <span class="text-xs text-destructive hidden" id="error_photo"></span>
-                        </div>
-                        
-                        <div class="flex flex-col gap-2">
-                            <label class="kt-label">
-                                Espèce Initiale
-                            </label>
-                            <input class="kt-input" type="number" name="espece_initiale" id="agent_espece_initiale" placeholder="0" min="0" step="0.01" />
-                            <span class="text-xs text-secondary-foreground">Montant en espèces physiques</span>
-                        </div>
-                        
-                        <!-- Montants virtuels par opérateur -->
-                        <div class="flex flex-col gap-3 border-t border-border pt-4">
-                            <label class="kt-label font-semibold">
-                                Montants Virtuels par Opérateur Mobile Money
-                            </label>
-                            <span class="text-xs text-secondary-foreground mb-2">Définir le montant virtuel initial pour chaque opérateur</span>
-                            @foreach($operateurs ?? [] as $operateur)
-                            <div class="flex flex-col gap-2">
-                                <label class="kt-label">
-                                    {{ $operateur->libelle }} ({{ $operateur->code }})
-                                </label>
-                                <input class="kt-input" type="number" name="montant_virtuel_{{ $operateur->id }}" id="montant_virtuel_{{ $operateur->id }}" placeholder="0" min="0" step="0.01" value="0" />
-                                <span class="text-xs text-destructive hidden" id="error_montant_virtuel_{{ $operateur->id }}"></span>
-                            </div>
-                            @endforeach
                         </div>
                     </div>
                 </div>
@@ -722,6 +700,35 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Onglet Montants Initiaux -->
+                <div id="tab_montants" class="kt-tab-content p-5 hidden">
+                    <div class="flex flex-col gap-5">
+                        <div class="flex flex-col gap-2">
+                            <label class="kt-label">
+                                Espèce Initiale
+                            </label>
+                            <input class="kt-input" type="number" name="espece_initiale" id="agent_espece_initiale" placeholder="0" min="0" step="0.01" />
+                            <span class="text-xs text-secondary-foreground">Montant en espèces physiques</span>
+                        </div>
+                        
+                        <!-- Montants virtuels par opérateur -->
+                        <div class="flex flex-col gap-3 border-t border-border pt-4">
+                            <label class="kt-label font-semibold">
+                                Montants Virtuels par Opérateur Mobile Money
+                            </label>
+                            <span class="text-xs text-secondary-foreground mb-2">Définir le montant virtuel initial pour chaque opérateur</span>
+                            @foreach($operateurs ?? [] as $operateur)
+                            <div class="flex flex-col gap-2">
+                                <label class="kt-label">
+                                    {{ $operateur->libelle }} ({{ $operateur->code }})
+                                </label>
+                                <input class="kt-input" type="number" name="montant_virtuel_{{ $operateur->id }}" id="montant_virtuel_{{ $operateur->id }}" placeholder="0" min="0" step="0.01" value="" />
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
             </form>
         </div>
         <div class="kt-modal-footer">
@@ -759,37 +766,41 @@ function setupAgentModalOnce() {
     fetch('http://127.0.0.1:7242/ingest/26370817-2ad4-48a9-8621-53fe8856d785',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'liste_agents:setupAgentModalOnce',message:'running',data:{readyState:document.readyState},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(function(){});
     // #endregion
 
-    // Gestion manuelle des onglets Agent / Kiosque pour éviter que le contenu kiosque s'affiche sous l'onglet Agent
+    // Gestion manuelle des onglets Agent / Kiosque / Montants pour éviter que le contenu s'affiche sous le mauvais onglet
     const tabAgentBtn = document.querySelector('[data-kt-tab-toggle="#tab_agent"]');
     const tabKiosqueBtn = document.querySelector('[data-kt-tab-toggle="#tab_kiosque"]');
+    const tabMontantsBtn = document.querySelector('[data-kt-tab-toggle="#tab_montants"]');
     const tabAgent = document.getElementById('tab_agent');
     const tabKiosque = document.getElementById('tab_kiosque');
+    const tabMontants = document.getElementById('tab_montants');
 
-    if (tabAgentBtn && tabKiosqueBtn && tabAgent && tabKiosque) {
-        // État initial : onglet Agent visible, Kiosque caché
-        tabAgentBtn.classList.add('active');
-        tabAgent.classList.add('active');
-        tabKiosqueBtn.classList.remove('active');
-        tabKiosque.classList.add('hidden');
+    if (tabAgentBtn && tabKiosqueBtn && tabMontantsBtn && tabAgent && tabKiosque && tabMontants) {
+        // Fonction pour activer un onglet et désactiver les autres
+        function activateTab(activeBtn, activeTab) {
+            // Désactiver tous les boutons et onglets
+            [tabAgentBtn, tabKiosqueBtn, tabMontantsBtn].forEach(btn => btn.classList.remove('active'));
+            [tabAgent, tabKiosque, tabMontants].forEach(tab => {
+                tab.classList.add('hidden');
+                tab.classList.remove('active');
+            });
+            
+            // Activer le bouton et l'onglet sélectionnés
+            activeBtn.classList.add('active');
+            activeTab.classList.remove('hidden');
+            activeTab.classList.add('active');
+        }
+
+        // État initial : onglet Agent visible
+        activateTab(tabAgentBtn, tabAgent);
 
         tabAgentBtn.addEventListener('click', function (e) {
             e.preventDefault();
-            tabAgentBtn.classList.add('active');
-            tabKiosqueBtn.classList.remove('active');
-            tabAgent.classList.remove('hidden');
-            tabAgent.classList.add('active');
-            tabKiosque.classList.add('hidden');
-            tabKiosque.classList.remove('active');
+            activateTab(tabAgentBtn, tabAgent);
         });
 
         tabKiosqueBtn.addEventListener('click', function (e) {
             e.preventDefault();
-            tabKiosqueBtn.classList.add('active');
-            tabAgentBtn.classList.remove('active');
-            tabKiosque.classList.remove('hidden');
-            tabKiosque.classList.add('active');
-            tabAgent.classList.add('hidden');
-            tabAgent.classList.remove('active');
+            activateTab(tabKiosqueBtn, tabKiosque);
 
             const creerKiosqueCheckbox = document.getElementById('creer_kiosque');
             if (creerKiosqueCheckbox && creerKiosqueCheckbox.checked && !map) {
@@ -797,6 +808,11 @@ function setupAgentModalOnce() {
                     initMap();
                 }, 200);
             }
+        });
+
+        tabMontantsBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            activateTab(tabMontantsBtn, tabMontants);
         });
     }
 
@@ -1134,25 +1150,6 @@ window.saveAgentWithKiosque = function saveAgentWithKiosque() {
         delete data.user_id;
     }
     
-    if (!data.montant_initial_total || data.montant_initial_total === '') {
-        delete data.montant_initial_total;
-    }
-    
-    if (!data.espece_initiale || data.espece_initiale === '') {
-        delete data.espece_initiale;
-    }
-    
-    // Nettoyer les montants virtuels vides ou à zéro
-    @if(isset($operateurs))
-    @foreach($operateurs as $operateur)
-    if (!data['montant_virtuel_{{ $operateur->id }}'] || data['montant_virtuel_{{ $operateur->id }}'] === '' || parseFloat(data['montant_virtuel_{{ $operateur->id }}']) === 0) {
-        delete data['montant_virtuel_{{ $operateur->id }}'];
-    } else {
-        // Convertir en nombre
-        data['montant_virtuel_{{ $operateur->id }}'] = parseFloat(data['montant_virtuel_{{ $operateur->id }}']);
-    }
-    @endforeach
-    @endif
     
     // Préparer les données du kiosque si création
     if (data.creer_kiosque === '1') {
@@ -1213,14 +1210,15 @@ window.saveAgentWithKiosque = function saveAgentWithKiosque() {
     finalFormData.append('email', data.email);
     finalFormData.append('statut', data.statut);
     
-    if (data.espece_initiale) {
+    // Ajouter les montants initiaux si spécifiés
+    if (data.espece_initiale && parseFloat(data.espece_initiale) > 0) {
         finalFormData.append('espece_initiale', data.espece_initiale);
     }
     
     // Ajouter les montants virtuels
     @if(isset($operateurs))
     @foreach($operateurs as $operateur)
-    if (data['montant_virtuel_{{ $operateur->id }}']) {
+    if (data['montant_virtuel_{{ $operateur->id }}'] && parseFloat(data['montant_virtuel_{{ $operateur->id }}']) > 0) {
         finalFormData.append('montant_virtuel_{{ $operateur->id }}', data['montant_virtuel_{{ $operateur->id }}']);
     }
     @endforeach

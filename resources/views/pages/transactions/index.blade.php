@@ -118,23 +118,40 @@
                                     </div>
                                 </td>
                                 <td class="text-center">
-                                    <div class="flex flex-col gap-0.5 items-center">
-                                        <span class="leading-none font-medium text-sm">
-                                            @if($transaction->operateur)
-                                                {{ $transaction->operateur->libelle }}
+                                    <div class="flex items-center justify-center gap-2.5">
+                                        @if($transaction->operateur)
+                                            @php
+                                                $operateurLogo = $transaction->operateur->logo
+                                                    ? asset('storage/' . $transaction->operateur->logo)
+                                                    : null;
+                                            @endphp
+                                            @if($operateurLogo)
+                                                <img class="h-8 w-8 rounded-full object-cover flex-shrink-0" src="{{ $operateurLogo }}" alt="{{ $transaction->operateur->libelle }}"/>
                                             @else
-                                                —
+                                                <div class="h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-semibold text-white flex-shrink-0"
+                                                     style="background-color: {{ $transaction->operateur->couleur ?? '#6366f1' }};">
+                                                    {{ strtoupper(substr($transaction->operateur->code, 0, 2)) }}
+                                                </div>
                                             @endif
-                                        </span>
-                                        @if($transaction->client_telephone || $transaction->client_nom)
-                                            <span class="text-xs text-secondary-foreground font-normal">
-                                                @if($transaction->client_nom){{ $transaction->client_nom }}@endif
-                                                @if($transaction->client_nom && $transaction->client_telephone) · @endif
-                                                @if($transaction->client_telephone){{ $transaction->client_telephone }}@endif
-                                            </span>
-                                        @else
-                                            <span class="text-xs text-muted-foreground">—</span>
                                         @endif
+                                        <div class="flex flex-col gap-0.5 items-start max-w-[180px]">
+                                            <span class="leading-none font-medium text-sm truncate w-full">
+                                                @if($transaction->client_nom)
+                                                    {{ $transaction->client_nom }}
+                                                @elseif($transaction->operateur)
+                                                    {{ $transaction->operateur->libelle }}
+                                                @else
+                                                    —
+                                                @endif
+                                            </span>
+                                            @if($transaction->client_telephone)
+                                                <span class="text-xs text-secondary-foreground font-normal truncate w-full">
+                                                    {{ $transaction->client_telephone }}
+                                                </span>
+                                            @else
+                                                <span class="text-xs text-muted-foreground">—</span>
+                                            @endif
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="text-center">
@@ -147,8 +164,8 @@
                                                 }
                                             @endphp
                                             <img class="h-9 w-9 rounded-full object-cover flex-shrink-0" src="{{ $agentAvatar }}" alt=""/>
-                                            <div class="flex flex-col gap-0.5 text-left">
-                                                <span class="leading-none font-medium text-sm">
+                                            <div class="flex flex-col gap-0.5 text-left max-w-[180px]">
+                                                <span class="leading-none font-medium text-sm truncate w-full">
                                                     @if($transaction->agent->utilisateur)
                                                         {{ $transaction->agent->utilisateur->prenom }} {{ $transaction->agent->utilisateur->nom }}
                                                     @else

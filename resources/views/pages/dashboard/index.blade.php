@@ -231,8 +231,8 @@
                                 @foreach($operateurs as $item)
                                 <div class="flex items-center gap-3.5 w-full">
                                     <div class="flex items-center justify-center rounded-full bg-gray-100 size-9 shrink-0 dark:bg-gray-900">
-                                        @if($item['operateur']->logo)
-                                            <img class="h-6 w-6 rounded object-contain" src="{{ asset('storage/' . $item['operateur']->logo) }}" alt="{{ $item['operateur']->libelle }}"/>
+                                        @if($item['operateur'] && $item['operateur']->logo)
+                                            <img class="h-6 w-6 rounded object-contain" src="{{ asset('storage/' . $item['operateur']->logo) }}" alt="{{ $item['operateur']->libelle ?? 'N/A' }}"/>
                                         @else
                                             <i class="ki-filled ki-abstract-39 text-base text-gray-600 dark:text-gray-300">
                                             </i>
@@ -240,7 +240,7 @@
                                     </div>
                                     <div class="flex flex-col gap-0.5 min-w-0 flex-1">
                                         <span class="text-sm font-medium text-foreground whitespace-nowrap overflow-hidden text-ellipsis">
-                                            {{ $item['operateur']->libelle }}
+                                            {{ $item['operateur']->libelle ?? 'N/A' }}
                                         </span>
                                         <span class="text-xs font-normal text-secondary-foreground whitespace-nowrap">
                                             {{ number_format($item['transactions']) }} transactions ce mois
@@ -285,12 +285,12 @@
                                     {{ $transaction->agent->nom }} {{ $transaction->agent->prenom }}
                                 </span>
                                 <span class="text-xs font-normal text-secondary-foreground">
-                                    {{ ucfirst($transaction->type) }} - {{ $transaction->operateur->libelle }}
+                                    {{ ucfirst($transaction->type) }} - {{ $transaction->operateur?->libelle ?? 'N/A' }}
                                 </span>
                             </div>
                             <div class="flex -space-x-2 ms-auto">
-                                @if($transaction->operateur->logo)
-                                <img class="h-7 w-7 rounded" src="{{ asset('storage/' . $transaction->operateur->logo) }}" alt="{{ $transaction->operateur->libelle }}"/>
+                                @if($transaction->operateur && $transaction->operateur->logo)
+                                <img class="h-7 w-7 rounded" src="{{ asset('storage/' . $transaction->operateur->logo) }}" alt="{{ $transaction->operateur->libelle ?? 'N/A' }}"/>
                                 @endif
                             </div>
                             <div class="flex items-center gap-1 lg:gap-5">

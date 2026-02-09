@@ -15,34 +15,30 @@ class OperateurSeeder extends Seeder
         $operateurs = [
             [
                 'code' => 'YAS',
-                'libelle' => 'Mixx by YAS',
-                'logo' => 'logos/operateurs/yas.png',
-                'couleur' => '#FF6B00',
+                'libelle' => 'Mixx by yas',
+                // Chemin relatif depuis storage/app/public (utilisé avec asset('storage/'.$logo))
+                'logo' => 'logos/operateurs/mixxbyyas.jpg',
+                'couleur' => '#865e3c',
                 'statut' => 'actif',
                 'ordre' => 1,
             ],
             [
                 'code' => 'FLOOZ',
-                'libelle' => 'Flooz',
-                'logo' => 'logos/operateurs/flooz.png',
-                'couleur' => '#00A651',
+                'libelle' => 'Flooz MONEY',
+                'logo' => 'logos/operateurs/moovmoney.png',
+                'couleur' => '#1a5fb4',
                 'statut' => 'actif',
                 'ordre' => 2,
             ],
-            [
-                'code' => 'ORANGE',
-                'libelle' => 'Orange Money',
-                'logo' => 'logos/operateurs/orange.png',
-                'couleur' => '#FF7900',
-                'statut' => 'actif',
-                'ordre' => 3,
-            ],
         ];
 
-        foreach ($operateurs as $operateur) {
-            Operateur::create($operateur);
+        foreach ($operateurs as $operateurData) {
+            Operateur::updateOrCreate(
+                ['code' => $operateurData['code']], // Recherche par code unique
+                $operateurData // Données à créer/mettre à jour
+            );
         }
 
-        $this->command->info('✅ Opérateurs créés avec succès!');
+        $this->command->info('✅ Opérateurs créés/mis à jour avec succès!');
     }
 }

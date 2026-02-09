@@ -28,10 +28,7 @@
     <!-- Filtres -->
     <div class="kt-container-fixed">
      <div class="flex flex-col items-stretch gap-5 lg:gap-7.5">
-      <div class="flex flex-wrap items-center gap-5 justify-between">
-       <h3 class="text-base text-mono font-medium sr-only">
-        Filtres
-       </h3>
+      <div class="flex flex-wrap items-center gap-5 justify-end">
        <div class="flex items-center flex-wrap gap-5">
         <form method="GET" action="{{ route('utilisateurs.index') }}" class="flex items-center gap-2.5" id="utilisateurs-filter-form">
          <select name="statut" id="filter-statut" class="kt-select w-36" data-kt-select="true" data-kt-select-placeholder="Sélectionner un statut">

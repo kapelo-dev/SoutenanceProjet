@@ -155,31 +155,31 @@
                                     <div class="flex flex-col gap-1">
                                         <div class="flex items-center justify-between gap-2">
                                             <span class="text-xs text-primary font-medium">{{ number_format($totalVirtuel, 0, ',', ' ') }} FCFA</span>
+                                            @if($soldesVirtuels->count() > 1)
                                             <button class="kt-btn kt-btn-xs kt-btn-icon kt-btn-ghost" onclick="toggleDropdown(this)">
                                                 <i class="ki-filled ki-down text-xs transition-transform duration-200"></i>
                                             </button>
+                                            @endif
                                         </div>
                                         <div class="hidden dropdown-content mt-1 border-t border-border pt-1">
-                                            <div class="text-xs text-secondary-foreground">
+                                            <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs">
                                                 @foreach($soldesVirtuels as $soldeVirtuel)
-                                                <div class="flex justify-between items-center py-1 gap-2">
-                                                    <div class="flex items-center gap-1.5">
-                                                        @if($soldeVirtuel->operateur)
-                                                            @if($soldeVirtuel->operateur->logo)
-                                                                <span class="h-4 w-4 shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-muted">
-                                                                    <img src="{{ asset('storage/' . $soldeVirtuel->operateur->logo) }}" alt="{{ $soldeVirtuel->operateur->libelle }}" class="h-full w-full object-cover" />
-                                                                </span>
-                                                            @else
-                                                                <span class="h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-semibold text-white shrink-0" style="background-color: {{ $soldeVirtuel->operateur->couleur ?? '#6b7280' }}">
-                                                                    {{ strtoupper(substr($soldeVirtuel->operateur->libelle ?? '', 0, 1)) }}
-                                                                </span>
-                                                            @endif
-                                                            <span class="text-primary">{{ $soldeVirtuel->operateur->libelle }}</span>
+                                                <div class="flex items-center gap-1.5 whitespace-nowrap">
+                                                    @if($soldeVirtuel->operateur)
+                                                        @if($soldeVirtuel->operateur->logo)
+                                                            <span class="h-4 w-4 shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-muted">
+                                                                <img src="{{ asset('storage/' . $soldeVirtuel->operateur->logo) }}" alt="{{ $soldeVirtuel->operateur->libelle }}" class="h-full w-full object-cover" />
+                                                            </span>
                                                         @else
-                                                            <span class="text-primary">N/A</span>
+                                                            <span class="h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-semibold text-white shrink-0" style="background-color: {{ $soldeVirtuel->operateur->couleur ?? '#6b7280' }}">
+                                                                {{ strtoupper(substr($soldeVirtuel->operateur->libelle ?? '', 0, 1)) }}
+                                                            </span>
                                                         @endif
-                                                    </div>
-                                                    <span class="font-medium">{{ number_format($soldeVirtuel->montant, 0, ',', ' ') }} FCFA</span>
+                                                        <span class="text-primary">{{ $soldeVirtuel->operateur->libelle }}</span>
+                                                        <span class="font-medium text-foreground">{{ number_format($soldeVirtuel->montant, 0, ',', ' ') }} FCFA</span>
+                                                    @else
+                                                        <span class="text-primary">N/A</span>
+                                                    @endif
                                                 </div>
                                                 @endforeach
                                             </div>
@@ -277,4 +277,17 @@
         display: none;
     }
 </style>
+<script>
+    function toggleDropdown(button) {
+        const dropdown = button.closest('.flex.flex-col').querySelector('.dropdown-content');
+        const icon = button.querySelector('i');
+        
+        if (dropdown) {
+            dropdown.classList.toggle('hidden');
+            if (icon) {
+                icon.classList.toggle('rotate-180');
+            }
+        }
+    }
+</script>
 @endsection

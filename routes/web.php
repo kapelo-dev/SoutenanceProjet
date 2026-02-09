@@ -160,6 +160,7 @@ Route::middleware(['auth', 'require.password.change'])->group(function () {
     // Resource routes (doit être après les routes spécifiques)
     Route::resource('agents', AgentController::class);
     Route::post('/agents/store-with-kiosque', [AgentController::class, 'storeWithKiosque'])->name('agents.store-with-kiosque');
+    Route::post('/agents/{agent}/montants-initiaux', [AgentController::class, 'storeMontantsInitiaux'])->name('agents.store-montants-initiaux');
     Route::post('/agents/{agent}/update-solde', [AgentController::class, 'updateSolde'])->name('agents.update-solde');
     Route::get('/api/agents/{agent}/soldes', [AgentController::class, 'getSoldes']);
     Route::post('/agents/{agent}/change-statut', [AgentController::class, 'changeStatut'])->name('agents.change-statut');
