@@ -241,36 +241,24 @@
     </div>
 </div>
 <!-- End of Container -->
-<style>
-    /* Menu déroulant opérateurs : affichage et z-index (comme page agents) */
-    #operateurs_table .kt-menu-dropdown {
-        display: none !important;
-        position: fixed !important;
-        z-index: 99999 !important;
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
-        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-        min-width: 200px;
-        padding: 0.5rem 0;
-    }
-    #operateurs_table .kt-menu-dropdown.show { display: block !important; }
-    #operateurs_table tbody tr.operateurs-row-menu-open { position: relative; z-index: 10000 !important; }
-    .dark #operateurs_table .kt-menu-dropdown { background: #1f2937; border-color: #374151; }
-</style>
 @endsection
 
 @push('scripts')
 <script>
 (function() {
-    var operateursPageInited = false;
-    function initOperateursPage() {
-        if (operateursPageInited) return;
-        operateursPageInited = true;
+    // Exposer la fonction globalement pour qu'elle soit appelée après navigation AJAX
+    window.initOperateursPage = function() {
+        // Réinitialiser les menus Metronic pour cette page (avec un petit délai pour s'assurer que le DOM est prêt)
+        setTimeout(() => {
+            if (window.MetronicCore && typeof window.MetronicCore.initMenus === 'function') {
+                window.MetronicCore.initMenus();
+            }
+        }, 50);
 
-    // Filtre des opérateurs actifs
+    // Filtre des opérateurs actifs (éviter les doublons d'event listeners)
     const filterActifs = document.getElementById('filter_actifs');
-    if (filterActifs) {
+    if (filterActifs && !filterActifs._operateursListenerAttached) {
+        filterActifs._operateursListenerAttached = true;
         filterActifs.addEventListener('change', function() {
             const table = document.getElementById('operateurs_table');
             if (!table) {
@@ -385,54 +373,6 @@
                 form.submit();
             }
             return false;
-        }
-    }, true);
-
-    // Fallback menu déroulant : ouvrir/fermer au clic sur le bouton trois points (si KTMenu non initialisé)
-    document.addEventListener('click', function(e) {
-        const menuToggle = e.target.closest('.kt-menu-toggle');
-        if (menuToggle && menuToggle.closest('#operateurs_table')) {
-            e.preventDefault();
-            e.stopPropagation();
-            const menuItem = menuToggle.closest('.kt-menu-item');
-            const dropdown = menuItem ? menuItem.querySelector('.kt-menu-dropdown') : null;
-            if (dropdown) {
-                document.querySelectorAll('#operateurs_table .kt-menu-dropdown.show').forEach(function(d) {
-                    if (d !== dropdown) {
-                        d.classList.remove('show');
-                        d.style.display = 'none';
-                        const row = d.closest('tr');
-                        if (row) row.classList.remove('operateurs-row-menu-open');
-                    }
-                });
-                const isOpen = dropdown.classList.contains('show');
-                if (isOpen) {
-                    dropdown.classList.remove('show');
-                    dropdown.style.display = 'none';
-                    const row = dropdown.closest('tr');
-                    if (row) row.classList.remove('operateurs-row-menu-open');
-                } else {
-                    const row = menuToggle.closest('tr');
-                    if (row) row.classList.add('operateurs-row-menu-open');
-                    var rect = menuToggle.getBoundingClientRect();
-                    dropdown.style.position = 'fixed';
-                    dropdown.style.top = (rect.bottom + 5) + 'px';
-                    dropdown.style.left = rect.left + 'px';
-                    dropdown.style.right = 'auto';
-                    dropdown.style.zIndex = '99999';
-                    dropdown.classList.add('show');
-                    dropdown.style.display = 'block';
-                }
-            }
-            return false;
-        }
-        if (!e.target.closest('.kt-menu') || !e.target.closest('#operateurs_table')) {
-            document.querySelectorAll('#operateurs_table .kt-menu-dropdown.show').forEach(function(d) {
-                d.classList.remove('show');
-                d.style.display = 'none';
-                const row = d.closest('tr');
-                if (row) row.classList.remove('operateurs-row-menu-open');
-            });
         }
     }, true);
 
@@ -704,9 +644,10 @@
         }
     }, true); // Utiliser capture phase
 
-    // Réinitialiser le formulaire de création
+    // Réinitialiser le formulaire de création (éviter les doublons)
     const createModal = document.getElementById('modal_nouvel_operateur');
-    if (createModal) {
+    if (createModal && !createModal._operateursListenerAttached) {
+        createModal._operateursListenerAttached = true;
         createModal.addEventListener('hidden', function() {
             document.getElementById('form_nouvel_operateur').reset();
             document.getElementById('create_logo_preview').innerHTML = '';
@@ -717,9 +658,10 @@
         });
     }
 
-    // Prévisualisation du logo lors de la sélection
+    // Prévisualisation du logo lors de la sélection (éviter les doublons)
     const createLogoInput = document.getElementById('create_logo');
-    if (createLogoInput) {
+    if (createLogoInput && !createLogoInput._operateursListenerAttached) {
+        createLogoInput._operateursListenerAttached = true;
         createLogoInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -733,7 +675,8 @@
     }
 
     const editLogoInput = document.getElementById('edit_logo');
-    if (editLogoInput) {
+    if (editLogoInput && !editLogoInput._operateursListenerAttached) {
+        editLogoInput._operateursListenerAttached = true;
         editLogoInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -745,11 +688,20 @@
             }
         });
     }
-    } // fin initOperateursPage
+    }; // fin initOperateursPage
 
-    document.addEventListener('DOMContentLoaded', initOperateursPage);
+    // Appeler immédiatement au chargement initial
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initOperateursPage);
+    } else {
+        initOperateursPage();
+    }
+    
+    // Réinitialiser après navigation AJAX
     document.addEventListener('ajax-content-loaded', function() {
-        if (document.getElementById('operateurs_table')) initOperateursPage();
+        if (document.getElementById('operateurs_table')) {
+            initOperateursPage();
+        }
     });
 })();
 </script>

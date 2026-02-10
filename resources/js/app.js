@@ -70,10 +70,14 @@ function initMenus() {
             const trigger = item.querySelector('[data-kt-menu-item-trigger="click"], [data-kt-menu-item-trigger="click|lg:hover"], .kt-menu-toggle');
             const dropdown = item.querySelector('.kt-menu-dropdown');
 
-            if (trigger && dropdown && !trigger._menuListenerAttached) {
-                trigger._menuListenerAttached = true;
+            if (trigger && dropdown) {
+                // Retirer l'ancien listener s'il existe (pour éviter les doublons après AJAX)
+                if (trigger._menuListenerAttached && trigger._menuClickHandler) {
+                    trigger.removeEventListener('click', trigger._menuClickHandler);
+                }
                 
-                trigger.addEventListener('click', function(e) {
+                // Créer un nouveau handler
+                trigger._menuClickHandler = function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     
@@ -86,7 +90,10 @@ function initMenus() {
                     
                     // Toggle le menu actuel
                     dropdown.classList.toggle('hidden');
-                });
+                };
+                
+                trigger.addEventListener('click', trigger._menuClickHandler);
+                trigger._menuListenerAttached = true;
             }
         });
     });

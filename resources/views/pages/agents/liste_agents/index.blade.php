@@ -359,38 +359,6 @@
         background-color: #374151;
     }
 </style>
-<script>
-    // S'assurer que le message vide reste centré après l'initialisation du datatable
-    document.addEventListener('DOMContentLoaded', function() {
-        const emptyRow = document.querySelector('#agents_table tbody tr.empty-row');
-        if (emptyRow) {
-            const td = emptyRow.querySelector('td');
-            if (td && td.getAttribute('colspan') !== '7') {
-                td.setAttribute('colspan', '7');
-                td.style.width = '100%';
-                td.style.border = 'none';
-            }
-        }
-        
-        // Observer les changements du DOM pour maintenir le colspan
-        const observer = new MutationObserver(function(mutations) {
-            const emptyRow = document.querySelector('#agents_table tbody tr.empty-row');
-            if (emptyRow) {
-                const td = emptyRow.querySelector('td');
-                if (td && td.getAttribute('colspan') !== '7') {
-                    td.setAttribute('colspan', '7');
-                    td.style.width = '100%';
-                    td.style.border = 'none';
-                }
-            }
-        });
-        
-        const table = document.getElementById('agents_table');
-        if (table) {
-            observer.observe(table, { childList: true, subtree: true });
-        }
-    });
-</script>
 
 <!-- Modal Nouvel Agent avec Kiosque -->
 <div class="kt-modal" data-kt-modal="true" data-kt-modal-disable-scroll="false" id="modal_nouvel_agent">
@@ -1660,10 +1628,13 @@ window.loadAgentEdit = function(id) {
 
 // Fonction pour initialiser les event listeners des boutons d'action
 function initAgentsPageActions() {
+    // Éviter de ré-attacher plusieurs fois les mêmes listeners
+    if (document._agentsActionsInited) {
+        return;
+    }
+    document._agentsActionsInited = true;
+
     // Utiliser la délégation d'événements pour capturer les clics même après le chargement dynamique
-    // Note: Cette fonction peut être appelée plusieurs fois, mais la délégation d'événements au niveau du document
-    // garantit que les clics seront toujours capturés, même après navigation AJAX
-    
     // Voir les détails
     document.addEventListener('click', function(e) {
         const viewLink = e.target.closest('.view-agent');
@@ -1727,41 +1698,24 @@ function initAgentsPageActions() {
     }, true);
 }
 
-// Fonction pour initialiser les menus KTMenu
+// Fonction pour initialiser les menus d'actions des agents
 function initKTMenus() {
-    console.log('Initialisation des menus KTMenu...');
-    
-    // Méthode 1: Via MetronicCore
+    // Éviter de ré-attacher plusieurs fois les mêmes listeners
+    if (document._agentsMenusInited) {
+        return;
+    }
+    document._agentsMenusInited = true;
+
+    console.log('Initialisation des menus KTMenu (agents)...');
+
+    // Laisser Metronic initialiser les menus globaux si disponible
     if (window.MetronicCore && typeof window.MetronicCore.initMenus === 'function') {
         window.MetronicCore.initMenus();
     }
-    
-    // Méthode 2: Initialisation manuelle de tous les menus
-    if (typeof KTMenu !== 'undefined') {
-        const menuElements = document.querySelectorAll('[data-kt-menu="true"]');
-        console.log('Menus trouvés:', menuElements.length);
-        
-        menuElements.forEach(function(el, index) {
-            // Détruire l'instance existante si elle existe
-            const existingInstance = KTMenu.getInstance(el);
-            if (existingInstance) {
-                existingInstance.destroy();
-            }
-            
-            // Créer une nouvelle instance
-            try {
-                const menu = new KTMenu(el);
-                console.log('Menu initialisé:', index + 1);
-            } catch (e) {
-                console.error('Erreur initialisation menu:', e);
-            }
-        });
-    }
-    
-    // Ajouter toujours le fallback manuel pour gérer les clics
-    // (même si KTMenu est disponible, au cas où il ne fonctionne pas)
-    console.log('Ajout du fallback manuel pour les menus');
-    
+
+    // Fallback manuel pour gérer les clics sur les trois points
+    console.log('Ajout du fallback manuel pour les menus (agents)');
+
     // Utiliser capture pour intercepter les clics avant les autres handlers
     document.addEventListener('click', function(e) {
         const menuToggle = e.target.closest('.kt-menu-toggle');
@@ -1834,39 +1788,53 @@ function initKTMenus() {
             }
         }
     }, true); // Utiliser capture phase
-    
-    console.log('Fallback manuel activé');
 }
 
-// Initialisation sur chargement normal
-document.addEventListener('DOMContentLoaded', function() {
-    // Attendre que tout soit chargé avant d'initialiser les menus
-    setTimeout(() => {
-        initKTMenus();
-    }, 300);
-    
-    initAgentsPageActions();
-});
+// Exposer une fonction d'initialisation globale pour la page Agents (utilisée par la navigation AJAX)
+window.initAgentsPage = function() {
+    // S'assurer que le message vide reste centré (colspan, largeur)
+    const table = document.getElementById('agents_table');
+    if (table) {
+        const applyEmptyRowFix = () => {
+            const emptyRow = table.querySelector('tbody tr.empty-row');
+            if (!emptyRow) return;
+            const td = emptyRow.querySelector('td');
+            if (td && td.getAttribute('colspan') !== '7') {
+                td.setAttribute('colspan', '7');
+                td.style.width = '100%';
+                td.style.border = 'none';
+            }
+        };
 
-// Réinitialisation après navigation AJAX
+        applyEmptyRowFix();
+
+        // Observer les changements du DOM pour maintenir le colspan (une seule fois)
+        if (!table._agentsEmptyObserver) {
+            const observer = new MutationObserver(() => applyEmptyRowFix());
+            observer.observe(table, { childList: true, subtree: true });
+            table._agentsEmptyObserver = observer;
+        }
+    }
+
+    // Initialiser menus et actions
+    initKTMenus();
+    initAgentsPageActions();
+};
+
+// Initialisation sur chargement normal
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        window.initAgentsPage();
+    });
+} else {
+    window.initAgentsPage();
+}
+
+// Réinitialisation explicite après navigation AJAX (quand la page Agents est chargée via AJAX)
 document.addEventListener('ajax-content-loaded', function() {
-    // Attendre un court délai pour que les scripts soient exécutés
-    setTimeout(() => {
-        // Réinitialiser les menus
-        initKTMenus();
-        
-        // Les event listeners sont déjà attachés au niveau du document, donc pas besoin de les réinitialiser
-        // Mais on peut forcer une réinitialisation si nécessaire
-        initAgentsPageActions();
-        
-        // Vérifier que les fonctions globales sont accessibles
-        if (typeof window.saveAgentWithKiosque !== 'function') {
-            console.error('saveAgentWithKiosque n\'est pas accessible après navigation AJAX');
-        }
-        if (typeof window.resetAgentModal !== 'function') {
-            console.error('resetAgentModal n\'est pas accessible après navigation AJAX');
-        }
-    }, 100);
+    if (document.getElementById('agents_table')) {
+        window.initAgentsPage();
+    }
 });
 
 </script>
