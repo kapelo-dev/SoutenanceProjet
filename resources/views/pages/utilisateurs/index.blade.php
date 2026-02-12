@@ -159,12 +159,16 @@
            @endif
           </div>
          </div>
-         <div class="kt-card-footer justify-center">
+         <div class="kt-card-footer justify-center gap-2">
           <a class="kt-btn kt-btn-sm kt-btn-outline {{ $utilisateur->statut == 'actif' ? 'kt-btn-primary' : '' }}">
            <i class="ki-filled ki-check-circle">
            </i>
            {{ $utilisateur->statut == 'actif' ? 'Actif' : ($utilisateur->statut == 'suspendu' ? 'Suspendu' : 'Inactif') }}
           </a>
+          <button type="button" class="kt-btn kt-btn-sm kt-btn-outline" onclick="loadUserEdit({{ $utilisateur->id }})">
+           <i class="ki-filled ki-pencil"></i>
+           Modifier
+          </button>
          </div>
         </div>
         @empty
@@ -265,13 +269,17 @@
            @endif
           </div>
 
-          <!-- Colonne 3 : bouton statut -->
-          <div class="text-right w-28">
+          <!-- Colonne 3 : boutons actions -->
+          <div class="text-right flex items-center gap-2">
            <a class="kt-btn kt-btn-sm kt-btn-outline {{ $utilisateur->statut == 'actif' ? 'kt-btn-primary' : '' }}">
             <i class="ki-filled ki-check-circle">
             </i>
             {{ $utilisateur->statut == 'actif' ? 'Actif' : ($utilisateur->statut == 'suspendu' ? 'Suspendu' : 'Inactif') }}
            </a>
+           <button type="button" class="kt-btn kt-btn-sm kt-btn-outline" onclick="loadUserEdit({{ $utilisateur->id }})">
+            <i class="ki-filled ki-pencil"></i>
+            Modifier
+           </button>
           </div>
          </div>
         </div>
@@ -435,12 +443,282 @@
       </div>
      </div>
    <!-- End Modal de Profil Utilisateur -->
+
+   <!-- Modal Modifier Utilisateur -->
+   <div class="kt-modal" data-kt-modal="true" id="modal_edit_utilisateur" style="display: none;">
+    <div class="kt-modal-content max-w-2xl">
+     <div class="kt-modal-header">
+      <h3 class="kt-modal-title">Modifier l'utilisateur</h3>
+      <button type="button" class="kt-modal-close" data-kt-modal-dismiss="true">
+       <i class="ki-filled ki-cross"></i>
+      </button>
+     </div>
+     <form action="" method="POST" enctype="multipart/form-data" id="form_edit_utilisateur">
+      @csrf
+      @method('PUT')
+      <input type="hidden" name="utilisateur_id" id="edit_utilisateur_id">
+      <div class="kt-modal-body flex flex-col gap-5">
+       <div id="edit_errors_container" class="hidden">
+        <div class="kt-alert kt-alert-danger">
+         <i class="ki-filled ki-information-2"></i>
+         <ul class="list-disc list-inside text-sm" id="edit_errors_list"></ul>
+        </div>
+       </div>
+       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="flex flex-col gap-2">
+         <label class="kt-label" for="edit_nom">Nom <span class="text-destructive">*</span></label>
+         <input type="text" name="nom" id="edit_nom" class="kt-input" required maxlength="100" placeholder="Nom de famille">
+         <span class="text-xs text-destructive hidden" id="error_edit_nom"></span>
+        </div>
+        <div class="flex flex-col gap-2">
+         <label class="kt-label" for="edit_prenom">Prénom <span class="text-destructive">*</span></label>
+         <input type="text" name="prenom" id="edit_prenom" class="kt-input" required maxlength="100" placeholder="Prénom">
+         <span class="text-xs text-destructive hidden" id="error_edit_prenom"></span>
+        </div>
+       </div>
+       <div class="flex flex-col gap-2">
+        <label class="kt-label" for="edit_email">Email <span class="text-destructive">*</span></label>
+        <input type="email" name="email" id="edit_email" class="kt-input" required maxlength="100" placeholder="email@exemple.com">
+        <span class="text-xs text-destructive hidden" id="error_edit_email"></span>
+       </div>
+       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="flex flex-col gap-2">
+         <label class="kt-label" for="edit_mot_de_passe">Mot de passe</label>
+         <input type="password" name="mot_de_passe" id="edit_mot_de_passe" class="kt-input" minlength="8" placeholder="Laisser vide pour ne pas changer">
+         <span class="text-xs text-muted-foreground">Laisser vide pour ne pas modifier le mot de passe</span>
+        </div>
+        <div class="flex flex-col gap-2">
+         <label class="kt-label" for="edit_mot_de_passe_confirmation">Confirmer le mot de passe</label>
+         <input type="password" name="mot_de_passe_confirmation" id="edit_mot_de_passe_confirmation" class="kt-input" minlength="8" placeholder="Répéter le mot de passe">
+         <span class="text-xs text-destructive hidden" id="error_edit_mot_de_passe"></span>
+        </div>
+       </div>
+       <div class="flex flex-col gap-2">
+        <label class="kt-label" for="edit_telephone">Téléphone</label>
+        <input type="text" name="telephone" id="edit_telephone" class="kt-input" maxlength="20" placeholder="Optionnel">
+        <span class="text-xs text-destructive hidden" id="error_edit_telephone"></span>
+       </div>
+       <div class="flex flex-col gap-2">
+        <label class="kt-label" for="edit_statut">Statut <span class="text-destructive">*</span></label>
+        <select name="statut" id="edit_statut" class="kt-select" data-kt-select="true" required>
+         <option value="actif">Actif</option>
+         <option value="inactif">Inactif</option>
+         <option value="suspendu">Suspendu</option>
+        </select>
+        <span class="text-xs text-destructive hidden" id="error_edit_statut"></span>
+       </div>
+       <div class="flex flex-col gap-2">
+        <label class="kt-label" for="edit_profils">Profils <span class="text-destructive">*</span></label>
+        <select name="profils[]" id="edit_profils" class="kt-select" data-kt-select="true" multiple required>
+         @foreach($profils ?? [] as $profil)
+          <option value="{{ $profil->id }}">{{ $profil->libelle }}</option>
+         @endforeach
+        </select>
+        <span class="text-xs text-muted-foreground">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs profils.</span>
+        <span class="text-xs text-destructive hidden" id="error_edit_profils"></span>
+       </div>
+       <div class="flex flex-col gap-2">
+        <label class="kt-label" for="edit_photo_profil">Photo de profil</label>
+        <div class="flex items-center gap-5">
+         <div id="edit_photo_preview" class="flex-shrink-0"></div>
+         <input type="file" name="photo_profil" id="edit_photo_profil" class="kt-input flex-1" accept="image/jpeg,image/png,image/jpg">
+        </div>
+        <span class="text-xs text-muted-foreground">JPEG, PNG ou JPG, max. 2 Mo.</span>
+        <span class="text-xs text-destructive hidden" id="error_edit_photo_profil"></span>
+       </div>
+      </div>
+      <div class="kt-modal-footer">
+       <button type="button" class="kt-btn kt-btn-outline" data-kt-modal-dismiss="true">Annuler</button>
+       <button type="submit" class="kt-btn kt-btn-primary" id="btn_update_utilisateur">
+        <i class="ki-filled ki-check me-1"></i>
+        Enregistrer
+       </button>
+      </div>
+     </form>
+    </div>
+   </div>
+   <!-- End Modal Modifier Utilisateur -->
    </main>
 
 <script>
 // La fonction loadUserProfile est définie dans resources/js/page-init.js
 // et est disponible globalement via window.loadUserProfile
 
+// Fonction pour charger et afficher le formulaire d'édition
+window.loadUserEdit = function(id) {
+    const modal = document.getElementById('modal_edit_utilisateur');
+    if (!modal) {
+        console.error('Modal de modification introuvable');
+        alert('Modal de modification introuvable');
+        return;
+    }
+    
+    // Réinitialiser les erreurs
+    document.getElementById('edit_errors_container').classList.add('hidden');
+    document.getElementById('edit_errors_list').innerHTML = '';
+    document.querySelectorAll('#modal_edit_utilisateur .text-destructive').forEach(el => {
+        el.classList.add('hidden');
+        el.textContent = '';
+    });
+    
+    // Charger les données de l'utilisateur
+    fetch(`/api/utilisateurs/${id}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erreur lors du chargement des données');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success && data.utilisateur) {
+            const user = data.utilisateur;
+            
+            // Remplir le formulaire
+            document.getElementById('edit_utilisateur_id').value = user.id;
+            document.getElementById('edit_nom').value = user.nom || '';
+            document.getElementById('edit_prenom').value = user.prenom || '';
+            document.getElementById('edit_email').value = user.email || '';
+            document.getElementById('edit_telephone').value = user.telephone || '';
+            document.getElementById('edit_mot_de_passe').value = '';
+            document.getElementById('edit_mot_de_passe_confirmation').value = '';
+            
+            // Photo de profil
+            const photoPreview = document.getElementById('edit_photo_preview');
+            if (user.photo_profil_url) {
+                photoPreview.innerHTML = `<img class="h-20 w-20 rounded-full object-cover border-2 border-border" src="${user.photo_profil_url}" alt="${user.prenom} ${user.nom}"/>`;
+            } else {
+                const initial = (user.prenom ? user.prenom.charAt(0) : user.nom.charAt(0)).toUpperCase();
+                photoPreview.innerHTML = `<div class="h-20 w-20 rounded-full flex items-center justify-center text-2xl ${user.statut == 'actif' ? 'text-green-500 ring-green-200 dark:ring-green-950 bg-green-50 dark:bg-green-950/30' : (user.statut == 'suspendu' ? 'text-destructive ring-destructive/20 bg-destructive/5' : 'text-muted-foreground ring-muted bg-muted/5') } ring-1">${initial}</div>`;
+            }
+            
+            // Mettre à jour l'action du formulaire
+            const form = document.getElementById('form_edit_utilisateur');
+            form.action = `/utilisateurs/${user.id}`;
+            
+            // Détruire les instances existantes de KTSelect avant de définir les valeurs
+            const editProfilsSelect = document.getElementById('edit_profils');
+            const editStatutSelect = document.getElementById('edit_statut');
+            
+            if (editProfilsSelect && typeof KTSelect !== 'undefined') {
+                try {
+                    const existingProfilsInstance = KTSelect.getInstance(editProfilsSelect);
+                    if (existingProfilsInstance) {
+                        existingProfilsInstance.destroy();
+                    }
+                } catch (error) {
+                    console.warn('Erreur destruction select profils:', error);
+                }
+            }
+            
+            if (editStatutSelect && typeof KTSelect !== 'undefined') {
+                try {
+                    const existingStatutInstance = KTSelect.getInstance(editStatutSelect);
+                    if (existingStatutInstance) {
+                        existingStatutInstance.destroy();
+                    }
+                } catch (error) {
+                    console.warn('Erreur destruction select statut:', error);
+                }
+            }
+            
+            // Maintenant définir les valeurs des selects (après avoir détruit les instances)
+            if (editStatutSelect) {
+                editStatutSelect.value = user.statut || 'actif';
+                // Déclencher l'événement change pour que KTSelect détecte la valeur
+                editStatutSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            
+            // Profils - définir les valeurs sélectionnées
+            if (editProfilsSelect && user.profils) {
+                // Désélectionner tous les profils d'abord
+                Array.from(editProfilsSelect.options).forEach(option => {
+                    option.selected = false;
+                });
+                // Sélectionner les profils de l'utilisateur
+                const selectedValues = [];
+                user.profils.forEach(profil => {
+                    const option = editProfilsSelect.querySelector(`option[value="${profil.id}"]`);
+                    if (option) {
+                        option.selected = true;
+                        selectedValues.push(profil.id);
+                    }
+                });
+                // Déclencher l'événement change pour que KTSelect détecte les valeurs
+                editProfilsSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            
+            // Initialiser les selects Metronic APRÈS avoir défini les valeurs
+            setTimeout(() => {
+                if (editStatutSelect && typeof KTSelect !== 'undefined') {
+                    try {
+                        const newStatutInstance = new KTSelect(editStatutSelect);
+                        // Réappliquer la valeur après l'initialisation pour s'assurer qu'elle est affichée
+                        setTimeout(() => {
+                            editStatutSelect.value = user.statut || 'actif';
+                            // Si KTSelect a une méthode pour mettre à jour, l'utiliser
+                            if (newStatutInstance && typeof newStatutInstance.setValue === 'function') {
+                                newStatutInstance.setValue(user.statut || 'actif');
+                            } else if (newStatutInstance && typeof newStatutInstance.update === 'function') {
+                                newStatutInstance.update();
+                            }
+                            editStatutSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                        }, 100);
+                    } catch (error) {
+                        console.warn('Erreur initialisation select statut:', error);
+                    }
+                }
+                
+                if (editProfilsSelect && typeof KTSelect !== 'undefined') {
+                    try {
+                        const newProfilsInstance = new KTSelect(editProfilsSelect);
+                        // Réappliquer les valeurs sélectionnées après l'initialisation
+                        setTimeout(() => {
+                            if (user.profils && user.profils.length > 0) {
+                                const selectedIds = user.profils.map(p => p.id.toString());
+                                // Réappliquer les sélections
+                                Array.from(editProfilsSelect.options).forEach(option => {
+                                    option.selected = selectedIds.includes(option.value);
+                                });
+                                // Si KTSelect a une méthode pour mettre à jour, l'utiliser
+                                if (newProfilsInstance && typeof newProfilsInstance.setValue === 'function') {
+                                    newProfilsInstance.setValue(selectedIds);
+                                } else if (newProfilsInstance && typeof newProfilsInstance.update === 'function') {
+                                    newProfilsInstance.update();
+                                }
+                                editProfilsSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        }, 100);
+                    } catch (error) {
+                        console.warn('Erreur initialisation select profils:', error);
+                    }
+                }
+            }, 100);
+            
+            // Ouvrir le modal
+            setTimeout(() => {
+                if (typeof KTModal !== 'undefined') {
+                    let modalInstance = KTModal.getInstance(modal);
+                    if (!modalInstance) {
+                        modalInstance = new KTModal(modal);
+                    }
+                    modalInstance.show();
+                } else {
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    modal.style.display = 'flex';
+                    modal.classList.add('show');
+                }
+            }, 150);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue lors du chargement des données: ' + error.message);
+    });
+};
 
 // Fonction d'initialisation pour la page utilisateurs (appelée après navigation AJAX)
 window.initUtilisateursPage = function() {
@@ -482,6 +760,37 @@ window.initUtilisateursPage = function() {
                     console.warn('Erreur initialisation select statut:', error);
                 }
             }
+        }
+        
+        // Prévisualisation de la photo lors de l'édition
+        const editPhotoInput = document.getElementById('edit_photo_profil');
+        if (editPhotoInput && !editPhotoInput._editPhotoHandlerAttached) {
+            editPhotoInput._editPhotoHandlerAttached = true;
+            editPhotoInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 2 * 1024 * 1024) {
+                        alert('Le fichier est trop volumineux. Taille maximale: 2MB');
+                        this.value = '';
+                        return;
+                    }
+                    
+                    if (!file.type.match('image.*')) {
+                        alert('Veuillez sélectionner une image valide');
+                        this.value = '';
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const preview = document.getElementById('edit_photo_preview');
+                        if (preview) {
+                            preview.innerHTML = `<img class="h-20 w-20 rounded-full object-cover border-2 border-border" src="${e.target.result}" alt="Photo de profil"/>`;
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
         }
     }, 200);
 };
@@ -525,6 +834,82 @@ document.addEventListener('ajax-content-loaded', function() {
         window.initUtilisateursPage();
     }
 });
+
+// Gestionnaire de soumission du formulaire de modification
+(function() {
+    const editForm = document.getElementById('form_edit_utilisateur');
+    if (editForm && !editForm._editFormHandlerAttached) {
+        editForm._editFormHandlerAttached = true;
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('btn_update_utilisateur');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="ki-filled ki-loading animate-spin me-1"></i> Enregistrement...';
+            
+            // Réinitialiser les erreurs
+            document.getElementById('edit_errors_container').classList.add('hidden');
+            document.getElementById('edit_errors_list').innerHTML = '';
+            document.querySelectorAll('#modal_edit_utilisateur .text-destructive').forEach(el => {
+                el.classList.add('hidden');
+                el.textContent = '';
+            });
+            
+            const formData = new FormData(this);
+            const utilisateurId = document.getElementById('edit_utilisateur_id').value;
+            
+            fetch(`/utilisateurs/${utilisateurId}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Recharger la page pour afficher les modifications
+                    window.location.reload();
+                } else {
+                    // Afficher les erreurs
+                    if (data.errors) {
+                        const errorsList = document.getElementById('edit_errors_list');
+                        const errorsContainer = document.getElementById('edit_errors_container');
+                        
+                        Object.keys(data.errors).forEach(key => {
+                            const errorMessages = Array.isArray(data.errors[key]) ? data.errors[key] : [data.errors[key]];
+                            errorMessages.forEach(msg => {
+                                const li = document.createElement('li');
+                                li.textContent = msg;
+                                errorsList.appendChild(li);
+                            });
+                            
+                            // Afficher l'erreur sous le champ correspondant
+                            const errorEl = document.getElementById('error_edit_' + key);
+                            if (errorEl) {
+                                errorEl.textContent = errorMessages[0];
+                                errorEl.classList.remove('hidden');
+                            }
+                        });
+                        
+                        errorsContainer.classList.remove('hidden');
+                    }
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Une erreur est survenue lors de l\'enregistrement.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        });
+    }
+})();
 
 // Filtrage en temps réel via AJAX
 (function() {
