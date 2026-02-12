@@ -107,6 +107,9 @@ class UtilisateurController extends Controller
 
         // Si c'est une requête AJAX ou API, retourner du JSON pour le modal
         if ($request->ajax() || $request->wantsJson() || $request->is('api/*')) {
+            // Récupérer tous les profils disponibles pour le select
+            $profilsDisponibles = Profil::ordreParNiveau()->get();
+            
             return response()->json([
                 'success' => true,
                 'utilisateur' => [
@@ -130,7 +133,13 @@ class UtilisateurController extends Controller
                         'nom' => $utilisateur->agent->nom,
                     ] : null,
                     'created_at' => $utilisateur->created_at->format('d/m/Y'),
-                ]
+                ],
+                'profils_disponibles' => $profilsDisponibles->map(function($profil) {
+                    return [
+                        'id' => $profil->id,
+                        'libelle' => $profil->libelle,
+                    ];
+                })
             ]);
         }
 

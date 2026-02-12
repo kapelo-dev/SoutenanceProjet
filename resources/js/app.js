@@ -132,12 +132,16 @@ function initStickyHeaders() {
 
 // Modal functionality
 function initModals() {
-    const modalToggles = document.querySelectorAll('[data-kt-modal-toggle]');
-
-    modalToggles.forEach(toggle => {
-        toggle.addEventListener('click', function(e) {
+    // Utiliser la délégation d'événements pour fonctionner après AJAX
+    // Attacher le handler une seule fois au niveau du document pour ouvrir les modals
+    if (!document._modalToggleHandlerAttached) {
+        document._modalToggleHandlerAttached = true;
+        document.addEventListener('click', function(e) {
+            const toggle = e.target.closest('[data-kt-modal-toggle]');
+            if (!toggle) return;
+            
             e.preventDefault();
-            const modalId = this.getAttribute('data-kt-modal-toggle');
+            const modalId = toggle.getAttribute('data-kt-modal-toggle');
             const modal = document.querySelector(modalId);
 
             if (modal) {
@@ -161,7 +165,25 @@ function initModals() {
                 }
             }
         });
-    });
+    }
+    
+    // Handler pour fermer les modals (délégation d'événements)
+    if (!document._modalDismissHandlerAttached) {
+        document._modalDismissHandlerAttached = true;
+        document.addEventListener('click', function(e) {
+            const dismissBtn = e.target.closest('[data-kt-modal-dismiss="true"]');
+            if (!dismissBtn) return;
+            
+            e.preventDefault();
+            const modal = dismissBtn.closest('.kt-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+            }
+        });
+    }
 }
 
 // Tabs functionality (for data-kt-tabs groups, e.g. users grid toggle)
@@ -280,3 +302,122 @@ window.MetronicCore = {
 
 // Exposer initSoldesPage globalement pour le système de réinitialisation automatique
 window.initSoldesPage = initSoldesPage;
+
+// Mettre à jour les classes actives du menu après navigation AJAX
+function updateActiveMenuItems() {
+    const currentUrl = window.location.pathname;
+    const currentSearch = window.location.search;
+    
+    // Normaliser les URLs (retirer les slashes finaux)
+    const normalizePath = (path) => path.replace(/\/+$/, '') || '/';
+    const normalizedCurrentPath = normalizePath(currentUrl);
+    
+    // Retirer toutes les classes actives existantes
+    document.querySelectorAll('.kt-menu-item-active').forEach(item => {
+        item.classList.remove('kt-menu-item-active');
+    });
+    
+    // Retirer aussi les classes show des accordions
+    document.querySelectorAll('.kt-menu-item-show').forEach(item => {
+        item.classList.remove('kt-menu-item-show');
+    });
+    
+    // Fonction pour vérifier si un lien correspond exactement à l'URL actuelle
+    function matchesUrlExactly(href, currentPath, currentSearch) {
+        if (!href) return false;
+        
+        try {
+            const linkUrl = new URL(href, window.location.origin);
+            const linkPath = normalizePath(linkUrl.pathname);
+            const linkSearch = linkUrl.search;
+            
+            // Correspondance exacte du path
+            if (linkPath !== currentPath) {
+                return false;
+            }
+            
+            // Si le lien a des query params, vérifier qu'ils correspondent exactement
+            if (linkSearch) {
+                const linkParams = new URLSearchParams(linkSearch);
+                const currentParams = new URLSearchParams(currentSearch);
+                
+                // Vérifier que tous les paramètres du lien sont présents dans l'URL actuelle
+                for (const [key, value] of linkParams.entries()) {
+                    if (currentParams.get(key) !== value) {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        } catch (e) {
+            // Si l'URL est relative, utiliser une approche simple
+            const cleanHref = normalizePath(href);
+            return currentPath === cleanHref;
+        }
+    }
+    
+    // Collecter tous les éléments de menu avec leurs informations
+    const menuItems = [];
+    document.querySelectorAll('#sidebar_menu .kt-menu-item').forEach(item => {
+        // Certains items (comme \"Rapports\") sont directement des <a class=\"kt-menu-item\" href=\"...\">
+        // D'autres ont un wrapper .kt-menu-item et un lien interne .kt-menu-link / .kt-menu-label.
+        const link = item.matches('a.kt-menu-item[href]')
+            ? item
+            : item.querySelector('.kt-menu-link[href], .kt-menu-label[href]');
+
+        if (!link) return;
+
+        const href = link.getAttribute('href');
+        if (!href) return;
+        
+        // Vérifier si c'est un sous-menu (dans un accordion)
+        const isSubMenu = !!item.closest('.kt-menu-accordion');
+        
+        menuItems.push({
+            item: item,
+            href: href,
+            isSubMenu: isSubMenu
+        });
+    });
+    
+    // Trouver la correspondance exacte la plus précise
+    // Priorité aux sous-menus car ils sont plus spécifiques
+    let activeSubMenu = null;
+    let activeMainMenu = null;
+    
+    menuItems.forEach(({ item, href, isSubMenu }) => {
+        if (matchesUrlExactly(href, normalizedCurrentPath, currentSearch)) {
+            if (isSubMenu) {
+                // Les sous-menus ont la priorité car ils sont plus spécifiques
+                activeSubMenu = item;
+            } else if (!activeSubMenu) {
+                // Menu principal seulement si aucun sous-menu ne correspond
+                activeMainMenu = item;
+            }
+        }
+    });
+    
+    // Utiliser le sous-menu si trouvé, sinon le menu principal
+    const itemToActivate = activeSubMenu || activeMainMenu;
+    
+    if (itemToActivate) {
+        itemToActivate.classList.add('kt-menu-item-active');
+        
+        // Si c'est un sous-menu, ouvrir et activer le parent accordion
+        const parentAccordion = itemToActivate.closest('.kt-menu-item[data-kt-menu-item-toggle="accordion"]');
+        if (parentAccordion) {
+            parentAccordion.classList.add('kt-menu-item-active', 'kt-menu-item-show');
+        }
+    }
+}
+
+// Appeler la fonction au chargement initial
+document.addEventListener('DOMContentLoaded', function() {
+    updateActiveMenuItems();
+});
+
+// Mettre à jour après chaque navigation AJAX
+document.addEventListener('ajax-content-loaded', function() {
+    updateActiveMenuItems();
+});

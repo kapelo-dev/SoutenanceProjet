@@ -140,7 +140,7 @@
                                                 <i class="ki-filled ki-dots-vertical text-lg"></i>
                                             </button>
                                             <div class="kt-menu-dropdown kt-menu-default w-full max-w-[200px]"
-                                                data-kt-menu-dismiss="true">
+                                                data-kt-menu-dismiss="true" style="display: none;">
                                                 <div class="kt-menu-item">
                                                     <a class="kt-menu-link view-operateur" 
                                                         href="javascript:void(0)" 
@@ -246,14 +246,352 @@
 @push('scripts')
 <script>
 (function() {
+    // DÉFINIR LES FONCTIONS EN PREMIER (avant les handlers)
+    // Fonction pour charger et afficher les détails d'un opérateur
+    window.loadOperateurDetails = function(id) {
+        console.log('loadOperateurDetails appelé avec ID:', id);
+        const modal = document.getElementById('modal_view_operateur');
+        if (!modal) {
+            console.error('Modal de visualisation introuvable');
+            alert('Modal de visualisation introuvable');
+            return;
+        }
+        
+        fetch(`/operateurs/${id}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erreur lors du chargement des données');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.operateur) {
+                document.getElementById('view_code').textContent = data.operateur.code || '-';
+                document.getElementById('view_libelle').textContent = data.operateur.libelle || '-';
+                const statutText = (data.operateur.statut || 'inactif').charAt(0).toUpperCase() + (data.operateur.statut || 'inactif').slice(1);
+                const statutEl = document.getElementById('view_statut');
+                statutEl.textContent = statutText;
+                statutEl.className = `kt-badge kt-badge-${data.operateur.statut === 'actif' ? 'success' : 'danger'}`;
+                document.getElementById('view_ordre').textContent = data.operateur.ordre || '-';
+                const couleurEl = document.getElementById('view_couleur');
+                couleurEl.textContent = data.operateur.couleur || '-';
+                if (data.operateur.couleur) {
+                    couleurEl.style.color = data.operateur.couleur;
+                }
+                
+                const logoContainer = document.getElementById('view_logo_container');
+                if (data.operateur.logo) {
+                    logoContainer.innerHTML = `<img class="h-20 w-20 rounded-full object-cover" src="/storage/${data.operateur.logo}" alt="${data.operateur.libelle}"/>`;
+                } else {
+                    const code = (data.operateur.code || '').substring(0, 2).toUpperCase();
+                    const couleur = data.operateur.couleur || '#6366f1';
+                    logoContainer.innerHTML = `<div class="h-20 w-20 rounded-full flex items-center justify-center text-white font-semibold text-lg" style="background-color: ${couleur};">${code}</div>`;
+                }
+                
+                if (data.stats) {
+                    document.getElementById('view_transactions_total').textContent = data.stats.transactions_total || 0;
+                    document.getElementById('view_montant_total').textContent = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(data.stats.montant_total || 0);
+                    document.getElementById('view_transactions_mois').textContent = data.stats.transactions_mois || 0;
+                    document.getElementById('view_montant_mois').textContent = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(data.stats.montant_mois || 0);
+                }
+                
+                if (typeof KTModal !== 'undefined') {
+                    let modalInstance = KTModal.getInstance(modal);
+                    if (!modalInstance) {
+                        modalInstance = new KTModal(modal);
+                    }
+                    modalInstance.show();
+                } else {
+                    modal.style.display = 'flex';
+                    modal.classList.add('show');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Une erreur est survenue lors du chargement des données: ' + error.message);
+        });
+    }
+
+    // Fonction pour charger et afficher le formulaire d'édition
+    window.loadOperateurEdit = function(id) {
+        console.log('loadOperateurEdit appelé avec ID:', id);
+        const modal = document.getElementById('modal_edit_operateur');
+        if (!modal) {
+            console.error('Modal d\'édition introuvable');
+            alert('Modal d\'édition introuvable');
+            return;
+        }
+        
+        const submitBtn = document.getElementById('btn_update_operateur');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="ki-filled ki-loading"></i> Chargement...';
+        
+        fetch(`/operateurs/${id}/edit`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erreur lors du chargement des données');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.operateur) {
+                document.getElementById('edit_operateur_id').value = data.operateur.id;
+                document.getElementById('edit_code').value = data.operateur.code || '';
+                document.getElementById('edit_libelle').value = data.operateur.libelle || '';
+                document.getElementById('edit_statut').value = data.operateur.statut || 'actif';
+                document.getElementById('edit_ordre').value = data.operateur.ordre || '';
+                document.getElementById('edit_couleur').value = data.operateur.couleur || '';
+                
+                const colorPicker = document.getElementById('edit_couleur_picker');
+                if (colorPicker && data.operateur.couleur) {
+                    colorPicker.value = data.operateur.couleur;
+                }
+                
+                const logoPreview = document.getElementById('edit_logo_preview');
+                if (data.operateur.logo) {
+                    logoPreview.innerHTML = `<img class="h-20 w-20 rounded-full object-cover" src="/storage/${data.operateur.logo}" alt="${data.operateur.libelle}"/>`;
+                } else {
+                    const code = (data.operateur.code || '').substring(0, 2).toUpperCase();
+                    const couleur = data.operateur.couleur || '#6366f1';
+                    logoPreview.innerHTML = `<div class="h-20 w-20 rounded-full flex items-center justify-center text-white font-semibold text-lg" style="background-color: ${couleur};">${code}</div>`;
+                }
+                
+                document.querySelectorAll('#modal_edit_operateur .text-destructive').forEach(el => {
+                    el.classList.add('hidden');
+                    el.textContent = '';
+                });
+                
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                
+                if (typeof KTModal !== 'undefined') {
+                    let modalInstance = KTModal.getInstance(modal);
+                    if (!modalInstance) {
+                        modalInstance = new KTModal(modal);
+                    }
+                    modalInstance.show();
+                } else {
+                    modal.style.display = 'flex';
+                    modal.classList.add('show');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Une erreur est survenue lors du chargement des données: ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    }
+
+    // ATTACHER LES HANDLERS D'ACTIONS (capture phase)
+    // Voir les détails
+    if (!document._operateursViewHandlerAttached) {
+        document._operateursViewHandlerAttached = true;
+        document.addEventListener('click', function(e) {
+            const viewLink = e.target.closest('.view-operateur');
+            if (viewLink && viewLink.closest('#operateurs_table')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                const menu = viewLink.closest('.kt-menu-dropdown');
+                if (menu) {
+                    menu.classList.remove('show');
+                    menu.style.display = 'none';
+                }
+                const id = viewLink.getAttribute('data-id');
+                if (id && typeof window.loadOperateurDetails === 'function') {
+                    setTimeout(() => window.loadOperateurDetails(id), 50);
+                }
+                return false;
+            }
+        }, true);
+    }
+
+    // Modifier
+    if (!document._operateursEditHandlerAttached) {
+        document._operateursEditHandlerAttached = true;
+        document.addEventListener('click', function(e) {
+            const editLink = e.target.closest('.edit-operateur');
+            if (editLink && editLink.closest('#operateurs_table')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                const menu = editLink.closest('.kt-menu-dropdown');
+                if (menu) {
+                    menu.classList.remove('show');
+                    menu.style.display = 'none';
+                }
+                const id = editLink.getAttribute('data-id');
+                if (id && typeof window.loadOperateurEdit === 'function') {
+                    setTimeout(() => window.loadOperateurEdit(id), 50);
+                }
+                return false;
+            }
+        }, true);
+    }
+
+    // Toggle statut
+    if (!document._operateursToggleHandlerAttached) {
+        document._operateursToggleHandlerAttached = true;
+        document.addEventListener('click', function(e) {
+            const toggleLink = e.target.closest('.toggle-status');
+            if (toggleLink && toggleLink.closest('#operateurs_table')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                const menu = toggleLink.closest('.kt-menu-dropdown');
+                if (menu) {
+                    menu.classList.remove('show');
+                    menu.style.display = 'none';
+                }
+                const id = toggleLink.getAttribute('data-id');
+                if (id) {
+                    fetch(`/operateurs/${id}/toggle-status`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const row = toggleLink.closest('tr');
+                            if (row) {
+                                const statutCell = row.querySelector('td:nth-child(5)');
+                                const badge = statutCell ? statutCell.querySelector('.kt-badge') : null;
+                                if (badge) {
+                                    badge.className = `kt-badge kt-badge-${data.statut === 'actif' ? 'success' : 'danger'}`;
+                                    badge.textContent = data.statut.charAt(0).toUpperCase() + data.statut.slice(1);
+                                }
+                                row.setAttribute('data-statut', data.statut);
+                            }
+                            const icon = toggleLink.querySelector('.kt-menu-icon i');
+                            const title = toggleLink.querySelector('.kt-menu-title');
+                            if (icon) icon.className = `ki-filled ki-${data.statut === 'actif' ? 'cross' : 'check'}`;
+                            if (title) title.textContent = data.statut === 'actif' ? 'Désactiver' : 'Activer';
+                            toggleLink.setAttribute('data-statut', data.statut);
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({ icon: 'success', title: 'Succès', text: data.message, timer: 2000, showConfirmButton: false });
+                            } else {
+                                alert(data.message);
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        alert('Une erreur est survenue lors de la mise à jour du statut.');
+                    });
+                }
+                return false;
+            }
+        }, true);
+    }
+
+    // Supprimer
+    if (!document._operateursDeleteHandlerAttached) {
+        document._operateursDeleteHandlerAttached = true;
+        document.addEventListener('click', function(e) {
+            const deleteLink = e.target.closest('.delete-operateur');
+            if (deleteLink && deleteLink.closest('#operateurs_table')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                const menu = deleteLink.closest('.kt-menu-dropdown');
+                if (menu) {
+                    menu.classList.remove('show');
+                    menu.style.display = 'none';
+                }
+                const url = deleteLink.getAttribute('data-url');
+                if (url && confirm('Êtes-vous sûr de vouloir supprimer cet opérateur ?')) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = url;
+                    const csrfToken = document.createElement('input');
+                    csrfToken.type = 'hidden';
+                    csrfToken.name = '_token';
+                    csrfToken.value = '{{ csrf_token() }}';
+                    form.appendChild(csrfToken);
+                    const methodInput = document.createElement('input');
+                    methodInput.type = 'hidden';
+                    methodInput.name = '_method';
+                    methodInput.value = 'DELETE';
+                    form.appendChild(methodInput);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+                return false;
+            }
+        }, true);
+    }
+
+    // Fallback manuel pour gérer les clics sur les trois points (APRÈS les handlers d'actions)
+    if (!document._operateursMenuHandlerAttached) {
+        document._operateursMenuHandlerAttached = true;
+        document.addEventListener('click', function(e) {
+            const menuToggle = e.target.closest('.kt-menu-toggle');
+            if (menuToggle && menuToggle.closest('#operateurs_table')) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const menuItem = menuToggle.closest('.kt-menu-item');
+                const dropdown = menuItem ? menuItem.querySelector('.kt-menu-dropdown') : null;
+                
+                if (dropdown) {
+                    const isOpen = dropdown.classList.contains('show');
+                    
+                    // Fermer tous les autres dropdowns
+                    document.querySelectorAll('.kt-menu-dropdown').forEach(d => {
+                        d.classList.remove('show');
+                        d.style.display = 'none';
+                    });
+                    
+                    if (!isOpen) {
+                        // Ouvrir le dropdown
+                        const rect = menuToggle.getBoundingClientRect();
+                        dropdown.style.position = 'fixed';
+                        dropdown.style.top = (rect.bottom + 5) + 'px';
+                        dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+                        dropdown.style.zIndex = '99999';
+                        dropdown.classList.add('show');
+                        dropdown.style.display = 'block';
+                    }
+                }
+                return false;
+            }
+            
+            // Fermer les dropdowns quand on clique ailleurs
+            if (!e.target.closest('.kt-menu') && !e.target.closest('.kt-menu-dropdown')) {
+                document.querySelectorAll('.kt-menu-dropdown.show').forEach(d => {
+                    d.classList.remove('show');
+                    d.style.display = 'none';
+                });
+            }
+        }, true);
+    }
+
     // Exposer la fonction globalement pour qu'elle soit appelée après navigation AJAX
     window.initOperateursPage = function() {
-        // Réinitialiser les menus Metronic pour cette page (avec un petit délai pour s'assurer que le DOM est prêt)
+        // Réinitialiser les menus Metronic pour cette page
         setTimeout(() => {
+            // Utiliser MetronicCore si disponible
             if (window.MetronicCore && typeof window.MetronicCore.initMenus === 'function') {
                 window.MetronicCore.initMenus();
             }
-        }, 50);
+        }, 200);
 
     // Filtre des opérateurs actifs (éviter les doublons d'event listeners)
     const filterActifs = document.getElementById('filter_actifs');
@@ -281,279 +619,7 @@
     });
     }
 
-    // Toggle statut depuis le menu déroulant (délégation d'événements)
-    document.addEventListener('click', function(e) {
-        const toggleLink = e.target.closest('.toggle-status');
-        if (toggleLink) {
-            e.preventDefault();
-            e.stopPropagation();
-            const id = toggleLink.getAttribute('data-id');
-            
-            fetch(`/operateurs/${id}/toggle-status`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Mettre à jour l'icône et le badge de statut
-                    const row = toggleLink.closest('tr');
-                    if (row) {
-                        const statutCell = row.querySelector('td:nth-child(5)');
-                        const badge = statutCell ? statutCell.querySelector('.kt-badge') : null;
-                        
-                        if (badge) {
-                            // Mettre à jour le badge
-                            badge.className = `kt-badge kt-badge-${data.statut === 'actif' ? 'success' : 'danger'}`;
-                            badge.textContent = data.statut.charAt(0).toUpperCase() + data.statut.slice(1);
-                        }
-                        
-                        // Mettre à jour l'attribut data-statut
-                        row.setAttribute('data-statut', data.statut);
-                    }
-                    
-                    // Mettre à jour l'icône et le texte du lien dans le menu
-                    const icon = toggleLink.querySelector('.kt-menu-icon i');
-                    const title = toggleLink.querySelector('.kt-menu-title');
-                    if (icon) {
-                        icon.className = `ki-filled ki-${data.statut === 'actif' ? 'cross' : 'check'}`;
-                    }
-                    if (title) {
-                        title.textContent = data.statut === 'actif' ? 'Désactiver' : 'Activer';
-                    }
-                    toggleLink.setAttribute('data-statut', data.statut);
-                    
-                    // Afficher un message de succès
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Succès',
-                            text: data.message,
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
-                    } else {
-                        alert(data.message);
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                alert('Une erreur est survenue lors de la mise à jour du statut.');
-            });
-        }
-    });
 
-    // Gestion de la suppression (délégation pour fonctionner après AJAX / datatable)
-    document.addEventListener('click', function(e) {
-        const deleteLink = e.target.closest('.delete-operateur');
-        if (deleteLink) {
-            e.preventDefault();
-            e.stopPropagation();
-            const url = deleteLink.getAttribute('data-url');
-            if (!url) return;
-            if (confirm('Êtes-vous sûr de vouloir supprimer cet opérateur ?')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = url;
-                const csrfToken = document.createElement('input');
-                csrfToken.type = 'hidden';
-                csrfToken.name = '_token';
-                csrfToken.value = '{{ csrf_token() }}';
-                form.appendChild(csrfToken);
-                const methodInput = document.createElement('input');
-                methodInput.type = 'hidden';
-                methodInput.name = '_method';
-                methodInput.value = 'DELETE';
-                form.appendChild(methodInput);
-                document.body.appendChild(form);
-                form.submit();
-            }
-            return false;
-        }
-    }, true);
-
-    // Définir les fonctions AVANT les event listeners
-    // Fonction pour charger et afficher les détails d'un opérateur
-    window.loadOperateurDetails = function(id) {
-        console.log('loadOperateurDetails appelé avec ID:', id);
-        const modal = document.getElementById('modal_view_operateur');
-        if (!modal) {
-            console.error('Modal de visualisation introuvable');
-            alert('Modal de visualisation introuvable');
-            return;
-        }
-        
-        console.log('Chargement des données pour l\'opérateur:', id);
-        
-        fetch(`/operateurs/${id}`, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => {
-            console.log('Réponse reçue:', response.status);
-            if (!response.ok) {
-                throw new Error('Erreur lors du chargement des données');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Données reçues:', data);
-            if (data.success && data.operateur) {
-                // Remplir le modal de visualisation
-                document.getElementById('view_code').textContent = data.operateur.code || '-';
-                document.getElementById('view_libelle').textContent = data.operateur.libelle || '-';
-                const statutText = (data.operateur.statut || 'inactif').charAt(0).toUpperCase() + (data.operateur.statut || 'inactif').slice(1);
-                const statutEl = document.getElementById('view_statut');
-                statutEl.textContent = statutText;
-                statutEl.className = `kt-badge kt-badge-${data.operateur.statut === 'actif' ? 'success' : 'danger'}`;
-                document.getElementById('view_ordre').textContent = data.operateur.ordre || '-';
-                const couleurEl = document.getElementById('view_couleur');
-                couleurEl.textContent = data.operateur.couleur || '-';
-                if (data.operateur.couleur) {
-                    couleurEl.style.color = data.operateur.couleur;
-                }
-                
-                const logoContainer = document.getElementById('view_logo_container');
-                if (data.operateur.logo) {
-                    logoContainer.innerHTML = `<img class="h-20 w-20 rounded-full object-cover" src="/storage/${data.operateur.logo}" alt="${data.operateur.libelle}"/>`;
-                } else {
-                    const code = (data.operateur.code || '').substring(0, 2).toUpperCase();
-                    const couleur = data.operateur.couleur || '#6366f1';
-                    logoContainer.innerHTML = `<div class="h-20 w-20 rounded-full flex items-center justify-center text-white font-semibold text-lg" style="background-color: ${couleur};">${code}</div>`;
-                }
-                
-                // Statistiques
-                if (data.stats) {
-                    document.getElementById('view_transactions_total').textContent = data.stats.transactions_total || 0;
-                    document.getElementById('view_montant_total').textContent = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(data.stats.montant_total || 0);
-                    document.getElementById('view_transactions_mois').textContent = data.stats.transactions_mois || 0;
-                    document.getElementById('view_montant_mois').textContent = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(data.stats.montant_mois || 0);
-                }
-                
-                // Ouvrir le modal
-                console.log('Ouverture du modal...');
-                if (typeof KTModal !== 'undefined') {
-                    let modalInstance = KTModal.getInstance(modal);
-                    if (!modalInstance) {
-                        modalInstance = new KTModal(modal);
-                    }
-                    modalInstance.show();
-                    console.log('Modal ouvert via KTModal');
-                } else {
-                    modal.style.display = 'flex';
-                    modal.classList.add('show');
-                    console.log('Modal ouvert via style direct');
-                }
-            } else {
-                console.error('Données invalides:', data);
-                throw new Error('Données invalides');
-            }
-        })
-        .catch(error => {
-            console.error('Erreur complète:', error);
-            alert('Une erreur est survenue lors du chargement des données: ' + error.message);
-        });
-    }
-
-    // Fonction pour charger et afficher le formulaire d'édition
-    window.loadOperateurEdit = function(id) {
-        console.log('loadOperateurEdit appelé avec ID:', id);
-        const modal = document.getElementById('modal_edit_operateur');
-        if (!modal) {
-            console.error('Modal d\'édition introuvable');
-            alert('Modal d\'édition introuvable');
-            return;
-        }
-        
-        // Afficher un indicateur de chargement
-        const submitBtn = document.getElementById('btn_update_operateur');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="ki-filled ki-loading"></i> Chargement...';
-        
-        console.log('Chargement des données pour l\'édition de l\'opérateur:', id);
-        
-        fetch(`/operateurs/${id}/edit`, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => {
-            console.log('Réponse reçue pour édition:', response.status);
-            if (!response.ok) {
-                throw new Error('Erreur lors du chargement des données');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Données reçues pour édition:', data);
-            if (data.success && data.operateur) {
-                // Remplir le formulaire d'édition
-                document.getElementById('edit_operateur_id').value = data.operateur.id;
-                document.getElementById('edit_code').value = data.operateur.code || '';
-                document.getElementById('edit_libelle').value = data.operateur.libelle || '';
-                document.getElementById('edit_statut').value = data.operateur.statut || 'actif';
-                document.getElementById('edit_ordre').value = data.operateur.ordre || '';
-                document.getElementById('edit_couleur').value = data.operateur.couleur || '';
-                
-                // Synchroniser le color picker
-                const colorPicker = document.getElementById('edit_couleur_picker');
-                if (colorPicker && data.operateur.couleur) {
-                    colorPicker.value = data.operateur.couleur;
-                }
-                
-                const logoPreview = document.getElementById('edit_logo_preview');
-                if (data.operateur.logo) {
-                    logoPreview.innerHTML = `<img class="h-20 w-20 rounded-full object-cover" src="/storage/${data.operateur.logo}" alt="${data.operateur.libelle}"/>`;
-                } else {
-                    const code = (data.operateur.code || '').substring(0, 2).toUpperCase();
-                    const couleur = data.operateur.couleur || '#6366f1';
-                    logoPreview.innerHTML = `<div class="h-20 w-20 rounded-full flex items-center justify-center text-white font-semibold text-lg" style="background-color: ${couleur};">${code}</div>`;
-                }
-                
-                // Réinitialiser les erreurs
-                document.querySelectorAll('#modal_edit_operateur .text-destructive').forEach(el => {
-                    el.classList.add('hidden');
-                    el.textContent = '';
-                });
-                
-                // Réactiver le bouton
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-                
-                // Ouvrir le modal
-                console.log('Ouverture du modal d\'édition...');
-                if (typeof KTModal !== 'undefined') {
-                    let modalInstance = KTModal.getInstance(modal);
-                    if (!modalInstance) {
-                        modalInstance = new KTModal(modal);
-                    }
-                    modalInstance.show();
-                    console.log('Modal d\'édition ouvert via KTModal');
-                } else {
-                    modal.style.display = 'flex';
-                    modal.classList.add('show');
-                    console.log('Modal d\'édition ouvert via style direct');
-                }
-            } else {
-                console.error('Données invalides pour édition:', data);
-                throw new Error('Données invalides');
-            }
-        })
-        .catch(error => {
-            console.error('Erreur complète lors de l\'édition:', error);
-            alert('Une erreur est survenue lors du chargement des données: ' + error.message);
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-        });
-    }
 
     // Fermer le modal de détails même si KTModal n'est pas disponible
     document.addEventListener('click', function(e) {
@@ -580,69 +646,6 @@
         loadOperateurEdit: typeof window.loadOperateurEdit
     });
 
-    // Event listeners pour voir les détails et modifier (délégation d'événements)
-    // Utiliser capture phase pour intercepter avant que le menu ne se ferme
-    document.addEventListener('click', function(e) {
-        // Voir les détails
-        const viewLink = e.target.closest('.view-operateur');
-        if (viewLink) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            const menu = viewLink.closest('.kt-menu-dropdown');
-            if (menu) {
-                menu.classList.remove('show');
-                menu.style.display = 'none';
-                const row = menu.closest('tr');
-                if (row) row.classList.remove('operateurs-row-menu-open');
-            }
-            const id = viewLink.getAttribute('data-id');
-            console.log('Clic détecté sur voir détails, ID:', id);
-            if (id && typeof window.loadOperateurDetails === 'function') {
-                console.log('Appel de loadOperateurDetails avec ID:', id);
-                try {
-                    window.loadOperateurDetails(id);
-                } catch (error) {
-                    console.error('Erreur lors de l\'appel de loadOperateurDetails:', error);
-                    alert('Erreur: ' + error.message);
-                }
-            } else {
-                console.error('ID manquant ou fonction non définie. ID:', id, 'Fonction:', typeof window.loadOperateurDetails);
-                alert('Erreur: Fonction loadOperateurDetails non disponible');
-            }
-            return false;
-        }
-        
-        // Modifier
-        const editLink = e.target.closest('.edit-operateur');
-        if (editLink) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            const menu = editLink.closest('.kt-menu-dropdown');
-            if (menu) {
-                menu.classList.remove('show');
-                menu.style.display = 'none';
-                const row = menu.closest('tr');
-                if (row) row.classList.remove('operateurs-row-menu-open');
-            }
-            const id = editLink.getAttribute('data-id');
-            console.log('Clic détecté sur modifier, ID:', id);
-            if (id && typeof window.loadOperateurEdit === 'function') {
-                console.log('Appel de loadOperateurEdit avec ID:', id);
-                try {
-                    window.loadOperateurEdit(id);
-                } catch (error) {
-                    console.error('Erreur lors de l\'appel de loadOperateurEdit:', error);
-                    alert('Erreur: ' + error.message);
-                }
-            } else {
-                console.error('ID manquant ou fonction non définie. ID:', id, 'Fonction:', typeof window.loadOperateurEdit);
-                alert('Erreur: Fonction loadOperateurEdit non disponible');
-            }
-            return false;
-        }
-    }, true); // Utiliser capture phase
 
     // Réinitialiser le formulaire de création (éviter les doublons)
     const createModal = document.getElementById('modal_nouvel_operateur');
@@ -692,15 +695,17 @@
 
     // Appeler immédiatement au chargement initial
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initOperateursPage);
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initOperateursPage, 200);
+        });
     } else {
-        initOperateursPage();
+        setTimeout(initOperateursPage, 200);
     }
     
     // Réinitialiser après navigation AJAX
     document.addEventListener('ajax-content-loaded', function() {
         if (document.getElementById('operateurs_table')) {
-            initOperateursPage();
+            setTimeout(initOperateursPage, 300);
         }
     });
 })();

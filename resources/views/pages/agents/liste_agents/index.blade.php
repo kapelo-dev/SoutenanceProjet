@@ -1627,75 +1627,71 @@ window.loadAgentEdit = function(id) {
 }
 
 // Fonction pour initialiser les event listeners des boutons d'action
+// IMPORTANT: Cette fonction doit être appelée AVANT initKTMenus() pour que les handlers d'action
+// soient attachés en premier et s'exécutent avant le handler de menu (phase de capture)
 function initAgentsPageActions() {
-    // Éviter de ré-attacher plusieurs fois les mêmes listeners
-    if (document._agentsActionsInited) {
-        return;
-    }
-    document._agentsActionsInited = true;
-
     // Utiliser la délégation d'événements pour capturer les clics même après le chargement dynamique
     // Voir les détails
-    document.addEventListener('click', function(e) {
-        const viewLink = e.target.closest('.view-agent');
-        if (viewLink) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            
-            // Fermer le menu déroulant
-            const menu = viewLink.closest('.kt-menu-dropdown');
-            if (menu) {
-                menu.classList.remove('show');
-                menu.classList.add('hidden');
-                menu.style.display = 'none';
-                const row = menu.closest('tr');
-                if (row) row.classList.remove('agents-row-menu-open');
-                setTimeout(() => {
-                    const id = viewLink.getAttribute('data-id');
-                    if (id && typeof window.loadAgentDetails === 'function') {
-                        window.loadAgentDetails(id);
-                    }
-                }, 100);
-            } else {
+    if (!document._agentsViewHandlerAttached) {
+        document._agentsViewHandlerAttached = true;
+        document.addEventListener('click', function(e) {
+            const viewLink = e.target.closest('.view-agent');
+            if (viewLink) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                // Fermer le menu déroulant
+                const menu = viewLink.closest('.kt-menu-dropdown');
+                if (menu) {
+                    menu.classList.remove('show');
+                    menu.classList.add('hidden');
+                    menu.style.display = 'none';
+                    const row = menu.closest('tr');
+                    if (row) row.classList.remove('agents-row-menu-open');
+                }
+                
                 const id = viewLink.getAttribute('data-id');
                 if (id && typeof window.loadAgentDetails === 'function') {
-                    window.loadAgentDetails(id);
+                    setTimeout(() => {
+                        window.loadAgentDetails(id);
+                    }, 100);
                 }
+                return false;
             }
-            return false;
-        }
-        
-        // Modifier
-        const editLink = e.target.closest('.edit-agent');
-        if (editLink) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            
-            // Fermer le menu déroulant
-            const menu = editLink.closest('.kt-menu-dropdown');
-            if (menu) {
-                menu.classList.remove('show');
-                menu.classList.add('hidden');
-                menu.style.display = 'none';
-                const row = menu.closest('tr');
-                if (row) row.classList.remove('agents-row-menu-open');
-                setTimeout(() => {
-                    const id = editLink.getAttribute('data-id');
-                    if (id && typeof window.loadAgentEdit === 'function') {
-                        window.loadAgentEdit(id);
-                    }
-                }, 100);
-            } else {
+        }, true); // Capture phase pour s'exécuter avant le handler de menu
+    }
+    
+    // Modifier
+    if (!document._agentsEditHandlerAttached) {
+        document._agentsEditHandlerAttached = true;
+        document.addEventListener('click', function(e) {
+            const editLink = e.target.closest('.edit-agent');
+            if (editLink) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                // Fermer le menu déroulant
+                const menu = editLink.closest('.kt-menu-dropdown');
+                if (menu) {
+                    menu.classList.remove('show');
+                    menu.classList.add('hidden');
+                    menu.style.display = 'none';
+                    const row = menu.closest('tr');
+                    if (row) row.classList.remove('agents-row-menu-open');
+                }
+                
                 const id = editLink.getAttribute('data-id');
                 if (id && typeof window.loadAgentEdit === 'function') {
-                    window.loadAgentEdit(id);
+                    setTimeout(() => {
+                        window.loadAgentEdit(id);
+                    }, 100);
                 }
+                return false;
             }
-            return false;
-        }
-    }, true);
+        }, true); // Capture phase pour s'exécuter avant le handler de menu
+    }
 }
 
 // Fonction pour initialiser les menus d'actions des agents
@@ -1816,9 +1812,19 @@ window.initAgentsPage = function() {
         }
     }
 
-    // Initialiser menus et actions
-    initKTMenus();
+    // IMPORTANT: Initialiser les handlers d'action AVANT le handler de menu
+    // pour que les actions soient traitées en premier (phase de capture)
     initAgentsPageActions();
+    initKTMenus();
+    
+    // Réinitialiser les modals Metronic après AJAX
+    setTimeout(() => {
+        if (window.MetronicCore && typeof window.MetronicCore.initModals === 'function') {
+            window.MetronicCore.initModals();
+        } else if (typeof initModals === 'function') {
+            initModals();
+        }
+    }, 200);
 };
 
 // Initialisation sur chargement normal
@@ -1838,7 +1844,6 @@ document.addEventListener('ajax-content-loaded', function() {
 });
 
 </script>
-@endsection
 
 <!-- Modal Voir Agent -->
 <div class="kt-modal" data-kt-modal="true" data-kt-modal-disable-scroll="false" id="modal_view_agent" style="display: none;">
@@ -2229,3 +2234,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+@endsection

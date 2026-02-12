@@ -26,3 +26,61 @@
     --sidebar-width: var(--sidebar-default-width);
   }
 }
+
+/* Glassmorphisme pour les éléments de menu actifs
+   - On ne cible que le lien DIRECTEMENT enfant de l'item actif
+   - Ainsi, dans un accordion, seul le sous-menu actif est stylé,
+     pas tous les sous-éléments du parent. */
+.kt-menu-item-active > .kt-menu-link,
+.kt-menu-item-active > .kt-menu-label {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-left: 3px solid #fbbf24 !important; /* Jaune */
+  border-right-color: transparent !important;
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+}
+
+/* Support du mode sombre */
+.dark .kt-menu-item-active > .kt-menu-link,
+.dark .kt-menu-item-active > .kt-menu-label {
+  background: rgba(0, 0, 0, 0.2) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-left: 3px solid #fbbf24 !important; /* Jaune */
+  border-right-color: transparent !important;
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+}
+
+/* Hover jaune pour les éléments du sidebar (icône + texte + bordure)
+   - fonctionne pour:
+     - items classiques: .kt-menu-link
+     - items type \"Rapports\": a.kt-menu-item > .kt-menu-label
+   - neutralise le hover bleu basé sur la classe utilitaire kt-menu-link-hover */
+#sidebar_menu .kt-menu-link:hover,
+#sidebar_menu .kt-menu-label:hover,
+#sidebar_menu a.kt-menu-item:hover > .kt-menu-label {
+  border-left: 3px solid #fbbf24 !important;
+  border-right-color: transparent !important;
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+}
+
+#sidebar_menu .kt-menu-link:hover .kt-menu-title,
+#sidebar_menu .kt-menu-link:hover .kt-menu-icon,
+#sidebar_menu .kt-menu-label:hover .kt-menu-title,
+#sidebar_menu .kt-menu-label:hover .kt-menu-icon,
+#sidebar_menu a.kt-menu-item:hover .kt-menu-label .kt-menu-title,
+#sidebar_menu a.kt-menu-item:hover .kt-menu-label .kt-menu-icon,
+/* Quand Metronic ajoute la classe .kt-menu-link-hover (variant Tailwind),
+   on force aussi le jaune pour écraser !text-primary */
+#sidebar_menu .kt-menu-link.kt-menu-link-hover .kt-menu-title,
+#sidebar_menu .kt-menu-link.kt-menu-link-hover .kt-menu-icon,
+#sidebar_menu .kt-menu-label.kt-menu-link-hover .kt-menu-title,
+#sidebar_menu .kt-menu-label.kt-menu-link-hover .kt-menu-icon,
+#sidebar_menu a.kt-menu-item.kt-menu-link-hover .kt-menu-label .kt-menu-title,
+#sidebar_menu a.kt-menu-item.kt-menu-link-hover .kt-menu-label .kt-menu-icon {
+  color: #fbbf24 !important;
+}

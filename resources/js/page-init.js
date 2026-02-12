@@ -168,6 +168,7 @@ window.loadUserProfile = function(userId) {
                 </tr>`;
             }
             
+            // Profils en lecture seule (badges)
             if (user.profils && user.profils.length > 0) {
                 const badges = user.profils.map(p => 
                     `<span class="kt-badge kt-badge-sm kt-badge-primary kt-badge-outline">

@@ -291,7 +291,6 @@
      </div>
     </div>
     <!-- End of Container -->
-   </main>
 
    <!-- Modal Nouvel Utilisateur -->
    <div class="kt-modal" data-kt-modal="true" id="modal_nouvel_utilisateur" style="display: none;">
@@ -436,22 +435,95 @@
       </div>
      </div>
    <!-- End Modal de Profil Utilisateur -->
+   </main>
 
 <script>
 // La fonction loadUserProfile est définie dans resources/js/page-init.js
 // et est disponible globalement via window.loadUserProfile
 
-// Réouvrir le modal de création si des erreurs de validation (après soumission)
-document.addEventListener('DOMContentLoaded', function() {
+
+// Fonction d'initialisation pour la page utilisateurs (appelée après navigation AJAX)
+window.initUtilisateursPage = function() {
+    // Réinitialiser les modals Metronic
+    setTimeout(() => {
+        if (window.MetronicCore && typeof window.MetronicCore.initModals === 'function') {
+            window.MetronicCore.initModals();
+        }
+        
+        // Réinitialiser les selects Metronic pour le modal de création
+        const createProfilsSelect = document.getElementById('create_profils');
+        const createStatutSelect = document.getElementById('create_statut');
+        
+        if (createProfilsSelect) {
+            createProfilsSelect.setAttribute('data-kt-select', 'true');
+            if (typeof KTSelect !== 'undefined') {
+                try {
+                    const existingInstance = KTSelect.getInstance(createProfilsSelect);
+                    if (existingInstance) {
+                        existingInstance.destroy();
+                    }
+                    new KTSelect(createProfilsSelect);
+                } catch (error) {
+                    console.warn('Erreur initialisation select profils:', error);
+                }
+            }
+        }
+        
+        if (createStatutSelect) {
+            createStatutSelect.setAttribute('data-kt-select', 'true');
+            if (typeof KTSelect !== 'undefined') {
+                try {
+                    const existingInstance = KTSelect.getInstance(createStatutSelect);
+                    if (existingInstance) {
+                        existingInstance.destroy();
+                    }
+                    new KTSelect(createStatutSelect);
+                } catch (error) {
+                    console.warn('Erreur initialisation select statut:', error);
+                }
+            }
+        }
+    }, 200);
+};
+
+// Initialisation sur chargement normal
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        window.initUtilisateursPage();
+        
+        // Réouvrir le modal de création si des erreurs de validation (après soumission)
+        @if($errors->any())
+        setTimeout(() => {
+            var modal = document.getElementById('modal_nouvel_utilisateur');
+            if (modal) {
+                modal.style.display = 'flex';
+                modal.classList.add('show');
+                modal.classList.remove('hidden');
+            }
+        }, 300);
+        @endif
+    });
+} else {
+    window.initUtilisateursPage();
+    
+    // Réouvrir le modal de création si des erreurs de validation (après soumission)
     @if($errors->any())
-    var modal = document.getElementById('modal_nouvel_utilisateur');
-    if (modal && (window.KTModal || typeof KTModal !== 'undefined')) {
-        var inst = window.KTModal ? KTModal.getInstance(modal) : null;
-        if (inst) inst.show(); else if (modal) modal.style.display = 'flex';
-    } else if (modal) {
-        modal.style.display = 'flex';
-    }
+    setTimeout(() => {
+        var modal = document.getElementById('modal_nouvel_utilisateur');
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.classList.add('show');
+            modal.classList.remove('hidden');
+        }
+    }, 300);
     @endif
+}
+
+// Réinitialisation explicite après navigation AJAX (quand la page Utilisateurs est chargée via AJAX)
+document.addEventListener('ajax-content-loaded', function() {
+    if (document.getElementById('modal_nouvel_utilisateur')) {
+        window.initUtilisateursPage();
+    }
 });
 
 // Filtrage en temps réel via AJAX

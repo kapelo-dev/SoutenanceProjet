@@ -38,8 +38,8 @@
                             }
                         </style>
                         <div
-                            class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem]">
-                            <i class="ki-filled ki-chart-line ms-5 mt-4 text-3xl text-primary"></i>
+                            class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 rounded-2xl border border-white/40 bg-white/30 backdrop-blur-xl shadow-[0_18px_45px_rgba(15,23,42,0.08)] bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem] dark:border-white/10 dark:bg-white/5">
+                            <i class="ki-filled ki-chart-line ms-5 mt-4 text-3xl text-primary/70"></i>
                             <div class="flex flex-col gap-1 px-5 pb-4">
                                 <span class="text-3xl font-semibold text-mono">
                                     {{ number_format($stats['transactions_jour']) }}
@@ -50,8 +50,8 @@
                             </div>
                         </div>
                         <div
-                            class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem]">
-                            <i class="ki-filled ki-dollar ms-5 mt-4 text-3xl text-success"></i>
+                            class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 rounded-2xl border border-emerald-200/50 bg-emerald-50/40 backdrop-blur-xl shadow-[0_18px_45px_rgba(15,23,42,0.06)] bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem] dark:border-emerald-300/25 dark:bg-emerald-400/10">
+                            <i class="ki-filled ki-dollar ms-5 mt-4 text-3xl text-emerald-500/80"></i>
                             <div class="flex flex-col gap-1 px-5 pb-4">
                                 <span class="text-3xl font-semibold text-mono">
                                     {{ number_format($stats['montant_jour'] / 1000000, 1) }}M
@@ -62,8 +62,8 @@
                             </div>
                         </div>
                         <div
-                            class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem]">
-                            <i class="ki-filled ki-people ms-5 mt-4 text-3xl text-warning"></i>
+                            class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 rounded-2xl border border-amber-200/50 bg-amber-50/40 backdrop-blur-xl shadow-[0_18px_45px_rgba(15,23,42,0.06)] bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem] dark:border-amber-300/25 dark:bg-amber-400/10">
+                            <i class="ki-filled ki-people ms-5 mt-4 text-3xl text-amber-500/80"></i>
                             <div class="flex flex-col gap-1 px-5 pb-4">
                                 <span class="text-3xl font-semibold text-mono">
                                     {{ $stats['agents_actifs'] }}
@@ -74,8 +74,8 @@
                             </div>
                         </div>
                         <div
-                            class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem]">
-                            <i class="ki-filled ki-shop ms-5 mt-4 text-3xl text-info"></i>
+                            class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 rounded-2xl border border-sky-200/50 bg-sky-50/40 backdrop-blur-xl shadow-[0_18px_45px_rgba(15,23,42,0.06)] bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem] dark:border-sky-300/25 dark:bg-sky-400/10">
+                            <i class="ki-filled ki-shop ms-5 mt-4 text-3xl text-sky-500/80"></i>
                             <div class="flex flex-col gap-1 px-5 pb-4">
                                 <span class="text-3xl font-semibold text-mono">
                                     {{ $stats['kiosques_actifs'] }}

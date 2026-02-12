@@ -26,8 +26,8 @@
             <!-- Sidebar Menu -->
             <div class="kt-menu flex grow flex-col gap-1" data-kt-menu="true" data-kt-menu-accordion-expand-all="false"
                 id="sidebar_menu">
-                <div class="kt-menu-item">
-                    <a href="{{ url('/dashboard') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px]"
+                <div class="kt-menu-item {{ request()->is('dashboard') ? 'kt-menu-item-active' : '' }}">
+                    <a href="{{ url('/dashboard') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
                         tabindex="0">
 
                         <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
@@ -35,7 +35,7 @@
                             </i>
                         </span>
                         <span
-                            class="kt-menu-title kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary text-sm font-medium text-foreground">
+                            class="kt-menu-title kt-menu-item-active:text-primary text-sm font-medium text-foreground">
                             Dashboard
                         </span>
                         
@@ -47,8 +47,8 @@
                         User
                     </span>
                 </div>
-                <div class="kt-menu-item">
-                    <a href="{{ url('/transactions') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px]"
+                <div class="kt-menu-item {{ request()->is('transactions') ? 'kt-menu-item-active' : '' }}">
+                    <a href="{{ url('/transactions') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
                         tabindex="0">
                         
                         <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
@@ -56,21 +56,21 @@
                             </i>
                         </span>
                         <span
-                            class="kt-menu-title kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary text-sm font-medium text-foreground">
+                            class="kt-menu-title kt-menu-item-active:text-primary text-sm font-medium text-foreground">
                             Transactions
                         </span>
                         
                     </a>
                 </div>
-                <div class="kt-menu-item" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
-                    <div class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px]"
+                <div class="kt-menu-item {{ request()->is('agents/*') ? 'kt-menu-item-active kt-menu-item-show' : '' }}" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
+                    <div class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
                         tabindex="0">
                         <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
                             <i class="ki-filled ki-setting-2 text-lg">
                             </i>
                         </span>
                         <span
-                            class="kt-menu-title kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary text-sm font-medium text-foreground">
+                            class="kt-menu-title kt-menu-item-active:text-primary text-sm font-medium text-foreground">
                             Agents
                         </span>
                         <span
@@ -87,41 +87,41 @@
                     </div>
                     <div
                         class="kt-menu-accordion relative gap-1 ps-[10px] before:absolute before:bottom-0 before:start-[20px] before:top-0 before:border-s before:border-border">
-                        <div class="kt-menu-item">
-                            <a href="{{ url('/agents/liste-agents') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                        <div class="kt-menu-item {{ request()->is('agents/liste-agents') ? 'kt-menu-item-active' : '' }}">
+                            <a href="{{ url('/agents/liste-agents') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px] rounded-md"
                                 tabindex="0">
                                 <span
                                     class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
                                 </span>
                                 <span
-                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium me-1 font-normal text-foreground">
                                     Liste des Agents
                                 </span>
                             </a>
                         </div>
-                        <div class="kt-menu-item">
-                            <a href="{{ url('/agents/soldes') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                        <div class="kt-menu-item {{ request()->is('agents/soldes') ? 'kt-menu-item-active' : '' }}">
+                            <a href="{{ url('/agents/soldes') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px] rounded-md"
                                 tabindex="0">
                                 <span
                                     class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
                                 </span>
                                 <span
-                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium me-1 font-normal text-foreground">
                                    Soldes
                                 </span>
                             </a>
                         </div>
                     </div>
                 </div>
-                <div class="kt-menu-item" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
-                    <div class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px]"
+                <div class="kt-menu-item {{ request()->is('kiosques*') ? 'kt-menu-item-active kt-menu-item-show' : '' }}" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
+                    <div class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
                         tabindex="0">
                         <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
                             <i class="ki-filled ki-shop text-lg">
                             </i>
                         </span>
                         <span
-                            class="kt-menu-title kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary text-sm font-medium text-foreground">
+                            class="kt-menu-title kt-menu-item-active:text-primary text-sm font-medium text-foreground">
                             Kiosques
                         </span>
                         <span
@@ -138,41 +138,41 @@
                     </div>
                     <div
                         class="kt-menu-accordion relative gap-1 ps-[10px] before:absolute before:bottom-0 before:start-[20px] before:top-0 before:border-s before:border-border">
-                        <div class="kt-menu-item">
-                            <a href="{{ url('/kiosques') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                        <div class="kt-menu-item {{ request()->is('kiosques') ? 'kt-menu-item-active' : '' }}">
+                            <a href="{{ url('/kiosques') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px] rounded-md"
                                 tabindex="0">
                                 <span
                                     class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
                                 </span>
                                 <span
-                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium me-1 font-normal text-foreground">
                                     Liste des Kiosques
                                 </span>
                             </a>
                         </div>
-                        <div class="kt-menu-item">
-                            <a href="{{ url('/kiosques-carte') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                        <div class="kt-menu-item {{ request()->is('kiosques-carte') ? 'kt-menu-item-active' : '' }}">
+                            <a href="{{ url('/kiosques-carte') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px] rounded-md"
                                 tabindex="0">
                                 <span
                                     class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
                                 </span>
                                 <span
-                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium me-1 font-normal text-foreground">
                                     Carte des Kiosques
                                 </span>
                             </a>
                         </div>
                     </div>
                 </div>
-                <div class="kt-menu-item" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
-                    <a href="{{ url('/utilisateurs') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px]"   
+                <div class="kt-menu-item {{ request()->is('utilisateurs') ? 'kt-menu-item-active' : '' }}" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
+                    <a href="{{ url('/utilisateurs') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"   
                         tabindex="0">
                         <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
                             <i class="ki-filled ki-users text-lg">
                             </i>
                         </span>
                         <span
-                            class="kt-menu-title kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary text-sm font-medium text-foreground">
+                            class="kt-menu-title kt-menu-item-active:text-primary text-sm font-medium text-foreground">
                             Utilisateurs
                         </span>
                         
@@ -186,8 +186,8 @@
                         Finance
                     </span>
                 </div>
-                <a href="{{ url('/rapports') }}" class="kt-menu-item">
-                    <div class="kt-menu-label gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px]"
+                <a href="{{ url('/rapports') }}" class="kt-menu-item {{ request()->is('rapports') ? 'kt-menu-item-active' : '' }}">
+                    <div class="kt-menu-label gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
                         href="" tabindex="0">
                         <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
                             <i class="ki-filled ki-setting text-lg">
@@ -203,15 +203,15 @@
                         </span>
                     </div>
                 </a>
-                <div class="kt-menu-item">
-                    <a href="{{ url('/operations-agence') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px]"
+                <div class="kt-menu-item {{ request()->is('operations-agence') ? 'kt-menu-item-active' : '' }}">
+                    <a href="{{ url('/operations-agence') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
                         tabindex="0">
                         <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
                             <i class="ki-filled ki-bank text-lg">
                             </i>
                         </span>
                         <span
-                            class="kt-menu-title kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary text-sm font-medium text-foreground">
+                            class="kt-menu-title kt-menu-item-active:text-primary text-sm font-medium text-foreground">
                             Opérations en Agence
                         </span>
                     </a>
@@ -223,15 +223,15 @@
                         Entreprise
                     </span>
                 </div>
-                <div class="kt-menu-item" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
-                    <div class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px]"
+                <div class="kt-menu-item {{ request()->is('gestion-entreprise') ? 'kt-menu-item-active kt-menu-item-show' : '' }}" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
+                    <div class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
                         tabindex="0">
                         <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
                             <i class="ki-filled ki-office-bag text-lg">
                             </i>
                         </span>
                         <span
-                            class="kt-menu-title kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary text-sm font-medium text-foreground">
+                            class="kt-menu-title kt-menu-item-active:text-primary text-sm font-medium text-foreground">
                             Gestion d'entreprise
                         </span>
                         <span
@@ -248,38 +248,38 @@
                     </div>
                     <div
                         class="kt-menu-accordion relative gap-1 ps-[10px] before:absolute before:bottom-0 before:start-[20px] before:top-0 before:border-s before:border-border">
-                        <div class="kt-menu-item">
-                            <a href="{{ url('/gestion-entreprise?onglet=salaires') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                        <div class="kt-menu-item {{ request()->fullUrlIs('*gestion-entreprise?onglet=salaires*') ? 'kt-menu-item-active' : '' }}">
+                            <a href="{{ url('/gestion-entreprise?onglet=salaires') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px] rounded-md"
                                 tabindex="0">
                                 <span
                                     class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
                                 </span>
                                 <span
-                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium me-1 font-normal text-foreground">
                                     Salaires
                                 </span>
                             </a>
                         </div>
-                        <div class="kt-menu-item">
-                            <a href="{{ url('/gestion-entreprise?onglet=parametres') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                        <div class="kt-menu-item {{ request()->fullUrlIs('*gestion-entreprise?onglet=parametres*') ? 'kt-menu-item-active' : '' }}">
+                            <a href="{{ url('/gestion-entreprise?onglet=parametres') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px] rounded-md"
                                 tabindex="0">
                                 <span
                                     class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
                                 </span>
                                 <span
-                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium me-1 font-normal text-foreground">
                                     Paramètres Salaire
                                 </span>
                             </a>
                         </div>
-                        <div class="kt-menu-item">
-                            <a href="{{ url('/gestion-entreprise?onglet=tresorerie') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                        <div class="kt-menu-item {{ request()->fullUrlIs('*gestion-entreprise?onglet=tresorerie*') ? 'kt-menu-item-active' : '' }}">
+                            <a href="{{ url('/gestion-entreprise?onglet=tresorerie') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px] rounded-md"
                                 tabindex="0">
                                 <span
                                     class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
                                 </span>
                                 <span
-                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium me-1 font-normal text-foreground">
                                     Trésorerie
                                 </span>
                             </a>
@@ -293,15 +293,15 @@
                         Configuration
                     </span>
                 </div>
-                <div class="kt-menu-item" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
-                    <div class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px]"
+                <div class="kt-menu-item {{ request()->is('roles-et-permissions/*') ? 'kt-menu-item-active kt-menu-item-show' : '' }}" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
+                    <div class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
                         tabindex="0">
                         <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
                             <i class="ki-filled ki-setting-2 text-lg">
                             </i>
                         </span>
                         <span
-                            class="kt-menu-title kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary text-sm font-medium text-foreground">
+                            class="kt-menu-title kt-menu-item-active:text-primary text-sm font-medium text-foreground">
                             Role et permissions
                         </span>
                         <span
@@ -318,65 +318,65 @@
                     </div>
                     <div
                         class="kt-menu-accordion relative gap-1 ps-[10px] before:absolute before:bottom-0 before:start-[20px] before:top-0 before:border-s before:border-border">
-                        <div class="kt-menu-item">
-                            <a href="{{ url('/roles-et-permissions/gestion-roles') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                        <div class="kt-menu-item {{ request()->is('roles-et-permissions/gestion-roles') ? 'kt-menu-item-active' : '' }}">
+                            <a href="{{ url('/roles-et-permissions/gestion-roles') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px] rounded-md"
                                 tabindex="0">
                                 <span
                                     class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
                                 </span>
                                 <span
-                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium me-1 font-normal text-foreground">
                                     Gestion des roles
                                 </span>
                             </a>
                         </div>
-                        <div class="kt-menu-item">
-                            <a href="{{ url('/roles-et-permissions/gestion-permissions') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                        <div class="kt-menu-item {{ request()->is('roles-et-permissions/gestion-permissions') ? 'kt-menu-item-active' : '' }}">
+                            <a href="{{ url('/roles-et-permissions/gestion-permissions') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px] rounded-md"
                                 tabindex="0">
                                 <span
                                     class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
                                 </span>
                                 <span
-                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium me-1 font-normal text-foreground">
                                     Gestion des permissions
                                 </span>
                             </a>
                         </div>
-                        <div class="kt-menu-item">
-                            <a href="{{ url('/roles-et-permissions/gestion-routes') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                        <div class="kt-menu-item {{ request()->is('roles-et-permissions/gestion-routes') ? 'kt-menu-item-active' : '' }}">
+                            <a href="{{ url('/roles-et-permissions/gestion-routes') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px] rounded-md"
                                 tabindex="0">
                                 <span
                                     class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
                                 </span>
                                 <span
-                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium me-1 font-normal text-foreground">
                                    Gestion des routes
                                 </span>
                             </a>
                         </div>
-                        <div class="kt-menu-item">
-                            <a href="{{ url('/parametres-app-mobile') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px]"
+                        <div class="kt-menu-item {{ request()->is('parametres-app-mobile') ? 'kt-menu-item-active' : '' }}">
+                            <a href="{{ url('/parametres-app-mobile') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px] rounded-md"
                                 tabindex="0">
                                 <span
                                     class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
                                 </span>
                                 <span
-                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium kt-menu-link-hover:!text-primary me-1 font-normal text-foreground">
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium me-1 font-normal text-foreground">
                                     Configuration App Mobile
                                 </span>
                             </a>
                         </div>
                     </div>
                 </div>
-                <div class="kt-menu-item">
-                    <a href="{{ url('/operateurs') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px]"
+                <div class="kt-menu-item {{ request()->is('operateurs') ? 'kt-menu-item-active' : '' }}">
+                    <a href="{{ url('/operateurs') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
                         tabindex="0">
                         <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
                             <i class="ki-filled ki-phone text-lg">
                             </i>
                         </span>
                         <span
-                            class="kt-menu-title kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary text-sm font-medium text-foreground">
+                            class="kt-menu-title kt-menu-item-active:text-primary text-sm font-medium text-foreground">
                             Opérateurs Mobile Money
                         </span>
                     </a>
