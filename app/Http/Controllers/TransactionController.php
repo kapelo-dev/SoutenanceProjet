@@ -6,11 +6,13 @@ use App\Models\Transaction;
 use App\Models\Agent;
 use App\Models\Operateur;
 use App\Models\Solde;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
+    use Exportable;
     /**
      * Afficher la liste des transactions
      */
@@ -394,57 +396,100 @@ class TransactionController extends Controller
     }
 
     /**
-     * Exporter les transactions (CSV)
+     * Exporter les transactions (Excel ou PDF)
      */
     public function export(Request $request)
     {
         $query = Transaction::with(['agent', 'operateur']);
 
         // Appliquer les mêmes filtres que l'index
-        if ($request->filled('statut')) $query->where('statut', $request->statut);
-        if ($request->filled('type')) $query->where('type', $request->type);
-        if ($request->filled('operateur_id')) $query->where('operateur_id', $request->operateur_id);
-        if ($request->filled('date_debut')) $query->whereDate('date', '>=', $request->date_debut);
-        if ($request->filled('date_fin')) $query->whereDate('date', '<=', $request->date_fin);
+        if ($request->filled('statut')) {
+            $query->where('statut', $request->statut);
+        }
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+        if ($request->filled('operateur_id')) {
+            $query->where('operateur_id', $request->operateur_id);
+        }
+        if ($request->filled('agent_id')) {
+            $query->where('agent_id', $request->agent_id);
+        }
+        if ($request->filled('date_debut')) {
+            $query->whereDate('date', '>=', $request->date_debut);
+        }
+        if ($request->filled('date_fin')) {
+            $query->whereDate('date', '<=', $request->date_fin);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('reference', 'like', "%{$search}%")
+                  ->orWhere('client_nom', 'like', "%{$search}%")
+                  ->orWhere('client_telephone', 'like', "%{$search}%");
+            });
+        }
 
         $transactions = $query->latest('date')->get();
 
-        $filename = 'transactions_' . now()->format('Y-m-d_His') . '.csv';
+        $headers = ['Référence', 'Date', 'Type', 'Montant (XOF)', 'Opérateur', 'Agent', 'Client', 'Téléphone Client', 'Commission (XOF)', 'Statut'];
         
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ];
-
-        $callback = function() use ($transactions) {
-            $file = fopen('php://output', 'w');
-            
-            // En-têtes CSV
-            fputcsv($file, [
-                'Référence', 'Date', 'Type', 'Montant', 'Opérateur', 
-                'Agent', 'Client', 'Téléphone Client', 'Commission', 'Statut'
-            ]);
-
-            // Données
-            foreach ($transactions as $transaction) {
-                fputcsv($file, [
-                    $transaction->reference,
-                    $transaction->date->format('Y-m-d H:i:s'),
-                    $transaction->type,
-                    $transaction->montant,
-                    $transaction->operateur->libelle,
-                    $transaction->agent->nomComplet,
-                    $transaction->client_nom,
-                    $transaction->client_telephone,
-                    $transaction->commission,
-                    $transaction->statut,
-                ]);
+        $data = $transactions->map(function($transaction) {
+            // Préparer le logo de l'opérateur pour le PDF
+            $operateurCell = '-';
+            if ($transaction->operateur) {
+                $operateurLibelle = $transaction->operateur->libelle ?? '-';
+                $operateurLogo = null;
+                
+                if ($transaction->operateur->logo) {
+                    // Le logo est stocké dans storage/app/public/
+                    $logoPath = storage_path('app/public/' . $transaction->operateur->logo);
+                    if (file_exists($logoPath)) {
+                        // Convertir l'image en base64 pour le PDF
+                        $imageData = file_get_contents($logoPath);
+                        $imageInfo = getimagesize($logoPath);
+                        $mimeType = $imageInfo['mime'] ?? 'image/png';
+                        $base64 = base64_encode($imageData);
+                        
+                        $operateurLogo = [
+                            'base64' => 'data:' . $mimeType . ';base64,' . $base64,
+                            'libelle' => $operateurLibelle,
+                        ];
+                    }
+                }
+                
+                // Si pas de logo, utiliser la couleur avec les initiales
+                if (!$operateurLogo && $transaction->operateur->couleur) {
+                    $operateurLogo = [
+                        'couleur' => $transaction->operateur->couleur,
+                        'code' => strtoupper(substr($transaction->operateur->code ?? 'OP', 0, 2)),
+                        'libelle' => $operateurLibelle,
+                    ];
+                }
+                
+                $operateurCell = [
+                    'libelle' => $operateurLibelle,
+                    'logo' => $operateurLogo,
+                ];
             }
+            
+            return [
+                $transaction->reference ?? '-',
+                $transaction->date ? $transaction->date->format('d/m/Y H:i') : '-',
+                ucfirst($transaction->type ?? '-'),
+                number_format($transaction->montant ?? 0, 0, ',', ' ') . ' XOF',
+                $operateurCell,
+                ($transaction->agent) ? (($transaction->agent->prenom ?? '') . ' ' . ($transaction->agent->nom ?? '')) : '-',
+                $transaction->client_nom ?? '-',
+                $transaction->client_telephone ?? '-',
+                number_format($transaction->commission ?? 0, 0, ',', ' ') . ' XOF',
+                ucfirst($transaction->statut ?? '-'),
+            ];
+        })->toArray();
 
-            fclose($file);
-        };
+        $filename = 'transactions_' . now()->format('Y-m-d_His') . '.pdf';
 
-        return response()->stream($callback, 200, $headers);
+        return $this->exportToPdf('Liste des Transactions', $headers, $data, $filename);
     }
 
     /**

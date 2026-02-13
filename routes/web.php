@@ -156,6 +156,8 @@ Route::middleware(['auth', 'require.password.change'])->group(function () {
     Route::get('/agents/liste-agents', [AgentController::class, 'index'])->name('agents.liste-agents');
     Route::get('/agents/soldes', [AgentController::class, 'soldes'])->name('agents.soldes');
     Route::get('/agents-soldes', [AgentController::class, 'soldes'])->name('agents.soldes-alt');
+    Route::get('/agents/export', [AgentController::class, 'export'])->name('agents.export');
+    Route::get('/agents/soldes/export', [AgentController::class, 'exportSoldes'])->name('agents.solde.export');
 
     // Resource routes (doit être après les routes spécifiques)
     Route::resource('agents', AgentController::class);
@@ -166,10 +168,10 @@ Route::middleware(['auth', 'require.password.change'])->group(function () {
     Route::post('/agents/{agent}/change-statut', [AgentController::class, 'changeStatut'])->name('agents.change-statut');
 
     // Transactions
-    Route::resource('transactions', TransactionController::class);
-    Route::post('/transactions/{transaction}/annuler', [TransactionController::class, 'annuler'])->name('transactions.annuler');
-    Route::get('/api/transactions/statistiques', [TransactionController::class, 'statistiques']);
     Route::get('/transactions/export', [TransactionController::class, 'export'])->name('transactions.export');
+    Route::get('/api/transactions/statistiques', [TransactionController::class, 'statistiques']);
+    Route::post('/transactions/{transaction}/annuler', [TransactionController::class, 'annuler'])->name('transactions.annuler');
+    Route::resource('transactions', TransactionController::class);
 
     // Utilisateurs
     Route::get('/api/utilisateurs/{utilisateur}', [UtilisateurController::class, 'show'])->name('api.utilisateurs.show');
@@ -195,7 +197,8 @@ Route::middleware(['auth', 'require.password.change'])->group(function () {
     Route::post('/roles-et-permissions/gestion-routes', [RouteController::class, 'store'])->name('routes.store');
     Route::put('/roles-et-permissions/gestion-routes/visibility', [RouteController::class, 'updateVisibility'])->name('routes.update-visibility'); 
 
-    Route::get('/rapports', [RapportController::class, 'index'])->name('rapports.index'); 
+    Route::get('/rapports', [RapportController::class, 'index'])->name('rapports.index');
+    Route::get('/rapports/export', [RapportController::class, 'export'])->name('rapports.export'); 
 
     Route::get('/operations-agence', [OperationsAgenceController::class, 'index'])->name('operations-agence.index');
     Route::post('/operations-agence', [OperationsAgenceController::class, 'store'])->name('operations-agence.store');

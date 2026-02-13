@@ -10,8 +10,8 @@
 			</button>
 			<div class="flex items-center gap-2">
 				<a class="flex items-center shrink-0" href="{{ url('/') }}" title="PDV Connect">
-					<img class="dark:hidden w-8 shrink-0" src="{{ asset('assets/media/app/mini-logo.svg') }}" alt="PDV Connect" />
-					<img class="hidden dark:inline-block w-8 shrink-0" src="{{ asset('assets/media/app/mini-logo-dark.svg') }}" alt="PDV Connect" />
+					<img class="dark:hidden w-8 shrink-0" src="{{ asset('assets/media/app/mini-logo-v2.svg') }}" alt="PDV Connect" />
+					<img class="hidden dark:inline-block w-8 shrink-0" src="{{ asset('assets/media/app/mini-logo-v2-dark.svg') }}" alt="PDV Connect" />
 				</a>
 				<h3 class="text-mono text-lg font-medium hidden md:block">
 					PDV Connect

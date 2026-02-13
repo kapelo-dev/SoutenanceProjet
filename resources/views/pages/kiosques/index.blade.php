@@ -149,11 +149,15 @@
            </div>
           </div>
          </div>
-         <div class="kt-card-footer justify-center">
+         <div class="kt-card-footer justify-center gap-2">
           <a class="kt-btn kt-btn-sm kt-btn-outline {{ $kiosque->statut == 'actif' ? 'kt-btn-primary' : ($kiosque->statut == 'en_travaux' ? 'kt-btn-warning' : '') }}">
            <i class="ki-filled ki-check-circle">
            </i>
            {{ ucfirst(str_replace('_', ' ', $kiosque->statut)) }}
+          </a>
+          <a href="{{ route('kiosques.edit', $kiosque) }}" class="kt-btn kt-btn-sm kt-btn-outline">
+           <i class="ki-filled ki-pencil"></i>
+           Modifier
           </a>
          </div>
         </div>
@@ -253,11 +257,15 @@
             </span>
            </div>
           </div>
-          <div class="text-right">
+          <div class="text-right flex items-center gap-2">
            <a class="kt-btn kt-btn-sm kt-btn-outline {{ $kiosque->statut == 'actif' ? 'kt-btn-primary' : ($kiosque->statut == 'en_travaux' ? 'kt-btn-warning' : '') }}">
             <i class="ki-filled ki-check-circle">
             </i>
             {{ ucfirst(str_replace('_', ' ', $kiosque->statut)) }}
+           </a>
+           <a href="{{ route('kiosques.edit', $kiosque) }}" class="kt-btn kt-btn-sm kt-btn-outline">
+            <i class="ki-filled ki-pencil"></i>
+            Modifier
            </a>
           </div>
          </div>

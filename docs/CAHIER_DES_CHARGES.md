@@ -54,7 +54,7 @@ La plateforme **PDV Connect** est une solution de gestion pour points de vente (
 - Liste et détail des transactions.
 - Création, modification, annulation de transactions.
 - Filtres et recherche.
-- Export des données (ex. CSV/Excel).
+- Export des données en PDF (avec logo PDV Connect et logos des opérateurs).
 - Statistiques sur les transactions.
 - Typologie des opérations (types configurables, lien éventuel avec opérateur).
 
@@ -66,6 +66,8 @@ La plateforme **PDV Connect** est une solution de gestion pour points de vente (
 - Gestion du statut (actif / inactif), changement de statut.
 - Association agent ↔ kiosque(s) (assignation / retrait).
 - Historique des soldes (API).
+- Export PDF de la liste des agents (avec logo PDV Connect).
+- Export PDF des soldes des agents (avec logo PDV Connect).
 
 ### 2.5 Kiosques
 
@@ -115,8 +117,10 @@ La plateforme **PDV Connect** est une solution de gestion pour points de vente (
 
 ### 2.10 Rapports
 
-- Page dédiée aux rapports (consultation, filtres, exports selon besoins métier).
+- Page dédiée aux rapports (consultation, filtres avancés, statistiques par opérateur, top agents).
 - Données issues des transactions, agents, kiosques, trésorerie, salaires.
+- Statistiques globales et par opérateur.
+- Top agents par montant et nombre de transactions.
 
 ### 2.11 Configuration — Rôles et permissions
 

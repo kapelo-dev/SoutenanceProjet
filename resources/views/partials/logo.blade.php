@@ -2,8 +2,8 @@
     <!-- Logo -->
     <div class="flex items-center gap-2 lg:gap-5 2xl:-ml-[60px]">
         <a href="{{ url('/') }}" title="PDV Connect">
-            <img class="min-h-[42px] dark:hidden" src="{{ asset('assets/media/app/mini-logo.svg') }}" alt="PDV Connect" />
-            <img class="hidden min-h-[42px] dark:inline-block" src="{{ asset('assets/media/app/mini-logo-dark.svg') }}" alt="PDV Connect" />
+            <img class="min-h-[42px] dark:hidden" src="{{ asset('assets/media/app/mini-logo-v2.svg') }}" alt="PDV Connect" />
+            <img class="hidden min-h-[42px] dark:inline-block" src="{{ asset('assets/media/app/mini-logo-v2-dark.svg') }}" alt="PDV Connect" />
         </a>
         <div class="flex items-center">
             <h3 class="hidden text-base text-secondary-foreground md:block">

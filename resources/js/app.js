@@ -46,11 +46,23 @@ function initDrawers() {
         const toggles = document.querySelectorAll(`[data-kt-drawer-toggle="#${drawer.id}"]`);
 
         toggles.forEach(toggle => {
-            toggle.addEventListener('click', function(e) {
+            // Retirer l'ancien listener s'il existe (pour éviter les doublons après AJAX)
+            if (toggle._drawerListenerAttached && toggle._drawerClickHandler) {
+                toggle.removeEventListener('click', toggle._drawerClickHandler);
+                toggle._drawerListenerAttached = false;
+            }
+            
+            // Créer un nouveau handler
+            toggle._drawerClickHandler = function(e) {
                 e.preventDefault();
+                e.stopPropagation();
                 drawer.classList.toggle('hidden');
                 drawer.classList.toggle('block');
-            });
+            };
+            
+            // Attacher le nouveau listener
+            toggle.addEventListener('click', toggle._drawerClickHandler);
+            toggle._drawerListenerAttached = true;
         });
     });
 }

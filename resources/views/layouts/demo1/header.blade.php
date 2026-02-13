@@ -1,15 +1,15 @@
 <!-- Header -->
-<header class="kt-header fixed end-0 start-0 top-0 z-10 flex shrink-0 items-stretch bg-background" data-kt-sticky="true"
-    data-kt-sticky-class="border-b border-border" data-kt-sticky-name="header" id="header">
+<header class="kt-header fixed end-0 start-0 top-0 z-10 flex shrink-0 items-stretch bg-background shadow-md" data-kt-sticky="true"
+    data-kt-sticky-class="border-b border-border shadow-lg" data-kt-sticky-name="header" id="header">
     <!-- Container -->
     <div class="kt-container-fixed flex items-stretch justify-between lg:gap-4" id="headerContainer">
         <!-- Mobile Logo -->
         <div class="-ms-1 flex items-center gap-2.5 lg:hidden">
             <a class="shrink-0 dark:hidden" href="{{ url('/') }}" title="PDV Connect">
-                <img class="h-9 max-h-[40px] w-auto" src="{{ asset('assets/media/app/mini-logo.svg') }}" alt="PDV Connect" />
+                <img class="h-9 max-h-[40px] w-auto" src="{{ asset('assets/media/app/mini-logo-v2.svg') }}" alt="PDV Connect" />
             </a>
             <a class="shrink-0 hidden dark:block" href="{{ url('/') }}" title="PDV Connect">
-                <img class="h-6 max-h-[40px] w-auto" src="{{ asset('assets/media/app/mini-logo-dark.svg') }}" alt="PDV Connect" />
+                <img class="h-6 max-h-[40px] w-auto" src="{{ asset('assets/media/app/mini-logo-v2-dark.svg') }}" alt="PDV Connect" />
             </a>
             <div class="flex items-center">
                 <button class="kt-btn kt-btn-icon kt-btn-ghost" data-kt-drawer-toggle="#sidebar">

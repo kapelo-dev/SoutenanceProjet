@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prévisualisation des Logos PDV Connect</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Inter, system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #1f2937;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 40px;
+        }
+        .logo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .logo-card {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .logo-card:hover {
+            border-color: #FBBF24;
+            box-shadow: 0 10px 25px rgba(251, 191, 36, 0.2);
+            transform: translateY(-5px);
+        }
+        .logo-card h3 {
+            color: #374151;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        .logo-preview {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 120px;
+        }
+        .logo-preview img {
+            max-width: 100%;
+            height: auto;
+        }
+        .logo-info {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 10px;
+        }
+        .dark-preview {
+            background: #1f2937;
+            margin-top: 15px;
+        }
+        .current-logo {
+            border-color: #FBBF24;
+            background: #fffbeb;
+        }
+        .current-logo::before {
+            content: "LOGO ACTUEL";
+            display: block;
+            background: #FBBF24;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Variantes de Logos PDV Connect</h1>
+        <p class="subtitle">Choisissez votre logo préféré parmi les variantes proposées</p>
+        
+        <div class="logo-grid">
+            <!-- Logo actuel -->
+            <div class="logo-card current-logo">
+                <h3>Logo Actuel</h3>
+                <div class="logo-preview">
+                    <img src="/assets/media/app/default-logo.svg" alt="Logo actuel" style="height: 40px;" />
+                </div>
+                <div class="logo-preview dark-preview">
+                    <img src="/assets/media/app/default-logo.svg" alt="Logo actuel dark" style="height: 40px; filter: brightness(1.2);" />
+                </div>
+                <div class="logo-info">Design simple avec cercles et lignes</div>
+            </div>
+            
+            <!-- Variante 2 -->
+            <div class="logo-card">
+                <h3>Variante 2 - Moderne</h3>
+                <div class="logo-preview">
+                    <img src="/assets/media/app/default-logo-v2.svg" alt="Logo v2" style="height: 40px;" />
+                </div>
+                <div class="logo-preview dark-preview">
+                    <img src="/assets/media/app/default-logo-v2.svg" alt="Logo v2 dark" style="height: 40px; filter: brightness(1.2);" />
+                </div>
+                <div class="logo-info">Design moderne avec effet de brillance et ligne décorative</div>
+            </div>
+            
+            <!-- Variante 3 -->
+            <div class="logo-card">
+                <h3>Variante 3 - Épuré</h3>
+                <div class="logo-preview">
+                    <img src="/assets/media/app/default-logo-v3.svg" alt="Logo v3" style="height: 40px;" />
+                </div>
+                <div class="logo-preview dark-preview">
+                    <img src="/assets/media/app/default-logo-v3.svg" alt="Logo v3 dark" style="height: 40px; filter: brightness(1.2);" />
+                </div>
+                <div class="logo-info">Design épuré avec forme hexagonale stylisée</div>
+            </div>
+            
+            <!-- Variante 4 -->
+            <div class="logo-card">
+                <h3>Variante 4 - Professionnel</h3>
+                <div class="logo-preview">
+                    <img src="/assets/media/app/default-logo-v4.svg" alt="Logo v4" style="height: 40px;" />
+                </div>
+                <div class="logo-preview dark-preview">
+                    <img src="/assets/media/app/default-logo-v4.svg" alt="Logo v4 dark" style="height: 40px; filter: brightness(1.2);" />
+                </div>
+                <div class="logo-info">Design professionnel avec dégradé et accent décoratif</div>
+            </div>
+        </div>
+        
+        <h2 style="text-align: center; color: #374151; margin-top: 40px; margin-bottom: 20px;">Mini Logos (Icônes)</h2>
+        
+        <div class="logo-grid">
+            <!-- Mini logo actuel -->
+            <div class="logo-card current-logo">
+                <h3>Mini Logo Actuel</h3>
+                <div class="logo-preview">
+                    <img src="/assets/media/app/mini-logo.svg" alt="Mini logo actuel" style="height: 36px;" />
+                </div>
+                <div class="logo-preview dark-preview">
+                    <img src="/assets/media/app/mini-logo.svg" alt="Mini logo actuel dark" style="height: 36px; filter: brightness(1.2);" />
+                </div>
+            </div>
+            
+            <!-- Mini logo v2 -->
+            <div class="logo-card">
+                <h3>Mini Logo V2</h3>
+                <div class="logo-preview">
+                    <img src="/assets/media/app/mini-logo-v2.svg" alt="Mini logo v2" style="height: 36px;" />
+                </div>
+                <div class="logo-preview dark-preview">
+                    <img src="/assets/media/app/mini-logo-v2.svg" alt="Mini logo v2 dark" style="height: 36px; filter: brightness(1.2);" />
+                </div>
+            </div>
+            
+            <!-- Mini logo v3 -->
+            <div class="logo-card">
+                <h3>Mini Logo V3</h3>
+                <div class="logo-preview">
+                    <img src="/assets/media/app/mini-logo-v3.svg" alt="Mini logo v3" style="height: 36px;" />
+                </div>
+                <div class="logo-preview dark-preview">
+                    <img src="/assets/media/app/mini-logo-v3.svg" alt="Mini logo v3 dark" style="height: 36px; filter: brightness(1.2);" />
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 40px; padding: 20px; background: #f3f4f6; border-radius: 8px;">
+            <p style="color: #6b7280; margin-bottom: 10px;">💡 <strong>Instructions :</strong></p>
+            <p style="color: #374151;">Survolez les logos pour voir l'effet. Une fois votre choix fait, dites-moi quelle variante vous préférez et je remplacerai les logos actuels.</p>
+        </div>
+    </div>
+</body>
+</html>

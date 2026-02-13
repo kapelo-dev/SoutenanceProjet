@@ -13,10 +13,9 @@
             </div>
         </div>      
         <div class="flex items-center gap-2.5">
-        
-            <a class="kt-btn kt-btn-outline" href="#">
-                <i class="ki-filled ki-file-down"></i>
-                Exporter
+            <a href="{{ route('agents.export', request()->all()) }}" class="kt-btn kt-btn-outline" data-ajax="false" target="_blank">
+                <img src="{{ asset('assets/media/app/pdf-icon.svg') }}" alt="PDF" class="w-5 h-5 inline-block mr-2" />
+                Exporter en PDF
             </a>
         
             <button class="kt-btn kt-btn-primary" data-kt-modal-toggle="#modal_nouvel_agent">

@@ -10,6 +10,7 @@ use App\Models\Operateur;
 use App\Models\Profil;
 use App\Models\Transaction;
 use App\Models\TypeOperation;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -18,6 +19,7 @@ use Illuminate\Support\Str;
 
 class AgentController extends Controller
 {
+    use Exportable;
     /**
      * Afficher la liste des agents
      */
@@ -796,5 +798,122 @@ class AgentController extends Controller
                 'message' => 'Erreur lors de l\'enregistrement: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Exporter la liste des agents
+     */
+    public function export(Request $request)
+    {
+        $query = Agent::with(['kiosque', 'utilisateur']);
+
+        // Appliquer les mêmes filtres que l'index
+        if ($request->filled('statut')) {
+            $query->where('statut', $request->statut);
+        }
+        if ($request->filled('kiosque_id')) {
+            $query->where('kiosque_id', $request->kiosque_id);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('nom', 'like', "%{$search}%")
+                  ->orWhere('prenom', 'like', "%{$search}%")
+                  ->orWhere('code_agent', 'like', "%{$search}%")
+                  ->orWhere('telephone', 'like', "%{$search}%");
+            });
+        }
+
+        $agents = $query->orderBy('nom')->orderBy('prenom')->get();
+
+        $headers = ['Code Agent', 'Nom', 'Prénom', 'Téléphone', 'Email', 'Kiosque', 'Statut', 'Montant Total Initial'];
+        
+        $data = $agents->map(function($agent) {
+            return [
+                $agent->code_agent ?? '-',
+                $agent->nom ?? '-',
+                $agent->prenom ?? '-',
+                $agent->telephone ?? '-',
+                ($agent->utilisateur && $agent->utilisateur->email) ? $agent->utilisateur->email : '-',
+                ($agent->kiosque && $agent->kiosque->nom) ? $agent->kiosque->nom : 'Aucun kiosque',
+                ucfirst($agent->statut ?? 'inactif'),
+                number_format((float)($agent->montant_initial_total ?? 0), 0, ',', ' ') . ' XOF',
+            ];
+        })->toArray();
+
+        $filename = 'agents_' . now()->format('Y-m-d_His') . '.pdf';
+
+        return $this->exportToPdf('Liste des Agents', $headers, $data, $filename);
+    }
+
+    /**
+     * Exporter les soldes des agents
+     */
+    public function exportSoldes(Request $request)
+    {
+        $query = Agent::with(['kiosque', 'utilisateur', 'soldes.operateur']);
+
+        // Filtrer uniquement les agents avec soldes positifs
+        if ($request->has('soldes_positifs') && $request->soldes_positifs == 1) {
+            $query->whereHas('soldes', function($q) {
+                $q->where('montant', '>', 0);
+            });
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('nom', 'like', "%{$search}%")
+                  ->orWhere('prenom', 'like', "%{$search}%")
+                  ->orWhere('code_agent', 'like', "%{$search}%");
+            });
+        }
+
+        $agents = $query->actif()->orderBy('nom')->get();
+        $operateurs = Operateur::actif()->get();
+
+        // Préparer les données avec les soldes par opérateur
+        $headers = ['Code Agent', 'Nom', 'Prénom', 'Kiosque', 'Statut', 'Montant Initial', 'Solde en Espèce'];
+        foreach ($operateurs as $operateur) {
+            $headers[] = 'Solde ' . $operateur->libelle;
+        }
+        $headers[] = 'Solde Total';
+
+        $data = [];
+        foreach ($agents as $agent) {
+            // Récupérer le solde en espèce
+            $soldeEspece = $agent->soldes->where('type', 'espece')->first();
+            $montantEspece = $soldeEspece ? $soldeEspece->montant : 0;
+            
+            // Récupérer les soldes virtuels par opérateur
+            $soldesVirtuels = $agent->soldes->where('type', 'virtuel');
+            
+            $row = [
+                $agent->code_agent ?? '-',
+                $agent->nom ?? '-',
+                $agent->prenom ?? '-',
+                ($agent->kiosque && $agent->kiosque->nom) ? $agent->kiosque->nom : 'Aucun kiosque',
+                ucfirst($agent->statut ?? 'inactif'),
+                number_format($agent->montant_initial_total ?? 0, 0, ',', ' ') . ' XOF',
+                number_format($montantEspece, 0, ',', ' ') . ' XOF',
+            ];
+
+            $soldeTotalVirtuel = 0;
+            foreach ($operateurs as $operateur) {
+                $solde = $soldesVirtuels->where('operateur_id', $operateur->id)->first();
+                $montant = $solde ? $solde->montant : 0;
+                $soldeTotalVirtuel += $montant;
+                $row[] = number_format($montant, 0, ',', ' ') . ' XOF';
+            }
+            // Solde total = espèce + total virtuel
+            $soldeTotal = $montantEspece + $soldeTotalVirtuel;
+            $row[] = number_format($soldeTotal, 0, ',', ' ') . ' XOF';
+            
+            $data[] = $row;
+        }
+
+        $filename = 'soldes_agents_' . now()->format('Y-m-d_His') . '.pdf';
+
+        return $this->exportToPdf('Soldes des Agents', $headers, $data, $filename);
     }
 }

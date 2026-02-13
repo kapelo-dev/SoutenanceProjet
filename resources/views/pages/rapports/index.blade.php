@@ -18,7 +18,11 @@
                 </div>
             </div>
             <div class="flex items-center gap-2.5">
-                <button class="kt-btn kt-btn-outline kt-btn-primary" data-kt-drawer-toggle="#filtres_drawer">
+                <a href="{{ route('rapports.export', request()->all()) }}" class="kt-btn kt-btn-outline" data-ajax="false" target="_blank">
+                    <img src="{{ asset('assets/media/app/pdf-icon.svg') }}" alt="PDF" class="w-5 h-5 inline-block mr-2" />
+                    Exporter en PDF
+                </a>
+                <button class="kt-btn kt-btn-outline kt-btn-primary" data-kt-modal-toggle="#modal_filtres_rapports">
                     <i class="ki-filled ki-setting-4"></i>
                     Filtres
                 </button>
@@ -31,22 +35,21 @@
     </div>
     <!-- End of Container -->
     
-    <!-- Drawer Filtres -->
-    <div class="kt-drawer kt-drawer-end card bottom-5 end-5 top-5 hidden w-[450px] max-w-[90%] flex-col rounded-xl border border-border"
-        data-kt-drawer="true" data-kt-drawer-container="body" id="filtres_drawer">
-        <div class="flex flex-col h-full">
-            <div class="flex items-center justify-between gap-2.5 px-5 py-3.5 text-sm font-semibold text-mono">
-                Filtres de rapport
-                <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-dim shrink-0" data-kt-drawer-dismiss="true">
+    <!-- Modal Filtres -->
+    <div class="kt-modal" data-kt-modal="true" data-kt-modal-disable-scroll="false" id="modal_filtres_rapports" style="display: none;">
+        <div class="kt-modal-content max-w-[800px]">
+            <div class="kt-modal-header">
+                <h3 class="kt-modal-title">
+                    Filtres de rapport
+                </h3>
+                <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
                     <i class="ki-filled ki-cross"></i>
                 </button>
             </div>
-            <div class="border-b border-b-border"></div>
-            <form method="GET" action="{{ route('rapports.index') }}" id="form_filtres" class="flex flex-col h-full">
-                <div class="kt-scrollable-y-auto grow" data-kt-scrollable="true" data-kt-scrollable-dependencies="#header"
-                    data-kt-scrollable-max-height="auto" data-kt-scrollable-offset="230px">
-                    <div class="flex flex-col gap-5 p-5">
-                        <div class="grid grid-cols-1 gap-5">
+            <form method="GET" action="{{ route('rapports.index') }}" id="form_filtres">
+                <div class="kt-modal-body">
+                    <div class="flex flex-col gap-5">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div class="flex flex-col gap-2">
                                 <label class="kt-label">Date de début</label>
                                 <input type="date" name="date_debut" class="kt-input" value="{{ request('date_debut', $dateDebut->format('Y-m-d')) }}" />
@@ -56,7 +59,7 @@
                                 <input type="date" name="date_fin" class="kt-input" value="{{ request('date_fin', $dateFin->format('Y-m-d')) }}" />
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 gap-5">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div class="flex flex-col gap-2">
                                 <div class="flex items-center justify-between">
                                     <label class="kt-label">Agent</label>
@@ -110,7 +113,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 gap-5">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div class="flex flex-col gap-2">
                                 <div class="flex items-center justify-between">
                                     <label class="kt-label">Type de transaction</label>
@@ -175,9 +178,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="border-t border-t-border p-5 flex items-center justify-end gap-2.5">
-                    <button type="button" class="kt-btn kt-btn-ghost" data-kt-drawer-dismiss="true">Annuler</button>
-                    <button type="submit" class="kt-btn kt-btn-primary">
+                <div class="kt-modal-footer">
+                    <button type="button" class="kt-btn kt-btn-ghost" data-kt-modal-dismiss="true">Annuler</button>
+                    <button type="submit" class="kt-btn kt-btn-primary" id="btn_appliquer_filtres">
                         <i class="ki-filled ki-magnifier"></i>
                         Appliquer les filtres
                     </button>
@@ -185,215 +188,197 @@
             </form>
         </div>
     </div>
-    <!-- End Drawer Filtres -->
+    <!-- End Modal Filtres -->
     
     <!-- Container -->
     <div class="kt-container-fixed">
         <div class="grid gap-5 lg:gap-7.5">
-            <!-- begin: grid -->
-            <div class="grid items-stretch gap-y-5 lg:grid-cols-3 lg:gap-7.5">
-                <div class="lg:col-span-1">
-                    <div class="grid h-full grid-cols-2 items-stretch gap-5 lg:gap-7.5">
-                        <style>
-                            .channel-stats-bg {
-                                background-image: url('assets/media/images/2600x1600/bg-3.png');
-                            }
-
-                            .dark .channel-stats-bg {
-                                background-image: url('assets/media/images/2600x1600/bg-3-dark.png');
-                            }
-                        </style>
-                        @forelse($statsOperateurs as $index => $stat)
-                        @if($index < 4)
-                        <div class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem]">
-                            @if($stat['operateur']->logo)
-                            <img alt="{{ $stat['operateur']->libelle }}" class="ms-5 mt-4 w-20 h-20 object-contain" src="{{ asset('storage/' . $stat['operateur']->logo) }}" />
-                            @else
-                            <div class="ms-5 mt-4 w-10 h-10 rounded flex items-center justify-center text-white font-bold" style="background-color: {{ $stat['operateur']->couleur ?? '#3b82f6' }};">
-                                {{ strtoupper(substr($stat['operateur']->libelle, 0, 1)) }}
-                            </div>
-                            @endif
-                            <div class="flex flex-col gap-1 px-5 pb-4">
-                                <span class="text-3xl font-semibold text-mono">
-                                    {{ number_format($stat['montant_total'] / 1000, 1) }}k
-                                </span>
-                                <span class="text-sm font-normal text-secondary-foreground">
-                                    {{ $stat['operateur']->libelle }}
-                                </span>
-                                <span class="text-xs font-normal text-secondary-foreground">
-                                    {{ $stat['nombre_transactions'] }} transaction{{ $stat['nombre_transactions'] > 1 ? 's' : '' }}
-                                </span>
-                            </div>
-                        </div>
-                        @endif
-                        @empty
-                        @for($i = 0; $i < 4; $i++)
-                        <div class="kt-card channel-stats-bg h-full flex-col justify-between gap-6 bg-cover bg-[right_top_-1.7rem] bg-no-repeat rtl:bg-[left_top_-1.7rem]">
-                            <div class="ms-5 mt-4 w-7 h-7 rounded bg-gray-300"></div>
-                            <div class="flex flex-col gap-1 px-5 pb-4">
-                                <span class="text-3xl font-semibold text-mono">0</span>
-                                <span class="text-sm font-normal text-secondary-foreground">Aucune donnée</span>
-                            </div>
-                        </div>
-                        @endfor
-                        @endforelse
+            {{-- Statistiques Globales --}}
+            <div class="kt-card">
+                <div class="kt-card-header">
+                    <h3 class="kt-card-title">Statistiques Globales</h3>
+                    <div class="text-sm text-secondary-foreground">
+                        Période: {{ $dateDebut->format('d/m/Y') }} - {{ $dateFin->format('d/m/Y') }}
                     </div>
                 </div>
-                <div class="lg:col-span-2">
-                    <style>
-                        .entry-callout-bg {
-                            background-image: url('assets/media/images/2600x1600/2.png');
-                        }
-
-                        .dark .entry-callout-bg {
-                            background-image: url('assets/media/images/2600x1600/2-dark.png');
-                        }
-                    </style>
-                    <div class="kt-card h-full">
-                        <div class="kt-card-content entry-callout-bg bg-[length:80%] bg-no-repeat p-10 [background-position:175%_25%] rtl:[background-position:-70%_25%]">
-                            <div class="flex flex-col justify-center gap-4">
-                                <div class="flex -space-x-2">
-                                    @forelse($topAgents as $topAgent)
-                                    <div class="flex">
-                                        @if($topAgent['agent']->utilisateur && $topAgent['agent']->utilisateur->photo_profil)
-                                        <img class="hover:z-5 relative size-10 shrink-0 rounded-full ring-1 ring-background object-cover" src="{{ asset('storage/' . $topAgent['agent']->utilisateur->photo_profil) }}" alt="{{ $topAgent['agent']->nomComplet }}" />
-                                        @else
-                                        <span class="hover:z-5 text-2xs relative inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold leading-none text-primary-inverse ring-1 ring-background">
-                                            {{ strtoupper(substr($topAgent['agent']->nom ?? $topAgent['agent']->prenom, 0, 1)) }}
-                                        </span>
-                                        @endif
-                                    </div>
-                                    @empty
-                                    <div class="flex">
-                                        <span class="hover:z-5 text-2xs relative inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-gray-300 text-xs font-semibold leading-none text-gray-600 ring-1 ring-background">
-                                            ?
-                                        </span>
-                                    </div>
-                                    @endforelse
-                                </div>
-                                <h2 class="text-xl font-semibold text-mono">
-                                    Top Agents
-                                    <br />
-                                    <span class="text-base font-normal text-secondary-foreground">
-                                        Période: {{ $dateDebut->format('d/m/Y') }} - {{ $dateFin->format('d/m/Y') }}
-                                    </span>
-                                </h2>
-                                <div class="flex flex-col gap-2">
-                                    @forelse($topAgents as $topAgent)
-                                    <div class="flex items-center justify-between text-sm">
-                                        <span class="text-foreground">{{ $topAgent['agent']->nomComplet }}</span>
-                                        <span class="text-secondary-foreground">{{ number_format($topAgent['montant_total'], 0, ',', ' ') }} FCFA</span>
-                                    </div>
-                                    @empty
-                                    <p class="text-sm text-secondary-foreground">Aucun agent trouvé pour cette période</p>
-                                    @endforelse
-                                </div>
-                            </div>
-                        </div>
-                        <div class="kt-card-footer justify-center">
-                            <a class="kt-link kt-link-underlined kt-link-dashed" href="{{ route('agents.liste-agents') }}">
-                                Voir tous les agents
-                            </a>
-                        </div>
+                <div class="kt-card-content">
+                    <div class="overflow-x-auto">
+                        <table class="kt-table kt-table-row-bordered kt-table-row-dashed align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="min-w-150px">Indicateur</th>
+                                    <th class="min-w-150px text-end">Valeur</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Nombre total de transactions</strong></td>
+                                    <td class="text-end"><strong>{{ number_format($statsGlobales['total_transactions'], 0, ',', ' ') }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Montant total</strong></td>
+                                    <td class="text-end"><strong>{{ number_format($statsGlobales['montant_total'], 0, ',', ' ') }} XOF</strong></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Commission totale</strong></td>
+                                    <td class="text-end"><strong>{{ number_format($statsGlobales['commission_total'], 0, ',', ' ') }} XOF</strong></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Nombre d'agents</strong></td>
+                                    <td class="text-end"><strong>{{ $statsGlobales['nombre_agents'] }}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-            <!-- end: grid -->
-            <!-- begin: grid -->
-            <div class="grid items-stretch gap-5 lg:grid-cols-3 lg:gap-7.5">
-                <div class="lg:col-span-1">
-                    <div class="kt-card h-full">
-                        <div class="kt-card-header">
-                            <h3 class="kt-card-title">Statistiques</h3>
-                        </div>
-                        <div class="kt-card-content flex flex-col gap-5 px-5 pt-5 lg:px-7.5">
-                            <div class="flex flex-col gap-2">
-                                <span class="text-sm font-medium text-foreground">Montant total</span>
-                                <span class="text-2xl font-semibold text-mono">{{ number_format($statsGlobales['montant_total'], 0, ',', ' ') }} FCFA</span>
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <span class="text-sm font-medium text-foreground">Commission totale</span>
-                                <span class="text-2xl font-semibold text-mono">{{ number_format($statsGlobales['commission_total'], 0, ',', ' ') }} FCFA</span>
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <span class="text-sm font-medium text-foreground">Nombre d'agents</span>
-                                <span class="text-2xl font-semibold text-mono">{{ $statsGlobales['nombre_agents'] }}</span>
-                            </div>
-                        </div>
-                    </div>
+
+            {{-- Statistiques par Opérateur --}}
+            @if(count($statsOperateurs) > 0)
+            <div class="kt-card">
+                <div class="kt-card-header">
+                    <h3 class="kt-card-title">Statistiques par Opérateur</h3>
                 </div>
-                <div class="lg:col-span-2">
-                    <div class="kt-card h-full">
-                        <div class="kt-card-header">
-                            <h3 class="kt-card-title">Dernières transactions</h3>
-                            <a class="kt-btn kt-btn-sm kt-btn-outline" href="{{ route('transactions.index') }}">
-                                Voir tout
-                            </a>
-                        </div>
-                        <div class="kt-card-content">
-                            <div class="flex flex-col gap-5">
-                                @forelse($dernieresTransactions as $transaction)
-                                <div class="flex items-center gap-2.5">
-                                    <div class="flex items-center justify-center rounded-full bg-gray-100 size-9 dark:bg-gray-900">
-                                        @if($transaction->type == 'depot')
-                                        <i class="ki-filled ki-arrow-down text-base text-green-600 dark:text-green-400"></i>
-                                        @elseif($transaction->type == 'retrait')
-                                        <i class="ki-filled ki-arrow-up text-base text-red-600 dark:text-red-400"></i>
-                                        @elseif($transaction->type == 'transfert')
-                                        <i class="ki-filled ki-arrows-circle text-base text-blue-600 dark:text-blue-400"></i>
-                                        @else
-                                        <i class="ki-filled ki-wallet text-base text-yellow-600 dark:text-yellow-400"></i>
-                                        @endif
-                                    </div>
-                                    <div class="flex flex-col gap-0.5 flex-1">
-                                        <span class="text-sm font-medium text-foreground">
-                                            {{ ucfirst($transaction->type) }} - {{ $transaction->operateur->libelle ?? 'N/A' }}
-                                        </span>
-                                        <span class="text-xs font-normal text-secondary-foreground">
-                                            {{ $transaction->agent->nomComplet ?? 'N/A' }} - {{ $transaction->reference }}
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center gap-1 lg:gap-5">
-                                        <span class="text-xs font-normal text-secondary-foreground">
-                                            {{ $transaction->date->locale('fr')->isoFormat('D MMM Y, HH:mm') }}
-                                        </span>
-                                        <span class="text-sm font-semibold text-foreground">
-                                            {{ number_format($transaction->montant, 0, ',', ' ') }} FCFA
-                                        </span>
-                                        <div class="kt-menu" data-kt-menu="true">
-                                            <div class="kt-menu-item" data-kt-menu-item-offset="0, 10px"
-                                                data-kt-menu-item-placement="bottom-end"
-                                                data-kt-menu-item-placement-rtl="bottom-start"
-                                                data-kt-menu-item-toggle="dropdown"
-                                                data-kt-menu-item-trigger="click">
-                                                <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
-                                                    <i class="ki-filled ki-dots-vertical text-lg"></i>
-                                                </button>
-                                                <div class="kt-menu-dropdown kt-menu-default w-full max-w-[200px]" data-kt-menu-dismiss="true">
-                                                    <div class="kt-menu-item">
-                                                        <a class="kt-menu-link" href="{{ route('transactions.index', ['search' => $transaction->reference]) }}">
-                                                            <span class="kt-menu-icon">
-                                                                <i class="ki-filled ki-document"></i>
-                                                            </span>
-                                                            <span class="kt-menu-title">Détails</span>
-                                                        </a>
-                                                    </div>
-                                                </div>
+                <div class="kt-card-content">
+                    <div class="overflow-x-auto">
+                        <table class="kt-table kt-table-row-bordered kt-table-row-dashed align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="min-w-150px">Opérateur</th>
+                                    <th class="min-w-100px text-end">Nombre de transactions</th>
+                                    <th class="min-w-150px text-end">Montant total</th>
+                                    <th class="min-w-150px text-end">Commission totale</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($statsOperateurs as $stat)
+                                <tr>
+                                    <td>
+                                        <div class="flex items-center gap-2">
+                                            @if($stat['operateur']->logo)
+                                            <img alt="{{ $stat['operateur']->libelle }}" class="w-8 h-8 object-contain" src="{{ asset('storage/' . $stat['operateur']->logo) }}" />
+                                            @else
+                                            <div class="w-8 h-8 rounded flex items-center justify-center text-white text-xs font-bold" style="background-color: {{ $stat['operateur']->couleur ?? '#3b82f6' }};">
+                                                {{ strtoupper(substr($stat['operateur']->libelle, 0, 1)) }}
                                             </div>
+                                            @endif
+                                            <span>{{ $stat['operateur']->libelle }}</span>
                                         </div>
-                                    </div>
-                                </div>
-                                @empty
-                                <div class="flex items-center justify-center py-10">
-                                    <p class="text-sm text-secondary-foreground">Aucune transaction trouvée</p>
-                                </div>
-                                @endforelse
-                            </div>
-                        </div>
+                                    </td>
+                                    <td class="text-end">{{ number_format($stat['nombre_transactions'], 0, ',', ' ') }}</td>
+                                    <td class="text-end">{{ number_format($stat['montant_total'], 0, ',', ' ') }} XOF</td>
+                                    <td class="text-end">{{ number_format($stat['commission_total'], 0, ',', ' ') }} XOF</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-            <!-- end: grid -->
+            @endif
+
+            {{-- Top 10 Agents --}}
+            @if(count($topAgents) > 0)
+            <div class="kt-card">
+                <div class="kt-card-header">
+                    <h3 class="kt-card-title">Top 10 Agents</h3>
+                </div>
+                <div class="kt-card-content">
+                    <div class="overflow-x-auto">
+                        <table class="kt-table kt-table-row-bordered kt-table-row-dashed align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="min-w-50px">Rang</th>
+                                    <th class="min-w-200px">Agent</th>
+                                    <th class="min-w-100px text-end">Nombre de transactions</th>
+                                    <th class="min-w-150px text-end">Montant total</th>
+                                    <th class="min-w-150px text-end">Commission totale</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($topAgents as $index => $topAgent)
+                                <tr>
+                                    <td><strong>{{ $index + 1 }}</strong></td>
+                                    <td>{{ $topAgent['agent']->nomComplet }}</td>
+                                    <td class="text-end">{{ number_format($topAgent['nombre_transactions'], 0, ',', ' ') }}</td>
+                                    <td class="text-end">{{ number_format($topAgent['montant_total'], 0, ',', ' ') }} XOF</td>
+                                    <td class="text-end">{{ number_format($topAgent['commission_total'], 0, ',', ' ') }} XOF</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            {{-- Liste des Transactions --}}
+            <div class="kt-card">
+                <div class="kt-card-header">
+                    <h3 class="kt-card-title">Détail des Transactions ({{ count($transactions) }} transaction{{ count($transactions) > 1 ? 's' : '' }})</h3>
+                </div>
+                <div class="kt-card-content">
+                    <div class="overflow-x-auto">
+                        <table class="kt-table kt-table-row-bordered kt-table-row-dashed align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="min-w-120px">Référence</th>
+                                    <th class="min-w-120px">Date</th>
+                                    <th class="min-w-100px">Type</th>
+                                    <th class="min-w-120px text-end">Montant (XOF)</th>
+                                    <th class="min-w-120px">Opérateur</th>
+                                    <th class="min-w-150px">Agent</th>
+                                    <th class="min-w-120px">Client</th>
+                                    <th class="min-w-120px">Téléphone Client</th>
+                                    <th class="min-w-120px text-end">Commission (XOF)</th>
+                                    <th class="min-w-100px">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($transactions as $transaction)
+                                <tr>
+                                    <td>{{ $transaction->reference ?? '-' }}</td>
+                                    <td>{{ $transaction->date ? $transaction->date->format('d/m/Y H:i') : '-' }}</td>
+                                    <td><span class="badge badge-light-{{ $transaction->type == 'depot' ? 'success' : ($transaction->type == 'retrait' ? 'danger' : 'primary') }}">{{ ucfirst($transaction->type ?? '-') }}</span></td>
+                                    <td class="text-end">{{ number_format($transaction->montant ?? 0, 0, ',', ' ') }} XOF</td>
+                                    <td>
+                                        @if($transaction->operateur)
+                                        <div class="flex items-center gap-2">
+                                            @if($transaction->operateur->logo)
+                                            <img alt="{{ $transaction->operateur->libelle }}" class="w-6 h-6 object-contain" src="{{ asset('storage/' . $transaction->operateur->logo) }}" />
+                                            @else
+                                            <div class="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold" style="background-color: {{ $transaction->operateur->couleur ?? '#3b82f6' }};">
+                                                {{ strtoupper(substr($transaction->operateur->libelle, 0, 1)) }}
+                                            </div>
+                                            @endif
+                                            <span>{{ $transaction->operateur->libelle }}</span>
+                                        </div>
+                                        @else
+                                        -
+                                        @endif
+                                    </td>
+                                    <td>{{ ($transaction->agent) ? (($transaction->agent->prenom ?? '') . ' ' . ($transaction->agent->nom ?? '')) : '-' }}</td>
+                                    <td>{{ $transaction->client_nom ?? '-' }}</td>
+                                    <td>{{ $transaction->client_telephone ?? '-' }}</td>
+                                    <td class="text-end">{{ number_format($transaction->commission ?? 0, 0, ',', ' ') }} XOF</td>
+                                    <td>
+                                        <span class="badge badge-light-{{ $transaction->statut == 'valide' ? 'success' : ($transaction->statut == 'annule' ? 'danger' : 'warning') }}">
+                                            {{ ucfirst($transaction->statut ?? '-') }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="10" class="text-center py-10">
+                                        <p class="text-sm text-secondary-foreground">Aucune transaction trouvée pour les filtres sélectionnés</p>
+                                    </td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <!-- End of Container -->
@@ -511,7 +496,7 @@ function toggleAllCheckboxes(fieldName, button) {
 }
 
 // Mettre à jour le texte du bouton selon l'état initial
-document.addEventListener('DOMContentLoaded', function() {
+function updateToggleButtonsText() {
     const toggleButtons = document.querySelectorAll('[onclick*="toggleAllCheckboxes"]');
     toggleButtons.forEach(button => {
         const fieldName = button.getAttribute('onclick').match(/'([^']+)'/)[1];
@@ -523,6 +508,82 @@ document.addEventListener('DOMContentLoaded', function() {
             selectAllText.textContent = allChecked ? 'Tout désélectionner' : 'Tout sélectionner';
         }
     });
+}
+
+// Exposer une fonction d'initialisation globale pour la page Rapports (utilisée par la navigation AJAX)
+window.initRapportsPage = function() {
+    // Réinitialiser les selects Metronic (KTSelect) avec un délai pour s'assurer que le DOM est prêt
+    setTimeout(() => {
+        const selects = document.querySelectorAll('.kt-select[data-kt-select="true"]');
+        selects.forEach(select => {
+            if (window.KTSelect && typeof window.KTSelect.getInstance === 'function') {
+                const instance = window.KTSelect.getInstance(select);
+                if (instance) {
+                    instance.destroy();
+                }
+                new window.KTSelect(select);
+            }
+        });
+    }, 200);
+    
+    // Mettre à jour les textes des boutons toggle
+    updateToggleButtonsText();
+    
+    // Configurer la fermeture du modal après soumission du formulaire
+    setupFiltresFormClose();
+};
+
+// Initialisation sur chargement normal
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        window.initRapportsPage();
+    });
+} else {
+    window.initRapportsPage();
+}
+
+// Réinitialisation explicite après navigation AJAX (quand la page Rapports est chargée via AJAX)
+document.addEventListener('ajax-content-loaded', function() {
+    // Attendre un peu pour s'assurer que le DOM est complètement chargé
+    setTimeout(function() {
+        if (document.getElementById('modal_filtres_rapports')) {
+            window.initRapportsPage();
+        }
+    }, 100);
 });
+
+// Fonction pour fermer le modal après soumission du formulaire
+function setupFiltresFormClose() {
+    const formFiltres = document.getElementById('form_filtres');
+    const modal = document.getElementById('modal_filtres_rapports');
+    
+    if (!formFiltres || !modal) {
+        return;
+    }
+    
+    // Retirer l'ancien listener s'il existe (pour éviter les doublons après AJAX)
+    if (formFiltres._submitListenerAttached && formFiltres._submitHandler) {
+        formFiltres.removeEventListener('submit', formFiltres._submitHandler);
+        formFiltres._submitListenerAttached = false;
+    }
+    
+    // Créer un nouveau handler
+    formFiltres._submitHandler = function(e) {
+        // Fermer le modal après un court délai pour laisser le temps à la soumission
+        setTimeout(function() {
+            const currentModal = document.getElementById('modal_filtres_rapports');
+            if (currentModal) {
+                currentModal.classList.add('hidden');
+                currentModal.classList.remove('flex');
+                currentModal.style.display = 'none';
+                currentModal.classList.remove('show');
+            }
+        }, 150);
+    };
+    
+    // Attacher le nouveau listener
+    formFiltres.addEventListener('submit', formFiltres._submitHandler);
+    formFiltres._submitListenerAttached = true;
+}
 </script>
 @endsection

@@ -84,3 +84,25 @@
 #sidebar_menu a.kt-menu-item.kt-menu-link-hover .kt-menu-label .kt-menu-icon {
   color: #fbbf24 !important;
 }
+
+/* Ombre et élévation pour la navbar/header - Même couleur que le sidebar */
+.kt-header {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.dark .kt-header {
+  /* Ombre adaptée pour le dark mode avec la même couleur que le sidebar */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Ombre renforcée quand le header est sticky */
+.kt-header[data-kt-sticky="true"][data-kt-sticky-state="on"] {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.dark .kt-header[data-kt-sticky="true"][data-kt-sticky-state="on"] {
+  /* Ombre renforcée en dark mode sticky */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
