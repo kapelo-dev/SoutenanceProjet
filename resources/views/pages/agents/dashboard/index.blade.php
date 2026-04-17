@@ -77,11 +77,12 @@
                 <table class="kt-table kt-table-border" style="table-layout: fixed; width: 100%;">
                     <thead>
                         <tr>
-                            <th class="min-w-[180px] text-center" style="width: 25%;">Référence</th>
-                            <th class="min-w-[140px] text-center" style="width: 18%;">Type</th>
-                            <th class="min-w-[160px] text-center" style="width: 20%;">Opérateur</th>
-                            <th class="min-w-[160px] text-center" style="width: 20%;">Montant</th>
-                            <th class="min-w-[160px] text-center" style="width: 17%;">Date</th>
+                            <th class="min-w-[180px] text-center" style="width: 22%;">Référence</th>
+                            <th class="min-w-[140px] text-center" style="width: 15%;">Type</th>
+                            <th class="min-w-[160px] text-center" style="width: 18%;">Opérateur</th>
+                            <th class="min-w-[160px] text-center" style="width: 18%;">Montant</th>
+                            <th class="min-w-[160px] text-center" style="width: 15%;">Date</th>
+                            <th class="min-w-[120px] text-center" style="width: 12%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -105,10 +106,22 @@
                                 <td class="text-center">
                                     <span class="text-sm text-secondary-foreground">{{ $t->date?->format('d/m/Y H:i') ?? '-' }}</span>
                                 </td>
+                                <td class="text-center">
+                                    @if($t->statut === 'valide')
+                                        <button class="kt-btn kt-btn-sm kt-btn-outline kt-btn-danger annuler-transaction" 
+                                                data-transaction-id="{{ $t->id }}"
+                                                data-transaction-ref="{{ $t->reference }}">
+                                            <i class="ki-filled ki-cross-circle"></i>
+                                            Annuler
+                                        </button>
+                                    @else
+                                        <span class="text-xs text-muted-foreground">-</span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center py-10 text-muted-foreground">
+                                <td colspan="6" class="text-center py-10 text-muted-foreground">
                                     Aucune transaction pour le moment.
                                 </td>
                             </tr>
@@ -120,4 +133,64 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion de l'annulation de transaction
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.annuler-transaction');
+        if (!btn) return;
+
+        const transactionId = btn.dataset.transactionId;
+        const transactionRef = btn.dataset.transactionRef;
+
+        // Demander confirmation
+        if (!confirm(`Êtes-vous sûr de vouloir annuler la transaction ${transactionRef} ?\n\nCette action inversera automatiquement les soldes de l'agent.`)) {
+            return;
+        }
+
+        // Demander la raison de l'annulation
+        const raison = prompt('Veuillez indiquer la raison de l\'annulation :');
+        if (!raison || raison.trim() === '') {
+            alert('La raison de l\'annulation est obligatoire.');
+            return;
+        }
+
+        // Désactiver le bouton pendant le traitement
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ki-filled ki-loading"></i> Annulation...';
+
+        // Envoyer la requête d'annulation
+        fetch(`/transactions/${transactionId}/annuler`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ raison: raison })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message || 'Transaction annulée avec succès !');
+                // Recharger la page pour afficher les soldes mis à jour
+                window.location.reload();
+            } else {
+                alert(data.message || 'Erreur lors de l\'annulation de la transaction.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ki-filled ki-cross-circle"></i> Annuler';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Une erreur est survenue lors de l\'annulation.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ki-filled ki-cross-circle"></i> Annuler';
+        });
+    });
+});
+</script>
+@endpush
 

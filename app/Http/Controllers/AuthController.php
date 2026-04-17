@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Utilisateur;
+use App\Models\SystemLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -39,6 +40,15 @@ class AuthController extends Controller
         $utilisateur = Utilisateur::where('email', $email)->first();
 
         if (!$utilisateur) {
+            // Logger la tentative échouée
+            SystemLog::create([
+                'action' => 'login_failed',
+                'description' => "Tentative de connexion échouée pour l'email : {$email}",
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'metadata' => ['email' => $email],
+            ]);
+            
             return back()->withErrors([
                 'email' => 'Les identifiants fournis sont incorrects.',
             ])->withInput($request->only('email'));
@@ -46,6 +56,16 @@ class AuthController extends Controller
 
         // Vérifier le statut de l'utilisateur
         if ($utilisateur->statut !== 'actif') {
+            // Logger la tentative échouée
+            SystemLog::create([
+                'user_id' => $utilisateur->id,
+                'action' => 'login_failed',
+                'description' => "Tentative de connexion sur compte {$utilisateur->statut} : {$utilisateur->nom} {$utilisateur->prenom}",
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'metadata' => ['statut' => $utilisateur->statut],
+            ]);
+            
             return back()->withErrors([
                 'email' => 'Votre compte est désactivé ou suspendu.',
             ])->withInput($request->only('email'));
@@ -60,6 +80,16 @@ class AuthController extends Controller
                 $utilisateur->mot_de_passe = Hash::make($password);
                 $utilisateur->save();
             } else {
+                // Logger la tentative échouée avec mauvais mot de passe
+                SystemLog::create([
+                    'user_id' => $utilisateur->id,
+                    'action' => 'login_failed',
+                    'description' => "Tentative de connexion échouée (mot de passe incorrect) : {$utilisateur->nom} {$utilisateur->prenom}",
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'metadata' => ['raison' => 'mot_de_passe_incorrect'],
+                ]);
+                
                 return back()->withErrors([
                     'email' => 'Les identifiants fournis sont incorrects.',
                 ])->withInput($request->only('email'));
@@ -82,7 +112,14 @@ class AuthController extends Controller
         $utilisateur->dernier_connexion = now();
         $utilisateur->save();
 
-        // Rediriger vers la page demandée ou le dashboard
+        // Logger la connexion réussie
+        SystemLog::logLogin($utilisateur, true);
+
+        // Rediriger vers le dashboard approprié selon le type d'utilisateur
+        if ($utilisateur->isAgent()) {
+            return redirect()->intended(route('agent.dashboard'));
+        }
+        
         return redirect()->intended(route('dashboard'));
     }
 
@@ -143,6 +180,11 @@ class AuthController extends Controller
         // Régénérer la session
         $request->session()->regenerate();
 
+        // Rediriger vers le dashboard approprié selon le type d'utilisateur
+        if ($utilisateur->isAgent()) {
+            return redirect()->route('agent.dashboard')->with('status', 'Votre mot de passe a été changé avec succès. Bienvenue !');
+        }
+
         return redirect()->route('dashboard')->with('status', 'Votre mot de passe a été changé avec succès. Bienvenue !');
     }
 
@@ -151,6 +193,13 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
+        $user = Auth::user();
+        
+        // Logger la déconnexion avant de déconnecter
+        if ($user) {
+            SystemLog::logLogout($user);
+        }
+        
         Auth::logout();
 
         $request->session()->invalidate();

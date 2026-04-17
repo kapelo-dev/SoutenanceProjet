@@ -64,6 +64,12 @@ Route::get('/', function () {
         if (is_null(auth()->user()->dernier_connexion)) {
             return redirect()->route('password.change');
         }
+        
+        // Rediriger vers le dashboard approprié selon le type d'utilisateur
+        if (auth()->user()->isAgent()) {
+            return redirect()->route('agent.dashboard');
+        }
+        
         return redirect()->route('dashboard');
     }
     return redirect()->route('login');
@@ -222,4 +228,11 @@ Route::middleware(['auth', 'require.password.change'])->group(function () {
     Route::get('/parametres-app-mobile', [ConfigAppMobileController::class, 'index'])->name('parametres-app-mobile.index');
     Route::post('/parametres-app-mobile', [ConfigAppMobileController::class, 'store'])->name('parametres-app-mobile.store');
     Route::post('/parametres-app-mobile/generate-token', [ConfigAppMobileController::class, 'generateToken'])->name('parametres-app-mobile.generate-token');
+
+    // Logs système
+    Route::get('/system-logs', [\App\Http\Controllers\SystemLogController::class, 'index'])->name('system-logs.index');
+    Route::get('/system-logs/{systemLog}', [\App\Http\Controllers\SystemLogController::class, 'show'])->name('system-logs.show');
+    Route::get('/system-logs/export/excel', [\App\Http\Controllers\SystemLogController::class, 'exportExcel'])->name('system-logs.export.excel');
+    Route::get('/system-logs/export/pdf', [\App\Http\Controllers\SystemLogController::class, 'exportPdf'])->name('system-logs.export.pdf');
+    Route::post('/system-logs/clean', [\App\Http\Controllers\SystemLogController::class, 'clean'])->name('system-logs.clean');
 });

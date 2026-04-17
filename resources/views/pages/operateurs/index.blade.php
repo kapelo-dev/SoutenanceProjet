@@ -13,10 +13,10 @@
             </div>
         </div>
         <div class="flex items-center gap-2.5">
-            <button class="kt-btn kt-btn-primary" data-kt-modal-toggle="#modal_nouvel_operateur">
+            {{-- <button class="kt-btn kt-btn-primary" data-kt-modal-toggle="#modal_nouvel_operateur">
                 <i class="ki-filled ki-plus"></i>
                 Nouvel Opérateur
-            </button>
+            </button> --}}
         </div>
     </div>
 </div>
@@ -162,10 +162,10 @@
                                 Aucun opérateur mobile money n'a été enregistré pour le moment.
                             </span>
                         </div>
-                        <button class="kt-btn kt-btn-primary kt-btn-sm" data-kt-modal-toggle="#modal_nouvel_operateur">
+                        {{-- <button class="kt-btn kt-btn-primary kt-btn-sm" data-kt-modal-toggle="#modal_nouvel_operateur">
                             <i class="ki-filled ki-plus"></i>
                             Créer le premier opérateur
-                        </button>
+                        </button> --}}
                     </div>
                 </div>
             @endif

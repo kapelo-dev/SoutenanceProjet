@@ -105,14 +105,113 @@ Table pour gérer les agents de mobile money sur le terrain.
 - **N:0..1** avec `utilisateurs` (un agent peut avoir un compte utilisateur)
 - **1:N** avec `transactions` (un agent effectue plusieurs transactions)
 - **1:N** avec `soldes` (un agent a plusieurs enregistrements de solde)
+- **1:N** avec `agent_kiosque_historique` (un agent a un historique d'affectations dans les kiosques)
+- **N:0..1** avec `kiosques` (un agent peut être affecté à un kiosque)
 
 #### Notes
 - Le champ `deleted_at` permet une suppression logique (soft delete)
 - Un agent peut exister sans compte utilisateur (user_uid NULL)
+- L'historique des affectations dans les kiosques est tracé dans `agent_kiosque_historique`
 
 ---
 
-### 3. **transactions**
+### 3. **kiosques**
+
+Table pour gérer les kiosques (points de vente) où les agents sont affectés.
+
+#### Colonnes
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `id` | Integer | PRIMARY KEY AUTO_INCREMENT | Identifiant unique |
+| `uid` | String(36) | UNIQUE, NOT NULL | Identifiant unique UUID v4 |
+| `code` | String(50) | UNIQUE, NOT NULL | Code du kiosque (ex: K001, K002) |
+| `nom` | String(100) | NOT NULL | Nom du kiosque |
+| `type` | String(20) | NOT NULL | Type : 'fixe', 'mobile' |
+| `adresse` | Text | NULL | Adresse complète du kiosque |
+| `quartier` | String(100) | NULL | Quartier |
+| `ville` | String(100) | NULL | Ville |
+| `latitude` | Decimal(10,8) | NULL | Coordonnée GPS latitude |
+| `longitude` | Decimal(11,8) | NULL | Coordonnée GPS longitude |
+| `telephone` | String(20) | NULL | Numéro de téléphone du kiosque |
+| `capacite_agents` | Integer | NOT NULL, DEFAULT 1 | Nombre maximum d'agents |
+| `statut` | String(20) | NOT NULL, DEFAULT 'actif' | Statut : 'actif', 'inactif', 'en_travaux' |
+| `created_at` | DateTime(TZ) | DEFAULT now() | Date de création |
+| `updated_at` | DateTime(TZ) | DEFAULT now() | Date de dernière modification |
+| `deleted_at` | DateTime(TZ) | NULL | Date de suppression logique |
+
+#### Index
+- Index unique sur `code`
+- Index unique sur `uid`
+- Index sur `statut`
+- Index sur `ville`
+
+#### Valeurs par défaut
+- `uid`: UUID v4 généré automatiquement
+- `capacite_agents`: 1
+- `statut`: 'actif'
+- `created_at`: Timestamp actuel
+- `updated_at`: Timestamp actuel
+
+#### Relations
+- **1:N** avec `agents` (un kiosque peut avoir plusieurs agents)
+- **1:N** avec `agent_kiosque_historique` (un kiosque a un historique d'affectations d'agents)
+
+#### Notes
+- Le champ `deleted_at` permet une suppression logique (soft delete)
+- Les coordonnées GPS permettent l'affichage sur une carte
+- La capacité d'agents définit le nombre maximum d'agents pouvant être affectés
+
+---
+
+### 4. **agent_kiosque_historique**
+
+Table pour tracer l'historique des affectations des agents dans les kiosques.
+
+#### Colonnes
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `id` | Integer | PRIMARY KEY AUTO_INCREMENT | Identifiant unique |
+| `agent_id` | Integer | FOREIGN KEY → agents.id, NOT NULL | Agent concerné |
+| `kiosque_id` | Integer | FOREIGN KEY → kiosques.id, NOT NULL | Kiosque concerné |
+| `date_debut` | Date | NOT NULL | Date de début de l'affectation |
+| `date_fin` | Date | NULL | Date de fin de l'affectation (NULL si en cours) |
+| `type_mouvement` | Enum | NOT NULL, DEFAULT 'affectation' | Type : 'affectation', 'retrait' |
+| `commentaire` | Text | NULL | Commentaire ou notes |
+| `created_by` | Integer | FOREIGN KEY → utilisateurs.id, NULL | Utilisateur ayant créé l'entrée |
+| `created_at` | DateTime(TZ) | DEFAULT now() | Date de création de l'enregistrement |
+| `updated_at` | DateTime(TZ) | DEFAULT now() | Date de dernière modification |
+
+#### Index
+- Index sur `agent_id`
+- Index sur `kiosque_id`
+- Index sur `date_debut`
+- Index sur `date_fin`
+
+#### Valeurs par défaut
+- `type_mouvement`: 'affectation'
+- `created_at`: Timestamp actuel
+- `updated_at`: Timestamp actuel
+
+#### Relations
+- **N:1** avec `agents` (plusieurs affectations par agent)
+- **N:1** avec `kiosques` (plusieurs affectations par kiosque)
+- **N:0..1** avec `utilisateurs` (utilisateur ayant créé l'entrée)
+
+#### Types de mouvement
+- **affectation** : Agent affecté à un kiosque
+- **retrait** : Agent retiré d'un kiosque
+
+#### Notes
+- Une affectation en cours a `date_fin` NULL
+- Permet de suivre l'historique complet des affectations
+- La durée d'affectation peut être calculée : `date_fin - date_debut`
+- Lors d'une nouvelle affectation, l'affectation précédente est automatiquement terminée
+
+---
+
+### 5. **transactions**
 
 Table pour enregistrer toutes les transactions de mobile money.
 
@@ -158,7 +257,7 @@ Table pour enregistrer toutes les transactions de mobile money.
 
 ---
 
-### 4. **soldes**
+### 6. **soldes**
 
 Table pour tracker les soldes des agents en temps réel.
 
@@ -197,7 +296,62 @@ Table pour tracker les soldes des agents en temps réel.
 
 ---
 
-### 5. **audits**
+### 7. **system_logs**
+
+Table pour enregistrer tous les logs système (connexions, actions CRUD, etc.).
+
+#### Colonnes
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `id` | BIGINT UNSIGNED | PRIMARY KEY AUTO_INCREMENT | Identifiant unique |
+| `uid` | CHAR(36) | UNIQUE, NOT NULL | UUID v4 |
+| `user_id` | BIGINT UNSIGNED | FOREIGN KEY → utilisateurs.id, NULL | Utilisateur ayant effectué l'action |
+| `action` | ENUM | NOT NULL | Type d'action : 'create', 'update', 'delete', 'login', 'logout', 'login_failed', 'assign', 'unassign', 'validate', 'cancel', 'export', 'import', 'other' |
+| `model_type` | VARCHAR(255) | NULL | Type de modèle concerné (ex: App\Models\Agent) |
+| `model_id` | BIGINT UNSIGNED | NULL | ID de l'entité concernée |
+| `description` | TEXT | NOT NULL | Description de l'action |
+| `old_values` | JSON | NULL | Valeurs avant modification (format JSON) |
+| `new_values` | JSON | NULL | Valeurs après modification (format JSON) |
+| `ip_address` | VARCHAR(45) | NULL | Adresse IP de l'utilisateur |
+| `user_agent` | TEXT | NULL | User agent du navigateur |
+| `metadata` | JSON | NULL | Métadonnées supplémentaires |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Date de création du log |
+| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | Date de modification |
+
+#### Index
+- Index sur `user_id`
+- Index sur `action`
+- Index composite sur `model_type` et `model_id`
+- Index sur `created_at`
+
+#### Relations
+- **N:0..1** avec `utilisateurs` (plusieurs logs peuvent être créés par un utilisateur)
+
+#### Types d'actions
+- **create** : Création d'une entité
+- **update** : Modification d'une entité
+- **delete** : Suppression d'une entité
+- **login** : Connexion réussie
+- **logout** : Déconnexion
+- **login_failed** : Tentative de connexion échouée
+- **assign** : Affectation (ex: agent à un kiosque)
+- **unassign** : Retrait d'affectation
+- **validate** : Validation
+- **cancel** : Annulation
+- **export** : Export de données
+- **import** : Import de données
+- **other** : Autre action
+
+#### Notes
+- Les champs sensibles (mots de passe, tokens) sont automatiquement masqués avec '********'
+- Les valeurs JSON permettent de tracer les modifications exactes
+- L'adresse IP et le user agent permettent de tracer l'origine des actions
+- Essentiel pour la sécurité, l'audit et le debugging
+
+---
+
+### 8. **audits**
 
 Table pour l'historique des modifications (audit trail).
 
@@ -246,6 +400,24 @@ Table pour l'historique des modifications (audit trail).
 2. Un agent PEUT avoir un code_agent unique (généré automatiquement)
 3. Un agent PEUT être lié à un compte utilisateur
 4. Un agent supprimé a un `deleted_at` non NULL (soft delete)
+5. Un agent PEUT être affecté à un kiosque
+6. L'historique des affectations est automatiquement tracé
+
+### Gestion des Kiosques
+
+1. Chaque kiosque DOIT avoir un code unique (généré automatiquement)
+2. Un kiosque a une capacité maximale d'agents
+3. Les coordonnées GPS sont optionnelles mais recommandées
+4. Un kiosque peut avoir plusieurs agents (selon sa capacité)
+5. L'historique des affectations d'agents est conservé
+
+### Gestion de l'Historique des Affectations
+
+1. Chaque affectation d'agent à un kiosque est enregistrée
+2. Une affectation en cours a `date_fin` NULL
+3. Lors d'une nouvelle affectation, l'affectation précédente est automatiquement terminée
+4. Le type de mouvement indique s'il s'agit d'une affectation ou d'un retrait
+5. Un commentaire peut être ajouté pour chaque mouvement
 
 ### Gestion des Transactions
 
@@ -273,6 +445,7 @@ Table pour l'historique des modifications (audit trail).
 
 ## Statistiques et Vues Dérivées
 
+ 
 ### Statistiques par Agent
 
 ```sql
@@ -337,6 +510,8 @@ GROUP BY operateur;
 2. **add_user_uid.py** : Ajout de la colonne `user_uid` dans la table `agents`
 3. **add_photo_profil.py** : Ajout de la colonne `photo_profil` dans la table `utilisateurs`
 4. **add_deleted_at.py** : Ajout de la colonne `deleted_at` dans la table `agents`
+5. **2026_03_21_121920_create_agent_kiosque_historique_table.php** : Création de la table `agent_kiosque_historique` pour tracer l'historique des affectations
+6. **2026_03_25_212900_create_system_logs_table.php** : Création de la table `system_logs` pour le logging complet des actions système
 
 ---
 
@@ -403,7 +578,8 @@ Pour toute question sur le schéma de la base de données, consultez :
 
 ---
 
-**Version** : 1.0  
-**Dernière mise à jour** : 27 janvier 2026  
-**Base de données** : SQLite 3  
-**ORM** : SQLAlchemy
+**Version** : 1.2  
+**Dernière mise à jour** : 26 mars 2026  
+**Base de données** : MySQL / MariaDB  
+**ORM** : Laravel Eloquent  
+**Nouveautés v1.2** : Ajout de la table system_logs pour le logging complet des actions système

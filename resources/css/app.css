@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Désactiver le curseur de saisie (caret) sur tous les éléments sauf les inputs */
+* {
+  caret-color: auto;
+}
+
+*:not(input):not(textarea):not([contenteditable="true"]) {
+  caret-color: transparent !important;
+}
+
 /* Espacement entre labels, inputs et textes d'aide dans les modals */
 .kt-modal .kt-modal-body .flex.flex-col.gap-2 {
   gap: 1.25rem; /* 20px entre label, input et texte d'aide */
@@ -27,62 +36,108 @@
   }
 }
 
-/* Glassmorphisme pour les éléments de menu actifs
-   - On ne cible que le lien DIRECTEMENT enfant de l'item actif
-   - Ainsi, dans un accordion, seul le sous-menu actif est stylé,
-     pas tous les sous-éléments du parent. */
-.kt-menu-item-active > .kt-menu-link,
-.kt-menu-item-active > .kt-menu-label {
-  background: rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-left: 3px solid #fbbf24 !important; /* Jaune */
+/* Styles pour les éléments de menu actifs
+   - Menus parents (accordéons avec data-kt-menu-item-toggle): seulement bordure jaune
+   - Menus enfants (liens directs): background #314e6c + texte blanc + bordure jaune */
+
+/* Menus parents actifs ou ouverts (accordéons) - Seulement bordure gauche jaune */
+.kt-menu-item-active[data-kt-menu-item-toggle] > .kt-menu-link,
+.kt-menu-item-show[data-kt-menu-item-toggle] > .kt-menu-link {
+  border-left: 3px solid #fbbf24 !important;
   border-right-color: transparent !important;
   border-top-color: transparent !important;
   border-bottom-color: transparent !important;
+  background: transparent !important;
 }
 
-/* Support du mode sombre */
-.dark .kt-menu-item-active > .kt-menu-link,
-.dark .kt-menu-item-active > .kt-menu-label {
-  background: rgba(0, 0, 0, 0.2) !important;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-left: 3px solid #fbbf24 !important; /* Jaune */
-  border-right-color: transparent !important;
-  border-top-color: transparent !important;
-  border-bottom-color: transparent !important;
-}
-
-/* Hover jaune pour les éléments du sidebar (icône + texte + bordure)
-   - fonctionne pour:
-     - items classiques: .kt-menu-link
-     - items type \"Rapports\": a.kt-menu-item > .kt-menu-label
-   - neutralise le hover bleu basé sur la classe utilitaire kt-menu-link-hover */
-#sidebar_menu .kt-menu-link:hover,
-#sidebar_menu .kt-menu-label:hover,
-#sidebar_menu a.kt-menu-item:hover > .kt-menu-label {
+/* Menus enfants actifs (liens directs) - Background + texte blanc + bordure */
+.kt-menu-item-active:not([data-kt-menu-item-toggle]) > .kt-menu-link,
+.kt-menu-item-active:not([data-kt-menu-item-toggle]) > .kt-menu-label,
+.kt-menu-item-active > a.kt-menu-link {
+  background: #314e6c !important;
   border-left: 3px solid #fbbf24 !important;
   border-right-color: transparent !important;
   border-top-color: transparent !important;
   border-bottom-color: transparent !important;
 }
 
-#sidebar_menu .kt-menu-link:hover .kt-menu-title,
-#sidebar_menu .kt-menu-link:hover .kt-menu-icon,
-#sidebar_menu .kt-menu-label:hover .kt-menu-title,
-#sidebar_menu .kt-menu-label:hover .kt-menu-icon,
-#sidebar_menu a.kt-menu-item:hover .kt-menu-label .kt-menu-title,
-#sidebar_menu a.kt-menu-item:hover .kt-menu-label .kt-menu-icon,
-/* Quand Metronic ajoute la classe .kt-menu-link-hover (variant Tailwind),
-   on force aussi le jaune pour écraser !text-primary */
-#sidebar_menu .kt-menu-link.kt-menu-link-hover .kt-menu-title,
-#sidebar_menu .kt-menu-link.kt-menu-link-hover .kt-menu-icon,
-#sidebar_menu .kt-menu-label.kt-menu-link-hover .kt-menu-title,
-#sidebar_menu .kt-menu-label.kt-menu-link-hover .kt-menu-icon,
-#sidebar_menu a.kt-menu-item.kt-menu-link-hover .kt-menu-label .kt-menu-title,
-#sidebar_menu a.kt-menu-item.kt-menu-link-hover .kt-menu-label .kt-menu-icon {
-  color: #fbbf24 !important;
+/* Texte blanc pour les menus enfants actifs */
+.kt-menu-item-active:not([data-kt-menu-item-toggle]) > .kt-menu-link .kt-menu-title,
+.kt-menu-item-active:not([data-kt-menu-item-toggle]) > .kt-menu-link .kt-menu-icon,
+.kt-menu-item-active:not([data-kt-menu-item-toggle]) > .kt-menu-label .kt-menu-title,
+.kt-menu-item-active:not([data-kt-menu-item-toggle]) > .kt-menu-label .kt-menu-icon,
+.kt-menu-item-active > a.kt-menu-link .kt-menu-title,
+.kt-menu-item-active > a.kt-menu-link .kt-menu-icon {
+  color: #ffffff !important;
+}
+
+/* Support du mode sombre - Menus parents */
+.dark .kt-menu-item-active[data-kt-menu-item-toggle] > .kt-menu-link,
+.dark .kt-menu-item-show[data-kt-menu-item-toggle] > .kt-menu-link {
+  border-left: 3px solid #fbbf24 !important;
+  border-right-color: transparent !important;
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+  background: transparent !important;
+}
+
+/* Support du mode sombre - Menus enfants */
+.dark .kt-menu-item-active:not([data-kt-menu-item-toggle]) > .kt-menu-link,
+.dark .kt-menu-item-active:not([data-kt-menu-item-toggle]) > .kt-menu-label,
+.dark .kt-menu-item-active > a.kt-menu-link {
+  background: #314e6c !important;
+  border-left: 3px solid #fbbf24 !important;
+  border-right-color: transparent !important;
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+}
+
+/* Texte blanc pour les menus enfants actifs en mode sombre */
+.dark .kt-menu-item-active:not([data-kt-menu-item-toggle]) > .kt-menu-link .kt-menu-title,
+.dark .kt-menu-item-active:not([data-kt-menu-item-toggle]) > .kt-menu-link .kt-menu-icon,
+.dark .kt-menu-item-active:not([data-kt-menu-item-toggle]) > .kt-menu-label .kt-menu-title,
+.dark .kt-menu-item-active:not([data-kt-menu-item-toggle]) > .kt-menu-label .kt-menu-icon,
+.dark .kt-menu-item-active > a.kt-menu-link .kt-menu-title,
+.dark .kt-menu-item-active > a.kt-menu-link .kt-menu-icon {
+  color: #ffffff !important;
+}
+
+/* Hover pour les éléments du sidebar - Pas de couleur jaune */
+/* Les styles de hover par défaut de Metronic s'appliquent */
+
+/* Retirer le trait vertical blanc dans les sous-menus */
+.kt-menu-accordion::before {
+  display: none !important;
+}
+
+/* Retirer le curseur de saisie qui clignote dans les menus */
+#sidebar_menu .kt-menu-link,
+#sidebar_menu .kt-menu-label {
+  user-select: none !important;
+  caret-color: transparent !important;
+  cursor: pointer !important;
+}
+
+/* Changer la couleur des boutons primaires (création, enregistrement) */
+.kt-btn-primary {
+  background-color: #314e6c !important;
+  border-color: #314e6c !important;
+}
+
+.kt-btn-primary:hover {
+  background-color: #263d56 !important;
+  border-color: #263d56 !important;
+}
+
+/* Mode sombre */
+.dark .kt-btn-primary {
+  background-color: #314e6c !important;
+  border-color: #314e6c !important;
+}
+
+.dark .kt-btn-primary:hover {
+  background-color: #263d56 !important;
+  border-color: #263d56 !important;
 }
 
 /* Ombre et élévation pour la navbar/header - Même couleur que le sidebar */

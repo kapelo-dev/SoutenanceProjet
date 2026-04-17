@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use App\Traits\LogsActivity;
 
 class Agent extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, LogsActivity;
 
     protected $table = 'agents';
 
@@ -78,6 +79,18 @@ class Agent extends Model
     public function salaires()
     {
         return $this->hasMany(Salaire::class, 'agent_id');
+    }
+
+    // Un agent a un historique d'affectations dans les kiosques
+    public function historiqueKiosques()
+    {
+        return $this->hasMany(AgentKiosqueHistorique::class, 'agent_id')->orderBy('date_debut', 'desc');
+    }
+
+    // Affectation actuelle dans un kiosque
+    public function affectationActuelle()
+    {
+        return $this->hasOne(AgentKiosqueHistorique::class, 'agent_id')->enCours()->latest('date_debut');
     }
 
     /**

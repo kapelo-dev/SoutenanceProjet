@@ -122,7 +122,7 @@ function checkMenuVisibility(href) {
 
     // Debug pour les routes problématiques
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        if (cleanHref === '/utilisateurs' || cleanHref === '/rapports') {
+        if (cleanHref === '/utilisateurs' || cleanHref === '/rapports' || cleanHref === '/system-logs') {
             console.log(`checkMenuVisibility(${cleanHref}):`, {
                 isAuthorized,
                 routes: userPermissions.routes,

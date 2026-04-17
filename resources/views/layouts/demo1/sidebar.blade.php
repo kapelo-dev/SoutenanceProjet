@@ -62,6 +62,21 @@
                         
                     </a>
                 </div>
+                <div class="kt-menu-item {{ request()->is('agent/dashboard') ? 'kt-menu-item-active' : '' }}">
+                    <a href="{{ url('/agent/dashboard') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
+                        tabindex="0">
+                        
+                        <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
+                            <i class="ki-filled ki-chart-line-up text-lg">
+                            </i>
+                        </span>
+                        <span
+                            class="kt-menu-title kt-menu-item-active:text-primary text-sm font-medium text-foreground">
+                            Mon Dashboard
+                        </span>
+                        
+                    </a>
+                </div>
                 <div class="kt-menu-item {{ request()->is('agents/*') ? 'kt-menu-item-active kt-menu-item-show' : '' }}" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
                     <div class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
                         tabindex="0">
@@ -164,7 +179,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="kt-menu-item {{ request()->is('utilisateurs') ? 'kt-menu-item-active' : '' }}" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
+                <div class="kt-menu-item {{ request()->is('utilisateurs') ? 'kt-menu-item-active' : '' }}">
                     <a href="{{ url('/utilisateurs') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"   
                         tabindex="0">
                         <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
@@ -363,6 +378,18 @@
                                 <span
                                     class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium me-1 font-normal text-foreground">
                                     Configuration App Mobile
+                                </span>
+                            </a>
+                        </div>
+                        <div class="kt-menu-item {{ request()->is('system-logs*') ? 'kt-menu-item-active' : '' }}">
+                            <a href="{{ url('/system-logs') }}" class="kt-menu-link grow cursor-pointer gap-[14px] border border-transparent py-[8px] pe-[10px] ps-[10px] rounded-md"
+                                tabindex="0">
+                                <span
+                                    class="kt-menu-bullet kt-menu-item-active:before:bg-primary kt-menu-item-hover:before:bg-primary relative -start-[3px] flex w-[6px] before:absolute before:top-0 before:size-[6px] before:-translate-y-1/2 before:rounded-full rtl:start-0 rtl:before:translate-x-1/2">
+                                </span>
+                                <span
+                                    class="kt-menu-title text-2sm kt-menu-item-active:text-primary kt-menu-item-active:font-medium me-1 font-normal text-foreground">
+                                    Logs Système
                                 </span>
                             </a>
                         </div>

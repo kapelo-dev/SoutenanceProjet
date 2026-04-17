@@ -308,6 +308,9 @@ class TransactionController extends Controller
 
         DB::beginTransaction();
         try {
+            // Inverser les soldes avant d'annuler
+            $this->reverseAgentBalance($transaction);
+            
             $transaction->update(['statut' => 'annule']);
 
             // Créer un audit
@@ -324,14 +327,14 @@ class TransactionController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Transaction annulée avec succès !'
+                'message' => 'Transaction annulée avec succès ! Les soldes ont été mis à jour.'
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'annulation.'
+                'message' => 'Erreur lors de l\'annulation: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -490,6 +493,52 @@ class TransactionController extends Controller
         $filename = 'transactions_' . now()->format('Y-m-d_His') . '.pdf';
 
         return $this->exportToPdf('Liste des Transactions', $headers, $data, $filename);
+    }
+
+    /**
+     * Méthode privée pour inverser le solde de l'agent lors de l'annulation d'une transaction.
+     */
+    private function reverseAgentBalance(Transaction $transaction)
+    {
+        $agent = $transaction->agent;
+        $operateur = $transaction->operateur;
+        $montant = (float) $transaction->montant;
+
+        // --- Inverser le solde virtuel (solde opérateur) ---
+        $dernierVirtuel = Solde::where('agent_id', $agent->id)
+            ->where('operateur_id', $operateur->id)
+            ->where('type', 'virtuel')
+            ->latest('date')
+            ->first();
+        $ancienVirtuel = $dernierVirtuel ? (float) $dernierVirtuel->montant : 0;
+        $nouveauVirtuel = max(0, $ancienVirtuel - $montant);
+
+        Solde::create([
+            'agent_id' => $agent->id,
+            'operateur_id' => $operateur->id,
+            'montant' => $nouveauVirtuel,
+            'type' => 'virtuel',
+            'description' => "Annulation transaction {$transaction->reference}",
+        ]);
+
+        // --- Inverser le solde espèce (caisse agent) ---
+        if (in_array($transaction->type, ['depot', 'retrait'])) {
+            $dernierEspece = Solde::where('agent_id', $agent->id)
+                ->whereNull('operateur_id')
+                ->where('type', 'espece')
+                ->latest('date')
+                ->first();
+            $ancienEspece = $dernierEspece ? (float) $dernierEspece->montant : 0;
+            $nouveauEspece = $ancienEspece + $montant;
+
+            Solde::create([
+                'agent_id' => $agent->id,
+                'operateur_id' => null,
+                'montant' => $nouveauEspece,
+                'type' => 'espece',
+                'description' => "Annulation transaction {$transaction->reference} ({$transaction->type})",
+            ]);
+        }
     }
 
     /**

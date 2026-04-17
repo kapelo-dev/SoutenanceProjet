@@ -47,6 +47,7 @@ Route::prefix('operateurs')->group(function () {
 Route::prefix('kiosques')->group(function () {
     Route::get('/proximite', [KiosqueController::class, 'proximite']);
     Route::get('/carte-data', [KiosqueController::class, 'carteData']);
+    Route::get('/next-code', [KiosqueController::class, 'getNextCode']);
     Route::get('/', [KiosqueController::class, 'index']);
     Route::get('/{kiosque}', [KiosqueController::class, 'show']);
 });

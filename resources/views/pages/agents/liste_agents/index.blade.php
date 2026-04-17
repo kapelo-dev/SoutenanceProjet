@@ -133,10 +133,7 @@
                                         <span class="kt-badge kt-badge-sm kt-badge-outline kt-badge-success">
                                             Actif
                                         </span>
-                                    @elseif($agent->statut == 'en_attente')
-                                        <span class="kt-badge kt-badge-sm kt-badge-outline kt-badge-warning">
-                                            En attente
-                                        </span>
+                                
                                     @elseif($agent->statut == 'suspendu')
                                         <span class="kt-badge kt-badge-sm kt-badge-outline kt-badge-destructive">
                                             Suspendu
@@ -406,7 +403,7 @@
                                 <select class="kt-select" name="statut" id="agent_statut" data-kt-select="true" required>
                                     <option value="actif">Actif</option>
                                     <option value="inactif">Inactif</option>
-                                    <option value="en_attente">En attente</option>
+                                 
                                     <option value="suspendu">Suspendu</option>
                                 </select>
                             </div>
@@ -478,9 +475,10 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div class="flex flex-col gap-2">
                                     <label class="kt-label">
-                                        Code Kiosque <span class="text-destructive">*</span>
+                                        Code Kiosque <span class="text-muted-foreground text-xs">(généré automatiquement)</span>
                                     </label>
-                                    <input class="kt-input" type="text" name="kiosque_code" id="kiosque_code" placeholder="Ex: KIO001" />
+                                    <input class="kt-input bg-muted cursor-not-allowed" type="text" id="kiosque_code_display" placeholder="Chargement..." disabled readonly />
+                                    <input type="hidden" name="kiosque_code" id="kiosque_code" />
                                     <span class="text-xs text-destructive hidden" id="error_kiosque_code"></span>
                                 </div>
                                 <div class="flex flex-col gap-2">
@@ -727,6 +725,24 @@ function setupAgentModalOnce() {
             if (target.checked) {
                 kiosqueForm.classList.remove('hidden');
                 kiosqueExistant.classList.add('hidden');
+                
+                // Récupérer le prochain code kiosque disponible
+                fetch('/api/kiosques/next-code')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.code) {
+                            const codeDisplay = document.getElementById('kiosque_code_display');
+                            const codeHidden = document.getElementById('kiosque_code');
+                            if (codeDisplay) codeDisplay.value = data.code;
+                            if (codeHidden) codeHidden.value = data.code;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur lors de la récupération du code kiosque:', error);
+                        const codeDisplay = document.getElementById('kiosque_code_display');
+                        if (codeDisplay) codeDisplay.value = 'Erreur de chargement';
+                    });
+                
                 setTimeout(function () {
                     initMap();
                 }, 300);
@@ -1345,6 +1361,28 @@ function initViewAgentMap(latitude, longitude, kiosqueNom) {
     });
 }
 
+// Fonction helper pour calculer la durée entre deux dates
+function calculateDuration(dateDebut, dateFin) {
+    if (!dateDebut) return '-';
+    
+    const debut = new Date(dateDebut);
+    const fin = dateFin ? new Date(dateFin) : new Date();
+    
+    const diffTime = Math.abs(fin - debut);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 30) {
+        return diffDays + ' jour' + (diffDays > 1 ? 's' : '');
+    } else if (diffDays < 365) {
+        const months = Math.floor(diffDays / 30);
+        return months + ' mois';
+    } else {
+        const years = Math.floor(diffDays / 365);
+        const months = Math.floor((diffDays % 365) / 30);
+        return years + ' an' + (years > 1 ? 's' : '') + (months > 0 ? ' ' + months + ' mois' : '');
+    }
+}
+
 // Fonction pour charger et afficher les détails d'un agent
 window.loadAgentDetails = function(id) {
     currentViewAgentId = id;
@@ -1455,6 +1493,41 @@ window.loadAgentDetails = function(id) {
                 document.getElementById('view_agent_montant_mois').textContent = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(data.stats.montant_mois || 0);
                 document.getElementById('view_agent_transactions_jour').textContent = data.stats.transactions_jour || 0;
                 document.getElementById('view_agent_montant_jour').textContent = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(data.stats.montant_jour || 0);
+            }
+            
+            // Historique des affectations
+            const historiqueBody = document.getElementById('view_agent_historique_affectations');
+            if (historiqueBody && agent.historique_kiosques && agent.historique_kiosques.length > 0) {
+                let historiqueHtml = '';
+                agent.historique_kiosques.forEach(function(affectation) {
+                    const dateDebut = affectation.date_debut ? new Date(affectation.date_debut).toLocaleDateString('fr-FR') : '-';
+                    const dateFin = affectation.date_fin ? new Date(affectation.date_fin).toLocaleDateString('fr-FR') : '-';
+                    const kiosqueNom = affectation.kiosque ? affectation.kiosque.nom : 'Kiosque supprimé';
+                    const estEnCours = !affectation.date_fin;
+                    const duree = affectation.date_debut ? calculateDuration(affectation.date_debut, affectation.date_fin) : '-';
+                    const statutBadge = estEnCours 
+                        ? '<span class="kt-badge kt-badge-success kt-badge-sm">En cours</span>'
+                        : '<span class="kt-badge kt-badge-secondary kt-badge-sm">Terminé</span>';
+                    
+                    historiqueHtml += `
+                        <tr>
+                            <td>${kiosqueNom}</td>
+                            <td>${dateDebut}</td>
+                            <td>${dateFin}</td>
+                            <td>${duree}</td>
+                            <td>${statutBadge}</td>
+                        </tr>
+                    `;
+                });
+                historiqueBody.innerHTML = historiqueHtml;
+            } else if (historiqueBody) {
+                historiqueBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-10 text-muted-foreground">
+                            Aucun historique d'affectation
+                        </td>
+                    </tr>
+                `;
             }
             
             // Ouvrir le modal d'abord, puis initialiser la carte APRÈS que le modal soit complètement visible
@@ -2028,6 +2101,35 @@ document.addEventListener('ajax-content-loaded', function() {
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Historique des Affectations -->
+                        <div class="kt-card">
+                            <div class="kt-card-header">
+                                <h3 class="kt-card-title">Historique des Affectations</h3>
+                            </div>
+                            <div class="kt-card-content">
+                                <div class="kt-scrollable-x-auto">
+                                    <table class="kt-table kt-table-border">
+                                        <thead>
+                                            <tr>
+                                                <th class="min-w-[180px]">Kiosque</th>
+                                                <th class="min-w-[120px]">Date Début</th>
+                                                <th class="min-w-[120px]">Date Fin</th>
+                                                <th class="min-w-[100px]">Durée</th>
+                                                <th class="min-w-[100px]">Statut</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="view_agent_historique_affectations">
+                                            <tr>
+                                                <td colspan="5" class="text-center py-10 text-muted-foreground">
+                                                    Aucun historique d'affectation
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2076,7 +2178,7 @@ document.addEventListener('ajax-content-loaded', function() {
                             <select class="kt-select" name="statut" id="edit_statut" required>
                                 <option value="actif">Actif</option>
                                 <option value="inactif">Inactif</option>
-                                <option value="en_attente">En attente</option>
+                               
                                 <option value="suspendu">Suspendu</option>
                             </select>
                             <span class="text-xs text-destructive hidden" id="error_edit_statut"></span>

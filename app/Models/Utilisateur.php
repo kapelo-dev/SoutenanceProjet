@@ -7,10 +7,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use App\Traits\LogsActivity;
 
 class Utilisateur extends Authenticatable
 {
-    use HasFactory, SoftDeletes, Notifiable;
+    use HasFactory, SoftDeletes, Notifiable, LogsActivity;
 
     protected $table = 'utilisateurs';
 
@@ -31,6 +32,16 @@ class Utilisateur extends Authenticatable
     protected $hidden = [
         'mot_de_passe',
         'remember_token',
+    ];
+
+    /**
+     * Champs sensibles à masquer dans les logs système
+     */
+    protected $hiddenFromLogs = [
+        'mot_de_passe',
+        'password',
+        'remember_token',
+        'api_token',
     ];
 
     protected $casts = [
@@ -123,5 +134,21 @@ class Utilisateur extends Authenticatable
     public function getNomCompletAttribute()
     {
         return trim($this->nom . ' ' . $this->prenom);
+    }
+
+    /**
+     * Méthodes utiles
+     */
+    
+    // Vérifier si l'utilisateur est un agent
+    public function isAgent()
+    {
+        return $this->agent()->exists();
+    }
+
+    // Vérifier si l'utilisateur a un profil spécifique
+    public function hasProfil($profilLibelle)
+    {
+        return $this->profils()->where('libelle', $profilLibelle)->exists();
     }
 }

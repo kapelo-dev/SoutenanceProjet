@@ -56,9 +56,10 @@
                     </div>
                     <div class="flex flex-col gap-2">
                         <label class="kt-form-label">
-                            Code
+                            Code <span class="text-muted-foreground text-xs">(généré automatiquement)</span>
                         </label>
-                        <input class="kt-input @error('code') kt-input-error @enderror" type="text" name="code" value="{{ old('code', $suggestedCode ?? '') }}" placeholder="Ex: K001" />
+                        <input class="kt-input bg-muted cursor-not-allowed @error('code') kt-input-error @enderror" type="text" value="{{ old('code', $suggestedCode ?? '') }}" placeholder="Ex: K001" disabled readonly />
+                        <input type="hidden" name="code" value="{{ old('code', $suggestedCode ?? '') }}" />
                         @error('code')
                             <span class="text-xs text-destructive">{{ $message }}</span>
                         @enderror
@@ -138,7 +139,27 @@
                         <label class="kt-form-label">
                             Ville
                         </label>
-                        <input id="ville" class="kt-input @error('ville') kt-input-error @enderror" type="text" name="ville" value="{{ old('ville') }}" />
+                        <select id="ville" class="kt-select @error('ville') kt-input-error @enderror" name="ville" data-kt-select="true">
+                            <option value="">Sélectionner une ville</option>
+                            <option value="Lomé" {{ old('ville') == 'Lomé' ? 'selected' : '' }}>Lomé</option>
+                            <option value="Kara" {{ old('ville') == 'Kara' ? 'selected' : '' }}>Kara</option>
+                            <option value="Sokodé" {{ old('ville') == 'Sokodé' ? 'selected' : '' }}>Sokodé</option>
+                            <option value="Atakpamé" {{ old('ville') == 'Atakpamé' ? 'selected' : '' }}>Atakpamé</option>
+                            <option value="Kpalimé" {{ old('ville') == 'Kpalimé' ? 'selected' : '' }}>Kpalimé</option>
+                            <option value="Bassar" {{ old('ville') == 'Bassar' ? 'selected' : '' }}>Bassar</option>
+                            <option value="Tsévié" {{ old('ville') == 'Tsévié' ? 'selected' : '' }}>Tsévié</option>
+                            <option value="Aného" {{ old('ville') == 'Aného' ? 'selected' : '' }}>Aného</option>
+                            <option value="Dapaong" {{ old('ville') == 'Dapaong' ? 'selected' : '' }}>Dapaong</option>
+                            <option value="Mango" {{ old('ville') == 'Mango' ? 'selected' : '' }}>Mango</option>
+                            <option value="Niamtougou" {{ old('ville') == 'Niamtougou' ? 'selected' : '' }}>Niamtougou</option>
+                            <option value="Tabligbo" {{ old('ville') == 'Tabligbo' ? 'selected' : '' }}>Tabligbo</option>
+                            <option value="Notsé" {{ old('ville') == 'Notsé' ? 'selected' : '' }}>Notsé</option>
+                            <option value="Vogan" {{ old('ville') == 'Vogan' ? 'selected' : '' }}>Vogan</option>
+                            <option value="Badou" {{ old('ville') == 'Badou' ? 'selected' : '' }}>Badou</option>
+                            <option value="Kandé" {{ old('ville') == 'Kandé' ? 'selected' : '' }}>Kandé</option>
+                            <option value="Tchamba" {{ old('ville') == 'Tchamba' ? 'selected' : '' }}>Tchamba</option>
+                            <option value="Bafilo" {{ old('ville') == 'Bafilo' ? 'selected' : '' }}>Bafilo</option>
+                        </select>
                         @error('ville')
                             <span class="text-xs text-destructive">{{ $message }}</span>
                         @enderror

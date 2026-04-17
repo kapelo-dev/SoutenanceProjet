@@ -10,6 +10,7 @@ use App\Models\Operateur;
 use App\Models\Profil;
 use App\Models\Transaction;
 use App\Models\TypeOperation;
+use App\Models\AgentKiosqueHistorique;
 use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -317,6 +318,17 @@ class AgentController extends Controller
             $agentData['montant_initial_total'] = $montantTotal;
             
             $agent = Agent::create($agentData);
+            
+            // Créer l'historique d'affectation si un kiosque est assigné
+            if ($kiosqueId) {
+                AgentKiosqueHistorique::create([
+                    'agent_id' => $agent->id,
+                    'kiosque_id' => $kiosqueId,
+                    'date_debut' => now(),
+                    'type_mouvement' => 'affectation',
+                    'created_by' => auth()->id(),
+                ]);
+            }
 
             // Enregistrer les montants initiaux comme des opérations en agence
             $typeApportEspece = TypeOperation::where('code', 'apport_espece')->first();
@@ -426,6 +438,9 @@ class AgentController extends Controller
                             ->where('agent_id', $agent->id)
                             ->groupBy(DB::raw('COALESCE(operateur_id, 0)'), 'type');
                     })->with('operateur');
+                },
+                'historiqueKiosques' => function($q) {
+                    $q->with('kiosque')->orderBy('date_debut', 'desc');
                 }
             ]);
 

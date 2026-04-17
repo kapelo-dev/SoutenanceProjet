@@ -109,9 +109,9 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="flex flex-col gap-0.5 items-center">
-                                        <a class="leading-none font-medium text-sm text-mono hover:text-primary" href="{{ route('transactions.show', $transaction->id) }}">
+                                        <span class="leading-none font-medium text-sm text-mono">
                                             {{ $transaction->reference }}
-                                        </a>
+                                        </span>
                                         <span class="text-xs text-secondary-foreground font-normal">
                                             {{ ucfirst($transaction->type) }}
                                         </span>

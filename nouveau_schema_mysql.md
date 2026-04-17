@@ -10,10 +10,11 @@ Ce document décrit le nouveau schéma complet de la base de données MySQL pour
 - Support complet pour Laravel avec migrations
 - Optimisation MySQL avec index appropriés
 
-**Version** : 2.1  
-**Date de mise à jour** : 27 janvier 2026  
+**Version** : 2.2  
+**Date de mise à jour** : 26 mars 2026  
 **Base de données** : MySQL 8.0+  
 **ORM** : Laravel Eloquent  
+**Nouveautés v2.2** : Ajout de la table system_logs pour le logging complet des actions système  
 **Nouveautés v2.1** : Ajout gestion des kiosques avec géolocalisation GPS
 
 ---
@@ -589,7 +590,94 @@ WHERE a.id = 1
 
 ---
 
-### 10. **audits** - Historique des Modifications
+### 10. **system_logs** - Logs Système
+
+Table pour enregistrer tous les logs système (connexions, actions CRUD, modifications, etc.).
+
+#### Structure SQL
+
+```sql
+CREATE TABLE system_logs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    uid CHAR(36) UNIQUE NOT NULL COMMENT 'UUID v4',
+    user_id BIGINT UNSIGNED NULL COMMENT 'Utilisateur ayant effectué l\'action',
+    action ENUM('create', 'update', 'delete', 'login', 'logout', 'login_failed', 
+                'assign', 'unassign', 'validate', 'cancel', 'export', 'import', 'other') NOT NULL,
+    model_type VARCHAR(255) NULL COMMENT 'Type de modèle concerné ex: App\\Models\\Agent',
+    model_id BIGINT UNSIGNED NULL COMMENT 'ID de l\'entité concernée',
+    description TEXT NOT NULL COMMENT 'Description de l\'action',
+    old_values JSON NULL COMMENT 'Valeurs avant modification',
+    new_values JSON NULL COMMENT 'Valeurs après modification',
+    ip_address VARCHAR(45) NULL COMMENT 'Adresse IP de l\'utilisateur',
+    user_agent TEXT NULL COMMENT 'User agent du navigateur',
+    metadata JSON NULL COMMENT 'Métadonnées supplémentaires',
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    INDEX idx_user (user_id),
+    INDEX idx_action (action),
+    INDEX idx_model (model_type, model_id),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+#### Colonnes
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| `id` | BIGINT UNSIGNED | PRIMARY KEY | Identifiant unique |
+| `uid` | CHAR(36) | UNIQUE, NOT NULL | UUID v4 |
+| `user_id` | BIGINT UNSIGNED | FK → utilisateurs.id, NULL | Utilisateur ayant effectué l'action |
+| `action` | ENUM | NOT NULL | Type d'action effectuée |
+| `model_type` | VARCHAR(255) | NULL | Type de modèle concerné (namespace complet) |
+| `model_id` | BIGINT UNSIGNED | NULL | ID de l'entité concernée |
+| `description` | TEXT | NOT NULL | Description lisible de l'action |
+| `old_values` | JSON | NULL | Valeurs avant modification (format JSON) |
+| `new_values` | JSON | NULL | Valeurs après modification (format JSON) |
+| `ip_address` | VARCHAR(45) | NULL | Adresse IP (IPv4 ou IPv6) |
+| `user_agent` | TEXT | NULL | User agent du navigateur |
+| `metadata` | JSON | NULL | Métadonnées supplémentaires |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Date de création du log |
+| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | Date de modification |
+
+#### Types d'actions
+
+- **create** : Création d'une entité (Agent, Kiosque, Transaction, etc.)
+- **update** : Modification d'une entité
+- **delete** : Suppression d'une entité
+- **login** : Connexion réussie d'un utilisateur
+- **logout** : Déconnexion d'un utilisateur
+- **login_failed** : Tentative de connexion échouée
+- **assign** : Affectation (ex: agent à un kiosque)
+- **unassign** : Retrait d'affectation
+- **validate** : Validation d'une opération
+- **cancel** : Annulation d'une opération
+- **export** : Export de données (Excel, PDF, etc.)
+- **import** : Import de données
+- **other** : Autre type d'action
+
+#### Relations
+
+- **N:0..1** avec `utilisateurs` (plusieurs logs peuvent être créés par un utilisateur)
+
+#### Fonctionnalités
+
+1. **Logging automatique** : Les modèles utilisant le trait `LogsActivity` enregistrent automatiquement les actions CRUD
+2. **Masquage des données sensibles** : Les mots de passe et tokens sont automatiquement masqués avec '********'
+3. **Traçabilité complète** : IP, user agent, et métadonnées pour chaque action
+4. **Filtrage avancé** : Filtres par utilisateur, action, type d'entité, et dates
+5. **Export** : Possibilité d'exporter les logs en Excel ou PDF
+
+#### Notes
+
+- Les champs `old_values` et `new_values` stockent les données au format JSON
+- Les champs sensibles (mot_de_passe, remember_token, api_token) sont masqués automatiquement
+- L'index composite sur `model_type` et `model_id` permet de retrouver rapidement tous les logs d'une entité
+- Essentiel pour la sécurité, l'audit, la conformité et le debugging
+
+---
+
+### 11. **audits** - Historique des Modifications
 
 Table pour l'audit trail (traçabilité des modifications).
 

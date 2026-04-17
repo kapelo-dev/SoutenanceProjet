@@ -4,9 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Kiosque;
 use App\Models\Agent;
+use App\Models\Transaction;
+use App\Models\Operateur;
+use App\Models\AgentKiosqueHistorique;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class KiosqueController extends Controller
 {
@@ -83,6 +87,24 @@ class KiosqueController extends Controller
         $suggestedCode = 'K' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
 
         return view('pages.kiosques.create', compact('suggestedCode'));
+    }
+
+    /**
+     * Obtenir le prochain code kiosque disponible (API)
+     */
+    public function getNextCode()
+    {
+        $lastCode = Kiosque::where('code', 'like', 'K%')
+            ->orderBy('code', 'desc')
+            ->first();
+        
+        $nextNumber = $lastCode ? intval(substr($lastCode->code, 1)) + 1 : 1;
+        $suggestedCode = 'K' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+
+        return response()->json([
+            'success' => true,
+            'code' => $suggestedCode
+        ]);
     }
 
     /**
@@ -350,7 +372,27 @@ class KiosqueController extends Controller
         }
 
         $agent = Agent::find($request->agent_id);
+        
+        // Terminer l'affectation précédente si elle existe
+        $affectationActuelle = $agent->affectationActuelle;
+        if ($affectationActuelle) {
+            $affectationActuelle->update([
+                'date_fin' => now(),
+                'type_mouvement' => 'retrait'
+            ]);
+        }
+        
+        // Mettre à jour le kiosque de l'agent
         $agent->update(['kiosque_id' => $kiosque->id]);
+        
+        // Créer une nouvelle entrée dans l'historique
+        AgentKiosqueHistorique::create([
+            'agent_id' => $agent->id,
+            'kiosque_id' => $kiosque->id,
+            'date_debut' => now(),
+            'type_mouvement' => 'affectation',
+            'created_by' => auth()->id(),
+        ]);
 
         return response()->json([
             'success' => true,
@@ -369,6 +411,15 @@ class KiosqueController extends Controller
                 'success' => false,
                 'message' => 'Cet agent n\'est pas assigné à ce kiosque.'
             ], 400);
+        }
+        
+        // Terminer l'affectation actuelle dans l'historique
+        $affectationActuelle = $agent->affectationActuelle;
+        if ($affectationActuelle) {
+            $affectationActuelle->update([
+                'date_fin' => now(),
+                'type_mouvement' => 'retrait'
+            ]);
         }
 
         $agent->update(['kiosque_id' => null]);

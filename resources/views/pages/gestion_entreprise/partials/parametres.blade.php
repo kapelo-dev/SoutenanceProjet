@@ -187,6 +187,10 @@
                             <option value="soldes">Évolution des soldes</option>
                             <option value="objectifs">Atteinte d'objectifs</option>
                         </select>
+                        <div id="base_calcul_help" class="kt-alert kt-alert-info mt-2" style="display: none;">
+                            <i class="ki-filled ki-information-2"></i>
+                            <span id="base_calcul_help_text"></span>
+                        </div>
                     </div>
 
                     <div class="flex flex-col gap-2">
@@ -257,7 +261,7 @@
 
 <script>
 // Toggle fields based on type
-document.addEventListener('DOMContentLoaded', function() {
+(function initParametresForm() {
     const typeSelect = document.getElementById('parametre_type');
     const montantFixeField = document.getElementById('field_montant_fixe');
     const commissionField = document.getElementById('field_taux_commission');
@@ -278,8 +282,38 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (typeSelect) {
+        // Retirer les anciens listeners pour éviter les doublons
+        typeSelect.removeEventListener('change', toggleFields);
         typeSelect.addEventListener('change', toggleFields);
         toggleFields();
+    }
+
+    // Aide dynamique pour la base de calcul
+    const baseCalculSelect = document.getElementById('parametre_base_calcul');
+    const baseCalculHelp = document.getElementById('base_calcul_help');
+    const baseCalculHelpText = document.getElementById('base_calcul_help_text');
+
+    const baseCalculExplanations = {
+        'transactions': 'Le taux de commission sera appliqué sur le <strong>montant total des transactions</strong> effectuées par l\'agent. Exemple : Si l\'agent fait 1 000 000 FCFA de transactions avec un taux de 2%, il gagne 20 000 FCFA.',
+        'commissions': 'Le taux de commission sera appliqué sur la <strong>somme des commissions déjà perçues</strong> par l\'agent. Exemple : Si l\'agent a perçu 50 000 FCFA de commissions avec un taux de 10%, il gagne 5 000 FCFA supplémentaires.',
+        'soldes': 'Le taux de commission sera appliqué sur l\'<strong>évolution du solde</strong> de l\'agent. Exemple : Si le solde augmente de 200 000 FCFA avec un taux de 5%, il gagne 10 000 FCFA.',
+        'objectifs': 'Un <strong>bonus fixe</strong> sera versé si l\'objectif est atteint. Exemple : Si l\'objectif de 100 transactions est atteint, l\'agent reçoit le montant fixe défini.'
+    };
+
+    function updateBaseCalculHelp() {
+        const value = baseCalculSelect.value;
+        if (value && baseCalculExplanations[value]) {
+            baseCalculHelpText.innerHTML = baseCalculExplanations[value];
+            baseCalculHelp.style.display = 'flex';
+        } else {
+            baseCalculHelp.style.display = 'none';
+        }
+    }
+
+    if (baseCalculSelect) {
+        baseCalculSelect.removeEventListener('change', updateBaseCalculHelp);
+        baseCalculSelect.addEventListener('change', updateBaseCalculHelp);
+        updateBaseCalculHelp();
     }
 
     // Constructeur de formule : ajouter variable + opérateur + valeur dans le textarea
@@ -290,7 +324,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const builderAdd = document.getElementById('formule_builder_add');
 
     if (builderAdd && formuleTextarea) {
-        builderAdd.addEventListener('click', function() {
+        // Créer une fonction nommée pour pouvoir la retirer
+        const handleBuilderAdd = function() {
             const variable = builderVariable && builderVariable.value ? builderVariable.value.trim() : '';
             const operator = builderOperator && builderOperator.value ? builderOperator.value : '';
             const value = builderValue && builderValue.value ? builderValue.value.trim() : '';
@@ -307,9 +342,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 formuleTextarea.selectionStart = formuleTextarea.selectionEnd = before.length + toAppend.length;
                 formuleTextarea.focus();
             }
-        });
+        };
+        
+        // Retirer l'ancien listener pour éviter les doublons
+        builderAdd.removeEventListener('click', handleBuilderAdd);
+        builderAdd.addEventListener('click', handleBuilderAdd);
     }
-});
+})();
 
 function editParametre(parametre) {
     const form = document.getElementById('form_parametre');
@@ -349,34 +388,51 @@ function editParametre(parametre) {
 }
 
 // Validation avant envoi (évite "invalid form control is not focusable" sur les kt-select)
-const formParametre = document.getElementById('form_parametre');
-if (formParametre) {
-    formParametre.addEventListener('submit', function(e) {
-        const nom = document.getElementById('parametre_nom');
-        const typeSelect = document.getElementById('parametre_type');
-        const nomVal = nom && nom.value ? nom.value.trim() : '';
-        const typeVal = typeSelect && typeSelect.value ? typeSelect.value : '';
-        if (!nomVal) {
-            e.preventDefault();
-            nom.focus();
-            alert('Veuillez saisir le nom du paramètre.');
-            return;
-        }
-        if (!typeVal) {
-            e.preventDefault();
-            if (typeSelect) typeSelect.focus();
-            alert('Veuillez sélectionner un type (Fixe, Commission ou Mixte).');
-            return;
-        }
-    });
-}
+(function initFormValidation() {
+    const formParametre = document.getElementById('form_parametre');
+    if (formParametre) {
+        const handleSubmit = function(e) {
+            const nom = document.getElementById('parametre_nom');
+            const typeSelect = document.getElementById('parametre_type');
+            const nomVal = nom && nom.value ? nom.value.trim() : '';
+            const typeVal = typeSelect && typeSelect.value ? typeSelect.value : '';
+            if (!nomVal) {
+                e.preventDefault();
+                nom.focus();
+                alert('Veuillez saisir le nom du paramètre.');
+                return;
+            }
+            if (!typeVal) {
+                e.preventDefault();
+                if (typeSelect) typeSelect.focus();
+                alert('Veuillez sélectionner un type (Fixe, Commission ou Mixte).');
+                return;
+            }
+        };
+        
+        formParametre.removeEventListener('submit', handleSubmit);
+        formParametre.addEventListener('submit', handleSubmit);
+    }
+})();
 
 // Reset form when modal closes
-document.getElementById('modal_nouveau_parametre').addEventListener('hidden.kt.modal', function() {
-    const form = document.getElementById('form_parametre');
-    form.reset();
-    form.action = '{{ route("gestion-entreprise.parametres.store") }}';
-    document.getElementById('parametre_method').value = 'POST';
-    document.getElementById('modal_parametre_title').textContent = 'Nouveau paramètre de salaire';
-});
+(function initModalReset() {
+    const modal = document.getElementById('modal_nouveau_parametre');
+    if (modal) {
+        const handleHidden = function() {
+            const form = document.getElementById('form_parametre');
+            if (form) {
+                form.reset();
+                form.action = '{{ route("gestion-entreprise.parametres.store") }}';
+                const methodInput = document.getElementById('parametre_method');
+                if (methodInput) methodInput.value = 'POST';
+                const titleEl = document.getElementById('modal_parametre_title');
+                if (titleEl) titleEl.textContent = 'Nouveau paramètre de salaire';
+            }
+        };
+        
+        modal.removeEventListener('hidden.kt.modal', handleHidden);
+        modal.addEventListener('hidden.kt.modal', handleHidden);
+    }
+})();
 </script>
