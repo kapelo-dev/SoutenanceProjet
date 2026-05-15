@@ -1,0 +1,78 @@
+PDV Connect SaaS : La solution tout-en-un pour gérer vos points de vente et réseaux d’agents
+
+---
+
+PDV Connect SaaS est une plateforme cloud conçue pour centraliser, automatiser et optimiser la gestion des transactions Mobile Money, des agents, des kiosques, de la trésorerie et de la paie pour les entreprises opérant dans les secteurs de la distribution, des services financiers mobiles ou des réseaux d’agents.
+
+Avec une architecture multi-entreprises, chaque client bénéficie d’un espace dédié, sécurisé et personnalisable, accessible via un abonnement flexible adapté à ses besoins.
+
+---
+
+Pourquoi choisir PDV Connect SaaS ?
+
+1. Centralisation et automatisation
+- Gestion unifiée des transactions (Mobile Money, agences) avec saisie manuelle ou automatique (via SMS).
+- Suivi en temps réel des performances des agents et kiosques grâce à des tableaux de bord interactifs et des rapports avancés.
+- Automatisation de la paie et de la trésorerie avec des formules personnalisables (fixe, commission, mixte).
+
+2. Sécurité et contrôle d’accès
+- Authentification sécurisée (email/mot de passe, changement obligatoire à la première connexion).
+- Gestion fine des permissions (RBAC) : chaque utilisateur accède uniquement aux fonctionnalités qui lui sont attribuées.
+- Protection des données : conformité RGPD et chiffrement des échanges (HTTPS, tokens API).
+
+3. Mobilité et intégration
+- Application Android dédiée : service en arrière-plan pour capturer automatiquement les SMS de transaction et les envoyer vers la plateforme.
+- API ouverte : intégration facile avec vos outils existants (ERP, CRM, etc.).
+- Accès multi-device : utilisez la plateforme depuis n’importe quel navigateur (web) ou appareil mobile.
+
+4. Scalabilité et personnalisation
+- Multi-entreprises : chaque client dispose de son propre espace isolé avec ses agents, kiosques et données.
+- Abonnements flexibles : choisissez le forfait qui correspond à votre taille et à vos besoins.
+- Personnalisation : logos, paramètres de salaire, types de transactions, etc.
+
+5. Support et évolutivité
+- Documentation complète (FAQ, guides, API).
+- Support technique inclus dans les abonnements premium.
+- Mises à jour régulières : nouvelles fonctionnalités et améliorations continues.
+
+---
+
+Fonctionnalités clés (SaaS)
+
+Module | Fonctionnalités
+--- | ---
+Tableau de bord | KPIs en temps réel, graphiques, carte de performance par zone/kiosque.
+Transactions | Saisie, modification, annulation, export PDF, statistiques par opérateur.
+Agents | Gestion des profils, soldes, historique, affectation aux kiosques.
+Kiosques | Localisation, carte interactive, assignation d’agents.
+Trésorerie & Paie | Mouvements de trésorerie, génération automatique des salaires, suivi des paiements.
+Rapports | Statistiques globales, top agents, filtres avancés, export des données.
+Intégration SMS | Capture automatique des transactions via SMS (application Android).
+Sécurité | RBAC, authentification forte, audit des actions sensibles.
+
+---
+
+Modèle économique (Abonnements)
+
+Forfait | Prix/mois | Nombre d’agents | Volume de transactions | Fonctionnalités incluses
+--- | --- | --- | --- | ---
+Starter | 50 € | Jusqu’à 20 | 1 000/mois | Tableau de bord, gestion agents/kiosques, rapports basiques.
+Pro | 150 € | Jusqu’à 100 | 10 000/mois | + Trésorerie, paie, intégration SMS, support prioritaire.
+Enterprise | Sur devis | Illimité | Illimité | + API personnalisée, SSO, formation dédiée, SLA 99,9%.
+
+---
+Public cible
+- Opérateurs Mobile Money et fintechs.
+- Réseaux de distribution (kiosques, points de vente).
+- Entreprises gérant des agents terrain (ventes, collecte, services).
+- Coopératives et associations avec des flux financiers décentralisés.
+
+---
+Argumentaire commercial
+Avec PDV Connect SaaS, gagnez du temps, réduisez les erreurs et boostez la productivité de votre réseau. Plus besoin de gérer plusieurs outils : tout est centralisé, sécurisé et accessible en un clic. Essayez gratuitement pendant 14 jours !
+
+---
+Prochaines étapes pour le lancement SaaS
+1. Adapter l’architecture : multi-tenancy, gestion des abonnements, personnalisation.
+2. Développer les fonctionnalités SaaS : portail client, onboarding, API publique.
+3. Marketing et vente : site web vitrine, démonstrations, partenariats.
