@@ -4,8 +4,7 @@
     <div class="kt-sidebar-header relative hidden shrink-0 items-center justify-between px-3 lg:flex lg:px-6"
         id="sidebar_header">
         <a class="dark:hidden" href="{{ url('/') }}" title="PDV Connect">
-            <img class="default-logo min-h-[30px] h-9 max-w-none" src="{{ asset('assets/media/app/default-logo-v2.svg') }}" alt="PDV Connect" />
-            <img class="small-logo min-h-[30px] h-9 max-w-none" src="{{ asset('assets/media/app/mini-logo-v2.svg') }}" alt="PDV" />
+           
         </a>
         <a class="hidden dark:block" href="{{ url('/') }}" title="PDV Connect">
             <img class="default-logo min-h-[30px] h-9 max-w-none" src="{{ asset('assets/media/app/default-logo-v2-dark.svg') }}" alt="PDV Connect" />
@@ -211,11 +210,7 @@
                         <span class="kt-menu-title text-sm font-medium text-foreground">
                            Rapports
                         </span>
-                        <span class="kt-menu-badge me-[-10px]">
-                            <span class="kt-badge kt-badge-sm text-accent-foreground/60">
-                                0
-                            </span>
-                        </span>
+                        
                     </div>
                 </a>
                 <div class="kt-menu-item {{ request()->is('operations-agence') ? 'kt-menu-item-active' : '' }}">

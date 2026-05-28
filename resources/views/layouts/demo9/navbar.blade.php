@@ -738,7 +738,7 @@
 										</a>
 									</div>
 									<div class="kt-menu-item">
-										<a class="kt-menu-link" href="#" tabindex="0">
+										<a class="kMode Sombre t-menu-link" href="#" tabindex="0">
 											<span class="kt-menu-title grow-0">
 												Team Members
 											</span>

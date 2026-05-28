@@ -63,26 +63,22 @@
                             <div class="flex flex-col gap-2">
                                 <div class="flex items-center justify-between">
                                     <label class="kt-label">Agent</label>
-                                    <button type="button" class="text-xs text-primary hover:underline" onclick="toggleAllCheckboxes('agent_id', this)">
-                                        <span class="select-all-text">Tout sélectionner</span>
+                                    <button type="button" class="text-xs text-primary hover:underline" onclick="toggleAllAgentsSearch(this)">
+                                        <span class="select-all-text" id="agent_select_all_text">Tout sélectionner</span>
                                     </button>
                                 </div>
-                                <div class="kt-card max-h-48 overflow-y-auto border border-border p-3">
-                                    <div class="flex flex-col gap-1">
-                                        <label class="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-md px-3 py-2 transition-colors border-b border-border pb-2 mb-1">
-                                            <input type="checkbox" name="agent_id[]" value="tous" class="checkbox-filter" 
+                                <input type="hidden" name="agent_id_all" id="agent_id_all_value" value="" />
+                                <div id="rapport_agent_selected_badges" class="flex flex-wrap gap-1.5 min-h-0"></div>
+                                <div class="relative">
+                                    <input class="kt-input" type="text" id="rapport_agent_search" placeholder="Rechercher agent (nom, prénom, code…)" autocomplete="off" />
+                                    <div id="rapport_agent_dropdown" class="hidden absolute left-0 right-0 top-full z-30 mt-1 rounded-lg border border-border bg-background shadow-lg max-h-48 overflow-auto py-1">
+                                        <div class="px-3 py-2 text-xs text-muted-foreground border-b border-border flex items-center gap-2">
+                                            <input type="checkbox" id="rapport_agent_tous_checkbox" class="checkbox-filter"
                                                 {{ in_array('tous', (array)request('agent_id', [])) ? 'checked' : '' }}
-                                                onchange="handleTousCheckbox(this, 'agent_id')">
-                                            <span class="text-sm font-semibold text-foreground">Tous les agents</span>
-                                        </label>
-                                        @foreach($agents as $agent)
-                                        <label class="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-md px-3 py-1.5 transition-colors">
-                                            <input type="checkbox" name="agent_id[]" value="{{ $agent->id }}" class="checkbox-filter agent-checkbox"
-                                                {{ in_array($agent->id, (array)request('agent_id', [])) ? 'checked' : '' }}
-                                                onchange="handleCheckboxChange(this, 'agent_id')">
-                                            <span class="text-sm text-foreground">{{ $agent->nomComplet }} <span class="text-secondary-foreground">({{ $agent->code_agent }})</span></span>
-                                        </label>
-                                        @endforeach
+                                                onchange="handleAgentTousCheckbox(this)">
+                                            <span class="font-semibold">Tous les agents</span>
+                                        </div>
+                                        <div id="rapport_agent_results"></div>
                                     </div>
                                 </div>
                             </div>
@@ -157,24 +153,73 @@
                                 </div>
                             </div>
                             <div class="flex flex-col gap-2">
-                                <label class="kt-label">Statut</label>
-                                <select name="statut[]" multiple class="kt-select" data-kt-select="true" data-kt-select-placeholder="Sélectionner des statuts">
-                                    <option value="valide" {{ in_array('valide', (array)request('statut', [])) ? 'selected' : '' }}>Validé</option>
-                                    <option value="en_attente" {{ in_array('en_attente', (array)request('statut', [])) ? 'selected' : '' }}>En attente</option>
-                                    <option value="annule" {{ in_array('annule', (array)request('statut', [])) ? 'selected' : '' }}>Annulé</option>
-                                    <option value="echoue" {{ in_array('echoue', (array)request('statut', [])) ? 'selected' : '' }}>Échoué</option>
-                                </select>
+                                <div class="flex items-center justify-between">
+                                    <label class="kt-label">Statut</label>
+                                    <button type="button" class="text-xs text-primary hover:underline" onclick="toggleAllCheckboxes('statut', this)">
+                                        <span class="select-all-text">Tout sélectionner</span>
+                                    </button>
+                                </div>
+                                <div class="kt-card max-h-48 overflow-y-auto border border-border p-3">
+                                    <div class="flex flex-col gap-1">
+                                        <label class="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-md px-3 py-2 transition-colors border-b border-border pb-2 mb-1">
+                                            <input type="checkbox" name="statut[]" value="tous" class="checkbox-filter"
+                                                {{ in_array('tous', (array)request('statut', [])) ? 'checked' : '' }}
+                                                onchange="handleTousCheckbox(this, 'statut')">
+                                            <span class="text-sm font-semibold text-foreground">Tous les statuts</span>
+                                        </label>
+                                        <label class="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-md px-3 py-1.5 transition-colors">
+                                            <input type="checkbox" name="statut[]" value="valide" class="checkbox-filter statut-checkbox"
+                                                {{ in_array('valide', (array)request('statut', [])) ? 'checked' : '' }}
+                                                onchange="handleCheckboxChange(this, 'statut')">
+                                            <span class="text-sm text-foreground">Validé</span>
+                                        </label>
+                                        <label class="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-md px-3 py-1.5 transition-colors">
+                                            <input type="checkbox" name="statut[]" value="en_attente" class="checkbox-filter statut-checkbox"
+                                                {{ in_array('en_attente', (array)request('statut', [])) ? 'checked' : '' }}
+                                                onchange="handleCheckboxChange(this, 'statut')">
+                                            <span class="text-sm text-foreground">En attente</span>
+                                        </label>
+                                        <label class="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-md px-3 py-1.5 transition-colors">
+                                            <input type="checkbox" name="statut[]" value="annule" class="checkbox-filter statut-checkbox"
+                                                {{ in_array('annule', (array)request('statut', [])) ? 'checked' : '' }}
+                                                onchange="handleCheckboxChange(this, 'statut')">
+                                            <span class="text-sm text-foreground">Annulé</span>
+                                        </label>
+                                        <label class="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-md px-3 py-1.5 transition-colors">
+                                            <input type="checkbox" name="statut[]" value="echoue" class="checkbox-filter statut-checkbox"
+                                                {{ in_array('echoue', (array)request('statut', [])) ? 'checked' : '' }}
+                                                onchange="handleCheckboxChange(this, 'statut')">
+                                            <span class="text-sm text-foreground">Échoué</span>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="flex flex-col gap-2">
-                            <label class="kt-label">Kiosque</label>
-                            <select name="kiosque_id[]" multiple class="kt-select" data-kt-select="true" data-kt-select-placeholder="Sélectionner des kiosques">
-                                @foreach($kiosques as $kiosque)
-                                <option value="{{ $kiosque->id }}" {{ in_array($kiosque->id, (array)request('kiosque_id', [])) ? 'selected' : '' }}>
-                                    {{ $kiosque->nom }} ({{ $kiosque->code }})
-                                </option>
-                                @endforeach
-                            </select>
+                            <div class="flex items-center justify-between">
+                                <label class="kt-label">Kiosque</label>
+                                <button type="button" class="text-xs text-primary hover:underline" onclick="toggleAllCheckboxes('kiosque_id', this)">
+                                    <span class="select-all-text">Tout sélectionner</span>
+                                </button>
+                            </div>
+                            <div class="kt-card max-h-48 overflow-y-auto border border-border p-3">
+                                <div class="flex flex-col gap-1">
+                                    <label class="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-md px-3 py-2 transition-colors border-b border-border pb-2 mb-1">
+                                        <input type="checkbox" name="kiosque_id[]" value="tous" class="checkbox-filter"
+                                            {{ in_array('tous', (array)request('kiosque_id', [])) ? 'checked' : '' }}
+                                            onchange="handleTousCheckbox(this, 'kiosque_id')">
+                                        <span class="text-sm font-semibold text-foreground">Tous les kiosques</span>
+                                    </label>
+                                    @foreach($kiosques as $kiosque)
+                                    <label class="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-md px-3 py-1.5 transition-colors">
+                                        <input type="checkbox" name="kiosque_id[]" value="{{ $kiosque->id }}" class="checkbox-filter kiosque-checkbox"
+                                            {{ in_array($kiosque->id, (array)request('kiosque_id', [])) ? 'checked' : '' }}
+                                            onchange="handleCheckboxChange(this, 'kiosque_id')">
+                                        <span class="text-sm text-foreground">{{ $kiosque->nom }} <span class="text-secondary-foreground">({{ $kiosque->code }})</span></span>
+                                    </label>
+                                    @endforeach
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -495,6 +540,191 @@ function toggleAllCheckboxes(fieldName, button) {
     }
 }
 
+// ===== Recherche multi-select Agent =====
+var rapportAgentsData = @json($agentsJson ?? []);
+var rapportSelectedAgents = {};
+// Initialiser les agents sélectionnés depuis la requête
+(function() {
+    var preselected = @json((array)request('agent_id', []));
+    preselected.forEach(function(id) {
+        if (id === 'tous' || id === '') return;
+        var found = rapportAgentsData.find(function(a) { return String(a.id) === String(id); });
+        if (found) {
+            rapportSelectedAgents[found.id] = found;
+        }
+    });
+})();
+
+function renderAgentBadges() {
+    var container = document.getElementById('rapport_agent_selected_badges');
+    if (!container) return;
+    var ids = Object.keys(rapportSelectedAgents);
+    if (ids.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    container.innerHTML = ids.map(function(id) {
+        var a = rapportSelectedAgents[id];
+        var label = (a.libelle || 'Agent #' + a.id) + (a.code_agent ? ' (' + a.code_agent + ')' : '');
+        return '<span class="inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary text-xs font-medium px-2 py-1">' +
+            '<span>' + label.replace(/</g, '&lt;') + '</span>' +
+            '<button type="button" class="ml-0.5 hover:text-destructive" onclick="removeAgentFromSelection(' + id + ')">&times;</button>' +
+            '</span>';
+    }).join('');
+}
+
+function removeAgentFromSelection(agentId) {
+    delete rapportSelectedAgents[agentId];
+    renderAgentBadges();
+    updateAgentSelectAllText();
+    // Décocher "Tous" si on retire un agent
+    var tousCb = document.getElementById('rapport_agent_tous_checkbox');
+    if (tousCb) tousCb.checked = false;
+}
+
+function handleAgentTousCheckbox(checkbox) {
+    if (checkbox.checked) {
+        // Sélectionner tous les agents
+        rapportAgentsData.forEach(function(a) {
+            rapportSelectedAgents[a.id] = a;
+        });
+    } else {
+        // Désélectionner tous les agents
+        rapportSelectedAgents = {};
+    }
+    renderAgentBadges();
+    updateAgentSelectAllText();
+}
+
+function toggleAllAgentsSearch(button) {
+    var ids = Object.keys(rapportSelectedAgents);
+    var tousCb = document.getElementById('rapport_agent_tous_checkbox');
+    
+    if (ids.length === rapportAgentsData.length) {
+        // Tout désélectionner
+        rapportSelectedAgents = {};
+        if (tousCb) tousCb.checked = false;
+    } else {
+        // Tout sélectionner
+        rapportAgentsData.forEach(function(a) {
+            rapportSelectedAgents[a.id] = a;
+        });
+        if (tousCb) tousCb.checked = true;
+    }
+    renderAgentBadges();
+    updateAgentSelectAllText();
+}
+
+function updateAgentSelectAllText() {
+    var textEl = document.getElementById('agent_select_all_text');
+    var ids = Object.keys(rapportSelectedAgents);
+    if (textEl) {
+        textEl.textContent = (ids.length === rapportAgentsData.length && ids.length > 0) ? 'Tout désélectionner' : 'Tout sélectionner';
+    }
+}
+
+function initAgentSearch() {
+    var searchEl = document.getElementById('rapport_agent_search');
+    var dropdownEl = document.getElementById('rapport_agent_dropdown');
+    var resultsEl = document.getElementById('rapport_agent_results');
+    
+    if (!searchEl || !dropdownEl || !resultsEl) return;
+    
+    // Afficher les badges initiaux
+    renderAgentBadges();
+    updateAgentSelectAllText();
+    
+    searchEl.addEventListener('focus', function() {
+        showAgentDropdown('');
+    });
+    
+    searchEl.addEventListener('input', function() {
+        var q = (this.value || '').toLowerCase().trim();
+        showAgentDropdown(q);
+    });
+    
+    function showAgentDropdown(q) {
+        var filtered = rapportAgentsData;
+        if (q.length >= 1) {
+            filtered = rapportAgentsData.filter(function(a) {
+                return (a.libelle && a.libelle.toLowerCase().indexOf(q) !== -1) ||
+                    (a.nom && a.nom.toLowerCase().indexOf(q) !== -1) ||
+                    (a.prenom && a.prenom.toLowerCase().indexOf(q) !== -1) ||
+                    (a.code_agent && a.code_agent.toLowerCase().indexOf(q) !== -1);
+            });
+        }
+        
+        if (filtered.length === 0 && q.length >= 1) {
+            resultsEl.innerHTML = '<div class="px-3 py-2 text-xs text-muted-foreground">Aucun agent trouvé</div>';
+        } else {
+            resultsEl.innerHTML = filtered.slice(0, 20).map(function(a) {
+                var isSelected = rapportSelectedAgents[a.id];
+                var label = (a.libelle || 'Agent #' + a.id) + (a.code_agent ? ' <span class="text-secondary-foreground">(' + a.code_agent + ')</span>' : '');
+                return '<label class="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-md px-3 py-1.5 transition-colors">' +
+                    '<input type="checkbox" class="checkbox-filter rapport-agent-cb" data-agent-id="' + a.id + '" ' + (isSelected ? 'checked' : '') + ' onchange="toggleAgentFromDropdown(this, ' + a.id + ')">' +
+                    '<span class="text-sm text-foreground">' + label + '</span>' +
+                    '</label>';
+            }).join('');
+        }
+        dropdownEl.classList.remove('hidden');
+    }
+    
+    // Fermer en cliquant dehors
+    document.addEventListener('click', function(e) {
+        if (!searchEl.contains(e.target) && !dropdownEl.contains(e.target)) {
+            dropdownEl.classList.add('hidden');
+        }
+    });
+}
+
+function toggleAgentFromDropdown(checkbox, agentId) {
+    if (checkbox.checked) {
+        var found = rapportAgentsData.find(function(a) { return a.id === agentId; });
+        if (found) rapportSelectedAgents[agentId] = found;
+    } else {
+        delete rapportSelectedAgents[agentId];
+    }
+    renderAgentBadges();
+    updateAgentSelectAllText();
+    // Mettre à jour "Tous" checkbox
+    var tousCb = document.getElementById('rapport_agent_tous_checkbox');
+    if (tousCb) {
+        tousCb.checked = Object.keys(rapportSelectedAgents).length === rapportAgentsData.length;
+    }
+}
+
+// Injecter les agent_id sélectionnés dans le formulaire avant soumission
+function setupAgentFormSubmit() {
+    var form = document.getElementById('form_filtres');
+    if (!form) return;
+    
+    var origSubmit = form.onsubmit;
+    form.addEventListener('submit', function(e) {
+        // Supprimer les anciens hidden inputs agent_id
+        form.querySelectorAll('input[name="agent_id[]"]').forEach(function(el) { el.remove(); });
+        
+        var ids = Object.keys(rapportSelectedAgents);
+        var tousCb = document.getElementById('rapport_agent_tous_checkbox');
+        
+        if (tousCb && tousCb.checked) {
+            // Ajouter "tous"
+            var inp = document.createElement('input');
+            inp.type = 'hidden';
+            inp.name = 'agent_id[]';
+            inp.value = 'tous';
+            form.appendChild(inp);
+        } else if (ids.length > 0) {
+            ids.forEach(function(id) {
+                var inp = document.createElement('input');
+                inp.type = 'hidden';
+                inp.name = 'agent_id[]';
+                inp.value = id;
+                form.appendChild(inp);
+            });
+        }
+    });
+}
+
 // Mettre à jour le texte du bouton selon l'état initial
 function updateToggleButtonsText() {
     const toggleButtons = document.querySelectorAll('[onclick*="toggleAllCheckboxes"]');
@@ -528,6 +758,10 @@ window.initRapportsPage = function() {
     
     // Mettre à jour les textes des boutons toggle
     updateToggleButtonsText();
+    
+    // Initialiser la recherche d'agents
+    initAgentSearch();
+    setupAgentFormSubmit();
     
     // Configurer la fermeture du modal après soumission du formulaire
     setupFiltresFormClose();

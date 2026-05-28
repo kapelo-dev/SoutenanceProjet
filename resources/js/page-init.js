@@ -48,7 +48,7 @@ window.loadUserProfile = function(userId) {
     if (email) email.textContent = '';
     if (profils) profils.textContent = '';
     if (profilsContainer) profilsContainer.style.display = 'none';
-    if (about) about.innerHTML = '<tr><td colspan="2" class="text-center py-4"><i class="ki-filled ki-loading animate-spin text-primary text-2xl"></i></td></tr>';
+    if (about) about.innerHTML = '<div class="col-span-2 text-center py-8"><i class="ki-filled ki-loading animate-spin text-primary text-2xl"></i></div>';
     
     // Charger les données
     fetch(`/api/utilisateurs/${userId}`, {
@@ -80,7 +80,7 @@ window.loadUserProfile = function(userId) {
                 const initial = (user.prenom ? user.prenom.charAt(0) : user.nom.charAt(0)).toUpperCase();
                 avatar.style.display = 'none';
                 const initialDiv = document.createElement('div');
-                initialDiv.className = 'flex items-center justify-center relative text-2xl text-green-500 w-[100px] h-[100px] ring-1 ring-green-200 dark:ring-green-950 bg-green-50 dark:bg-green-950/30 rounded-full avatar-initial';
+                initialDiv.className = 'flex items-center justify-center relative text-2xl text-green-500 w-[80px] h-[80px] ring-1 ring-green-200 dark:ring-green-950 bg-green-50 dark:bg-green-950/30 rounded-full border-4 border-background shadow-lg avatar-initial';
                 initialDiv.textContent = initial;
                 avatarContainer.appendChild(initialDiv);
             }
@@ -101,95 +101,72 @@ window.loadUserProfile = function(userId) {
             if (profilsContainer) profilsContainer.style.display = 'none';
         }
         
-        // Section Informations avec badges et icônes
+        // Statut badge in header
+        const statutBadge = document.getElementById('modal_profile_statut_badge');
+        if (statutBadge && user.statut) {
+            const statutConfig = {
+                'actif': { label: 'Actif', class: 'bg-green-500/10 text-green-600 dark:text-green-400', icon: 'ki-check-circle' },
+                'inactif': { label: 'Inactif', class: 'bg-gray-500/10 text-gray-600 dark:text-gray-400', icon: 'ki-minus-circle' },
+                'suspendu': { label: 'Suspendu', class: 'bg-red-500/10 text-red-600 dark:text-red-400', icon: 'ki-cross-circle' }
+            };
+            const cfg = statutConfig[user.statut] || { label: user.statut, class: 'bg-gray-500/10 text-gray-600', icon: 'ki-information-circle' };
+            statutBadge.innerHTML = `<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${cfg.class}"><i class="ki-filled ${cfg.icon} text-xs"></i>${cfg.label}</span>`;
+        }
+
+        // Section Informations - grid cards
         if (about) {
             let html = '';
             
-            if (user.telephone) {
-                html += `<tr>
-                    <td class="text-sm font-medium text-secondary-foreground pb-4 pe-3 align-top">
-                        <div class="flex items-center gap-2">
-                            <i class="ki-filled ki-phone text-primary text-base"></i>
-                            <span>Téléphone:</span>
-                        </div>
-                    </td>
-                    <td class="text-sm text-mono pb-4 font-semibold text-foreground">${user.telephone}</td>
-                </tr>`;
-            }
-            
+            // Statut card
             if (user.statut) {
                 const statutConfig = {
-                    'actif': { label: 'Actif', class: 'kt-badge-success', icon: 'ki-check-circle' },
-                    'inactif': { label: 'Inactif', class: 'kt-badge-secondary', icon: 'ki-minus-circle' },
-                    'suspendu': { label: 'Suspendu', class: 'kt-badge-destructive', icon: 'ki-cross-circle' }
+                    'actif': { label: 'Actif', color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950/30', icon: 'ki-check-circle' },
+                    'inactif': { label: 'Inactif', color: 'text-gray-500', bg: 'bg-gray-50 dark:bg-gray-950/30', icon: 'ki-minus-circle' },
+                    'suspendu': { label: 'Suspendu', color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-950/30', icon: 'ki-cross-circle' }
                 };
-                const config = statutConfig[user.statut] || { label: user.statut, class: 'kt-badge-secondary', icon: 'ki-information-circle' };
-                html += `<tr>
-                    <td class="text-sm font-medium text-secondary-foreground pb-4 pe-3 align-top">
-                        <div class="flex items-center gap-2">
-                            <i class="ki-filled ki-graph-up text-primary text-base"></i>
-                            <span>Statut:</span>
-                        </div>
-                    </td>
-                    <td class="text-sm pb-4">
-                        <span class="kt-badge kt-badge-sm ${config.class} kt-badge-outline">
-                            <i class="ki-filled ${config.icon} me-1"></i>
-                            ${config.label}
-                        </span>
-                    </td>
-                </tr>`;
+                const cfg = statutConfig[user.statut] || { label: user.statut, color: 'text-gray-500', bg: 'bg-gray-50', icon: 'ki-information-circle' };
+                html += `<div class="flex items-center gap-3 rounded-lg border border-border p-3 ${cfg.bg}">
+                    <div class="flex items-center justify-center size-10 rounded-full ${cfg.bg}"><i class="ki-filled ${cfg.icon} ${cfg.color} text-lg"></i></div>
+                    <div><div class="text-xs text-muted-foreground">Statut</div><div class="text-sm font-semibold ${cfg.color}">${cfg.label}</div></div>
+                </div>`;
             }
-            
+
+            // Téléphone card
+            if (user.telephone) {
+                html += `<div class="flex items-center gap-3 rounded-lg border border-border p-3">
+                    <div class="flex items-center justify-center size-10 rounded-full bg-primary/5"><i class="ki-filled ki-phone text-primary text-lg"></i></div>
+                    <div><div class="text-xs text-muted-foreground">Téléphone</div><div class="text-sm font-semibold text-foreground">${user.telephone}</div></div>
+                </div>`;
+            }
+
+            // Dernière connexion card
             if (user.dernier_connexion) {
-                html += `<tr>
-                    <td class="text-sm font-medium text-secondary-foreground pb-4 pe-3 align-top">
-                        <div class="flex items-center gap-2">
-                            <i class="ki-filled ki-time text-primary text-base"></i>
-                            <span>Dernière connexion:</span>
-                        </div>
-                    </td>
-                    <td class="text-sm text-mono pb-4">
-                        <span class="text-warning font-medium">${user.dernier_connexion}</span>
-                    </td>
-                </tr>`;
+                html += `<div class="flex items-center gap-3 rounded-lg border border-border p-3">
+                    <div class="flex items-center justify-center size-10 rounded-full bg-warning/5"><i class="ki-filled ki-time text-warning text-lg"></i></div>
+                    <div><div class="text-xs text-muted-foreground">Dernière connexion</div><div class="text-sm font-semibold text-foreground">${user.dernier_connexion}</div></div>
+                </div>`;
             }
-            
+
+            // Membre depuis card
             if (user.created_at) {
-                html += `<tr>
-                    <td class="text-sm font-medium text-secondary-foreground pb-4 pe-3 align-top">
-                        <div class="flex items-center gap-2">
-                            <i class="ki-filled ki-calendar text-primary text-base"></i>
-                            <span>Membre depuis:</span>
-                        </div>
-                    </td>
-                    <td class="text-sm text-mono pb-4">
-                        <span class="text-success font-medium">${user.created_at}</span>
-                    </td>
-                </tr>`;
+                html += `<div class="flex items-center gap-3 rounded-lg border border-border p-3">
+                    <div class="flex items-center justify-center size-10 rounded-full bg-success/5"><i class="ki-filled ki-calendar text-success text-lg"></i></div>
+                    <div><div class="text-xs text-muted-foreground">Membre depuis</div><div class="text-sm font-semibold text-foreground">${user.created_at}</div></div>
+                </div>`;
             }
-            
-            // Profils en lecture seule (badges)
+
+            // Profils card (full width)
             if (user.profils && user.profils.length > 0) {
                 const badges = user.profils.map(p => 
-                    `<span class="kt-badge kt-badge-sm kt-badge-primary kt-badge-outline">
-                        <i class="ki-filled ki-abstract-41 me-1"></i>
-                        ${p.libelle}
-                    </span>`
+                    `<span class="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-1 text-xs font-medium"><i class="ki-filled ki-abstract-41"></i>${p.libelle}</span>`
                 ).join(' ');
-                html += `<tr>
-                    <td class="text-sm font-medium text-secondary-foreground pb-4 pe-3 align-top">
-                        <div class="flex items-center gap-2">
-                            <i class="ki-filled ki-profile-user text-primary text-base"></i>
-                            <span>Profils:</span>
-                        </div>
-                    </td>
-                    <td class="text-sm pb-4">
-                        <div class="flex flex-wrap gap-2">${badges}</div>
-                    </td>
-                </tr>`;
+                html += `<div class="col-span-2 flex items-center gap-3 rounded-lg border border-border p-3">
+                    <div class="flex items-center justify-center size-10 shrink-0 rounded-full bg-primary/5"><i class="ki-filled ki-profile-user text-primary text-lg"></i></div>
+                    <div><div class="text-xs text-muted-foreground mb-1">Profils</div><div class="flex flex-wrap gap-1.5">${badges}</div></div>
+                </div>`;
             }
             
-            about.innerHTML = html || '<tr><td colspan="2" class="text-sm text-secondary-foreground text-center py-8"><i class="ki-filled ki-information-circle text-3xl text-muted-foreground mb-2"></i><div>Aucune information disponible</div></td></tr>';
+            about.innerHTML = html || '<div class="col-span-2 text-center py-8"><i class="ki-filled ki-information-circle text-3xl text-muted-foreground mb-2"></i><div class="text-sm text-muted-foreground">Aucune information disponible</div></div>';
         }
         
         // Ouvrir le modal
@@ -225,7 +202,7 @@ window.loadUserProfile = function(userId) {
     .catch(error => {
         console.error('Erreur chargement profil:', error);
         alert('Une erreur est survenue lors du chargement des données');
-        if (about) about.innerHTML = '<tr><td colspan="2" class="text-center py-4 text-destructive"><i class="ki-filled ki-information-circle text-2xl mb-2"></i><div>Erreur de chargement</div></td></tr>';
+        if (about) about.innerHTML = '<div class="col-span-2 text-center py-8 text-destructive"><i class="ki-filled ki-information-circle text-2xl mb-2"></i><div>Erreur de chargement</div></div>';
     });
 };
 

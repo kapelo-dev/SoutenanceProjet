@@ -63,7 +63,7 @@
             </li>
         </ul>
         <div class="mb-2.5 flex flex-col gap-3.5 px-2.5 pt-1.5">
-            <div class="flex items-center justify-between gap-2">
+            <div class="hidden flex items-center justify-between gap-2">
                 <span class="flex items-center gap-2">
                     <i class="ki-filled ki-moon text-base text-muted-foreground">
                     </i>

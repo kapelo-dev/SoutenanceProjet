@@ -60,7 +60,9 @@ class RapportController extends Controller
         
         if ($request->filled('statut')) {
             $statuts = is_array($request->statut) ? $request->statut : [$request->statut];
-            $statuts = array_filter($statuts); // Enlever les valeurs vides
+            $statuts = array_filter($statuts, function($s) {
+                return $s !== 'tous' && $s !== '';
+            }); // Enlever les valeurs vides et "tous"
             if (!empty($statuts)) {
                 $query->whereIn('statut', $statuts);
             }
@@ -68,7 +70,9 @@ class RapportController extends Controller
         
         if ($request->filled('kiosque_id')) {
             $kiosqueIds = is_array($request->kiosque_id) ? $request->kiosque_id : [$request->kiosque_id];
-            $kiosqueIds = array_filter($kiosqueIds); // Enlever les valeurs vides
+            $kiosqueIds = array_filter($kiosqueIds, function($id) {
+                return $id !== 'tous' && $id !== '';
+            }); // Enlever les valeurs vides et "tous"
             if (!empty($kiosqueIds)) {
                 $query->whereHas('agent', function($q) use ($kiosqueIds) {
                     $q->whereIn('kiosque_id', $kiosqueIds);
@@ -177,6 +181,19 @@ class RapportController extends Controller
         $agents = Agent::actif()->with('utilisateur')->orderBy('nom')->get();
         $kiosques = Kiosque::actif()->orderBy('nom')->get();
         
+        // Agents pour la recherche dans le filtre (format JSON)
+        $agentsJson = $agents->map(function ($a) {
+            $p = $a->utilisateur->prenom ?? '';
+            $n = $a->utilisateur->nom ?? '';
+            return [
+                'id' => $a->id,
+                'nom' => $n,
+                'prenom' => $p,
+                'libelle' => trim($p . ' ' . $n),
+                'code_agent' => $a->code_agent,
+            ];
+        })->values()->toArray();
+        
         return $this->ajaxView('pages.rapports.index', compact(
             'statsOperateurs',
             'topAgents',
@@ -184,6 +201,7 @@ class RapportController extends Controller
             'statsGlobales',
             'operateurs',
             'agents',
+            'agentsJson',
             'kiosques',
             'dateDebut',
             'dateFin'

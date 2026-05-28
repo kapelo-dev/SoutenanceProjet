@@ -66,12 +66,12 @@
          </label>
         </form>
         <div class="kt-toggle-group kt-toggle-group-sm" data-kt-tabs="true">
-         <a class="kt-btn kt-btn-icon active" data-kt-tab-toggle="#kiosques_card" href="#"><i class="ki-filled ki-category"></i></a>
-         <a class="kt-btn kt-btn-icon" data-kt-tab-toggle="#kiosques_list" href="#"><i class="ki-filled ki-row-horizontal"></i></a>
+         <a class="kt-btn kt-btn-icon" data-kt-tab-toggle="#kiosques_card" href="#"><i class="ki-filled ki-category"></i></a>
+         <a class="kt-btn kt-btn-icon active" data-kt-tab-toggle="#kiosques_list" href="#"><i class="ki-filled ki-row-horizontal"></i></a>
         </div>
        </div>
       </div>
-      <div class="flex flex-col gap-5 lg:gap-7.5" id="kiosques_card">
+      <div class="hidden flex flex-col gap-5 lg:gap-7.5" id="kiosques_card">
        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-7.5">
         @forelse($kiosques as $kiosque)
         <div class="kt-card">
@@ -172,10 +172,10 @@
         @endforelse
        </div>
       </div>
-      <div class="hidden" id="kiosques_list">
+      <div id="kiosques_list">
        <div class="grid grid-cols-1 gap-5 lg:gap-7.5">
         @forelse($kiosques as $kiosque)
-        <div class="kt-card p-7.5">
+        <div class="kt-card p-7.5 border-l-4 {{ $kiosque->statut == 'actif' ? 'border-l-green-500' : ($kiosque->statut == 'en_travaux' ? 'border-l-yellow-500' : 'border-l-gray-400') }}">
          <div class="flex items-center flex-wrap justify-between gap-5">
           <div class="flex items-center gap-3.5">
            <div class="flex justify-center">
