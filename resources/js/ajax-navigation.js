@@ -395,6 +395,9 @@ const AjaxNavigation = {
         // Réinitialiser les datatables (pagination, etc.) pour le contenu chargé en AJAX
         this.reinitializeDatatables();
         
+        // Réinitialiser les modals pour qu'ils fonctionnent après navigation AJAX
+        this.reinitializeModals();
+        
         // Appeler toutes les fonctions d'initialisation de pages (pattern window.init*)
         this.reinitializePageFunctions();
         
@@ -469,6 +472,32 @@ const AjaxNavigation = {
         });
     },
     
+    // Réinitialiser les modals Metronic après navigation AJAX
+    reinitializeModals() {
+        setTimeout(() => {
+            // Réinitialiser les modals Metronic natifs (KTModal)
+            if (typeof KTModal !== 'undefined') {
+                document.querySelectorAll('[data-kt-modal="true"]').forEach(modalEl => {
+                    // Détruire l'ancienne instance si elle existe
+                    const existingInstance = KTModal.getInstance(modalEl);
+                    if (existingInstance) {
+                        try { existingInstance.destroy(); } catch(e) {}
+                    }
+                    // Créer une nouvelle instance
+                    try {
+                        modalEl._ktModalInstance = new KTModal(modalEl);
+                    } catch(e) {
+                        console.warn('KTModal reinit error:', e);
+                    }
+                });
+            }
+            // Fallback: appeler initModals() global si défini dans app.js
+            else if (typeof initModals === 'function') {
+                initModals();
+            }
+        }, 50);
+    },
+
     // Réinitialiser les cartes Leaflet
     reinitializeMaps() {
         // Attendre un peu pour que le DOM soit complètement mis à jour et que les scripts soient chargés

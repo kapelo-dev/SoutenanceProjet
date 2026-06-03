@@ -144,58 +144,19 @@ function initStickyHeaders() {
 
 // Modal functionality
 function initModals() {
-    // Utiliser la délégation d'événements pour fonctionner après AJAX
-    // Attacher le handler une seule fois au niveau du document pour ouvrir les modals
-    if (!document._modalToggleHandlerAttached) {
-        document._modalToggleHandlerAttached = true;
-        document.addEventListener('click', function(e) {
-            const toggle = e.target.closest('[data-kt-modal-toggle]');
-            if (!toggle) return;
-            
-            e.preventDefault();
-            const modalId = toggle.getAttribute('data-kt-modal-toggle');
-            const modal = document.querySelector(modalId);
-
-            if (modal) {
-                // Certains modals ont un style inline `display: none;`
-                // Donc on ne peut pas se contenter de toggle les classes.
-                const isHiddenByClass = modal.classList.contains('hidden');
-                const isHiddenByStyle = (modal.style && modal.style.display === 'none');
-
-                const shouldShow = isHiddenByClass || isHiddenByStyle;
-
-                if (shouldShow) {
-                    modal.classList.remove('hidden');
-                    modal.classList.add('flex');
-                    modal.style.display = 'flex';
-                    modal.classList.add('show');
-                } else {
-                    modal.classList.add('hidden');
-                    modal.classList.remove('flex');
-                    modal.style.display = 'none';
-                    modal.classList.remove('show');
+    // Initialiser les modals Metronic natifs (KTModal)
+    // KTModal gère déjà le backdrop, le z-index et les animations
+    document.querySelectorAll('[data-kt-modal="true"]').forEach(modalEl => {
+        if (!modalEl._ktModalInstance) {
+            try {
+                if (typeof KTModal !== 'undefined') {
+                    modalEl._ktModalInstance = new KTModal(modalEl);
                 }
+            } catch(e) {
+                console.warn('KTModal init error:', e);
             }
-        });
-    }
-    
-    // Handler pour fermer les modals (délégation d'événements)
-    if (!document._modalDismissHandlerAttached) {
-        document._modalDismissHandlerAttached = true;
-        document.addEventListener('click', function(e) {
-            const dismissBtn = e.target.closest('[data-kt-modal-dismiss="true"]');
-            if (!dismissBtn) return;
-            
-            e.preventDefault();
-            const modal = dismissBtn.closest('.kt-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                modal.style.display = 'none';
-                modal.classList.remove('show');
-            }
-        });
-    }
+        }
+    });
 }
 
 // Tabs functionality (for data-kt-tabs groups, e.g. users grid toggle)

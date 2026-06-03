@@ -3,12 +3,20 @@
     data-kt-drawer="true" data-kt-drawer-class="kt-drawer kt-drawer-start top-0 bottom-0" id="sidebar">
     <div class="kt-sidebar-header relative hidden shrink-0 items-center justify-between px-3 lg:flex lg:px-6"
         id="sidebar_header">
-        <a class="dark:hidden" href="{{ url('/') }}" title="PDV Connect">
-           
-        </a>
-        <a class="hidden dark:block" href="{{ url('/') }}" title="PDV Connect">
-            <img class="default-logo min-h-[30px] h-9 max-w-none" src="{{ asset('assets/media/app/default-logo-v2-dark.svg') }}" alt="PDV Connect" />
-            <img class="small-logo min-h-[30px] h-9 max-w-none" src="{{ asset('assets/media/app/mini-logo-v2-dark.svg') }}" alt="PDV" />
+        <a href="{{ url('/') }}" title="PDV Connect" class="flex items-center gap-3">
+            <!-- Default logo: monogramme rond + texte -->
+            <span class="default-logo flex items-center gap-3">
+                <span class="flex items-center justify-center size-10 rounded-full bg-[#314e6c] shrink-0" style="font-family: 'Geist Sans', system-ui, sans-serif;">
+                    <span class="text-sm font-bold leading-none"><span class="text-white">P</span><span class="text-[#fbbf24]">C</span></span>
+                </span>
+                <span class="text-[1.35rem] font-extrabold tracking-tight leading-none pl-4" style="font-family: 'Geist Sans', system-ui, sans-serif;">
+                    <span class="text-[#314e6c]">PDV</span><span class="text-[#fbbf24]"> Connect</span>
+                </span>
+            </span>
+            <!-- Small logo: monogramme rond seul (visible quand sidebar collapsed) -->
+            <span class="small-logo hidden flex items-center justify-center size-10 rounded-full bg-[#314e6c] shrink-0 mx-auto" style="font-family: 'Geist Sans', system-ui, sans-serif;">
+                <span class="text-sm font-bold leading-none"><span class="text-white">P</span><span class="text-[#fbbf24]">C</span></span>
+            </span>
         </a>
         <button
             class="kt-btn kt-btn-outline kt-btn-icon absolute start-full top-2/4 size-[30px] -translate-x-2/4 -translate-y-2/4 rtl:translate-x-2/4"

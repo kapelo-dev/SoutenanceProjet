@@ -1,9 +1,13 @@
 <div>
     <!-- Logo -->
-    <div class="flex items-center gap-2 lg:gap-5 2xl:-ml-[60px]">
-        <a href="{{ url('/') }}" title="PDV Connect">
-            <img class="min-h-[42px] dark:hidden" src="{{ asset('assets/media/app/mini-logo-v2.svg') }}" alt="PDV Connect" />
-            <img class="hidden min-h-[42px] dark:inline-block" src="{{ asset('assets/media/app/mini-logo-v2-dark.svg') }}" alt="PDV Connect" />
+    <div class="flex items-center justify-end gap-2 lg:gap-5 ml-auto">
+        <a href="{{ url('/') }}" title="PDV Connect" class="flex items-center gap-2.5">
+            <span class="flex items-center justify-center size-8 rounded-full bg-[#314e6c] shrink-0" style="font-family: 'Geist Sans', system-ui, sans-serif;">
+                <span class="text-xs font-bold leading-none"><span class="text-white">PD</span><span class="text-[#fbbf24]">V</span></span>
+            </span>
+            <span class="text-base font-extrabold tracking-tight leading-none ml-8" style="font-family: 'Geist Sans', system-ui, sans-serif;">
+                <span class="text-[#314e6c]">PDV</span><span class="text-[#fbbf24]"> Connect</span>
+            </span>
         </a>
         <div class="flex items-center">
             <h3 class="hidden text-base text-secondary-foreground md:block">

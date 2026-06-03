@@ -17,7 +17,7 @@
                 @include('layouts.demo1.header')
 
                 <!-- Content -->
-                <main class="grow pt-5" id="content" role="content">
+                <main class="grow pt-5 animate-slide-up" id="content" role="content">
                     @yield('content')
                 </main>
                 <!-- End of Content -->

@@ -7,11 +7,13 @@ id="header"
 style="background-image: url('{{ asset('assets/media/images/bg-cover2.png') }}'); background-size: 40%; background-position: center 25%; background-repeat: repeat;"><div class="kt-container-fixed flex items-stretch justify-between lg:gap-4" id="headerContainer">
 <!-- Mobile Logo -->
 <div class="-ms-1 flex items-center gap-2.5 lg:hidden">
-<a class="shrink-0 dark:hidden" href="{{ url('/') }}" title="PDV Connect">
-<img class="h-9 max-h-[40px] w-auto" src="{{ asset('assets/media/app/mini-logo-v2.svg') }}" alt="PDV Connect" />
-</a>
-<a class="shrink-0 hidden dark:block" href="{{ url('/') }}" title="PDV Connect">
-<img class="h-6 max-h-[40px] w-auto" src="{{ asset('assets/media/app/mini-logo-v2-dark.svg') }}" alt="PDV Connect" />
+<a class="shrink-0 flex items-center gap-2.5" href="{{ url('/') }}" title="PDV Connect">
+<span class="flex items-center justify-center size-8 rounded-full bg-[#314e6c]" style="font-family: 'Geist Sans', system-ui, sans-serif;">
+<span class="text-xs font-bold leading-none"><span class="text-white">P</span><span class="text-[#fbbf24]">C</span></span>
+</span>
+<span class="text-base font-extrabold tracking-tight leading-none" style="font-family: 'Geist Sans', system-ui, sans-serif;">
+<span class="text-[#314e6c]">PDV</span><span class="text-[#fbbf24]"> Connect</span>
+</span>
 </a>
 <div class="flex items-center">
 <button class="kt-btn kt-btn-icon kt-btn-ghost" data-kt-drawer-toggle="#sidebar">
