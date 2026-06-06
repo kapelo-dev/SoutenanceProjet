@@ -300,49 +300,35 @@
     }
 </style>
 <script>
-    // S'assurer que le message vide reste centré après l'initialisation du datatable
-    document.addEventListener('DOMContentLoaded', function() {
-        const emptyRow = document.querySelector('#transactions_table tbody tr.empty-row');
-        if (emptyRow) {
-            const td = emptyRow.querySelector('td');
-            if (td && td.getAttribute('colspan') !== '8') {
-                td.setAttribute('colspan', '8');
-                td.style.width = '100%';
-                td.style.border = 'none';
-            }
-            // S'assurer que la ligne vide est visible
-            emptyRow.style.display = 'table-row';
-        }
-        
-        // Observer les changements du DOM pour maintenir le colspan
-        const observer = new MutationObserver(function(mutations) {
-            const emptyRow = document.querySelector('#transactions_table tbody tr.empty-row');
-            if (emptyRow) {
-                const td = emptyRow.querySelector('td');
-                if (td && td.getAttribute('colspan') !== '8') {
-                    td.setAttribute('colspan', '8');
-                    td.style.width = '100%';
-                    td.style.border = 'none';
-                }
-                // S'assurer que la ligne vide reste visible
-                emptyRow.style.display = 'table-row';
-            }
-        });
-        
+window.initTransactionsPage = function() {
+    if (!document.getElementById('transactions_table')) return;
+
+    const isEmpty = @json($transactions->isEmpty());
+
+    if (window.AjaxNavigation && typeof window.AjaxNavigation.setupEmptyDatatable === 'function') {
+        window.AjaxNavigation.setupEmptyDatatable('transactions_table', 8, isEmpty);
+    } else {
         const table = document.getElementById('transactions_table');
-        if (table) {
-            observer.observe(table, { childList: true, subtree: true });
+        const emptyRow = table?.querySelector('tbody tr.empty-row');
+        if (emptyRow && isEmpty) {
+            const td = emptyRow.querySelector('td');
+            if (td) { td.setAttribute('colspan', '8'); td.style.width = '100%'; td.style.border = 'none'; }
+            const wrapper = table.closest('[data-kt-datatable="true"]');
+            if (wrapper) wrapper.removeAttribute('data-kt-datatable');
         }
-        
-        // Désactiver le datatable si aucune transaction
-        @if($transactions->isEmpty())
-        // Si pas de transactions, ne pas initialiser le datatable
-        const datatableElement = document.querySelector('[data-kt-datatable="true"]');
-        if (datatableElement) {
-            // Empêcher l'initialisation du datatable
-            datatableElement.removeAttribute('data-kt-datatable');
-        }
-        @endif
-    });
+    }
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => window.initTransactionsPage());
+} else {
+    window.initTransactionsPage();
+}
+
+document.addEventListener('ajax-content-loaded', () => {
+    if (document.getElementById('transactions_table')) {
+        window.initTransactionsPage();
+    }
+});
 </script>
 @endsection

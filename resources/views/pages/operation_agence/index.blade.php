@@ -36,7 +36,7 @@
         <div class="kt-card-content">
             <div class="grid" data-kt-datatable="true" data-kt-datatable-page-size="10">
                 <div class="kt-scrollable-x-auto">
-                    <table class="kt-table kt-table-border" data-kt-datatable-table="true" id="transactions_table?" style="table-layout: fixed; width: 100%;">
+                    <table class="kt-table kt-table-border" data-kt-datatable-table="true" id="transactions_table" style="table-layout: fixed; width: 100%;">
                         <thead>
                             <tr>
                                 <th class="w-[50px] text-center">
@@ -232,88 +232,23 @@
     }
 </style>
 <script>
-    // S'assurer que le message vide reste centré après l'initialisation du datatable (même logique que la page transactions)
-    document.addEventListener('DOMContentLoaded', function() {
-        const emptyRow = document.querySelector('#transactions_table tbody tr.empty-row');
-        if (emptyRow) {
-            const td = emptyRow.querySelector('td');
-            if (td && td.getAttribute('colspan') !== '7') {
-                td.setAttribute('colspan', '7');
-                td.style.width = '100%';
-                td.style.border = 'none';
-            }
-            // S'assurer que la ligne vide est visible
-            emptyRow.style.display = 'table-row';
+    window.initOperationAgencePage = function() {
+        if (!document.getElementById('transactions_table')) return;
+        const isEmpty = @json($transactions->isEmpty());
+        if (window.AjaxNavigation?.setupEmptyDatatable) {
+            window.AjaxNavigation.setupEmptyDatatable('transactions_table', 7, isEmpty);
         }
-        
-        // Observer les changements du DOM pour maintenir le colspan
-        const observer = new MutationObserver(function(mutations) {
-            const emptyRow = document.querySelector('#transactions_table tbody tr.empty-row');
-            if (emptyRow) {
-                const td = emptyRow.querySelector('td');
-                if (td && td.getAttribute('colspan') !== '7') {
-                    td.setAttribute('colspan', '7');
-                    td.style.width = '100%';
-                    td.style.border = 'none';
-                }
-                // S'assurer que la ligne vide reste visible
-                emptyRow.style.display = 'table-row';
-            }
-        });
-        
-        const table = document.getElementById('transactions_table');
-        if (table) {
-            observer.observe(table, { childList: true, subtree: true });
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => window.initOperationAgencePage());
+    } else {
+        window.initOperationAgencePage();
+    }
+    document.addEventListener('ajax-content-loaded', () => {
+        if (document.getElementById('transactions_table') && document.getElementById('modal_nouvelle_operation')) {
+            window.initOperationAgencePage();
         }
-        
-        // Désactiver le datatable si aucune opération
-        @if($transactions->isEmpty())
-        // Si pas d'opérations, ne pas initialiser le datatable
-        const datatableElement = document.querySelector('[data-kt-datatable="true"]');
-        if (datatableElement) {
-            // Empêcher l'initialisation du datatable
-            datatableElement.removeAttribute('data-kt-datatable');
-        }
-        @endif
-    });
-    
-    // Réinitialisation après navigation AJAX
-    document.addEventListener('ajax-content-loaded', function() {
-        const emptyRow = document.querySelector('#transactions_table tbody tr.empty-row');
-        if (emptyRow) {
-            const td = emptyRow.querySelector('td');
-            if (td && td.getAttribute('colspan') !== '7') {
-                td.setAttribute('colspan', '7');
-                td.style.width = '100%';
-                td.style.border = 'none';
-            }
-            emptyRow.style.display = 'table-row';
-        }
-        
-        // Observer les changements du DOM pour maintenir le colspan
-        const table = document.getElementById('transactions_table');
-        if (table) {
-            const observer = new MutationObserver(function(mutations) {
-                const emptyRow = document.querySelector('#transactions_table tbody tr.empty-row');
-                if (emptyRow) {
-                    const td = emptyRow.querySelector('td');
-                    if (td && td.getAttribute('colspan') !== '7') {
-                        td.setAttribute('colspan', '7');
-                        td.style.width = '100%';
-                        td.style.border = 'none';
-                    }
-                    emptyRow.style.display = 'table-row';
-                }
-            });
-            observer.observe(table, { childList: true, subtree: true });
-        }
-        
-        @if($transactions->isEmpty())
-        const datatableElement = document.querySelector('[data-kt-datatable="true"]');
-        if (datatableElement) {
-            datatableElement.removeAttribute('data-kt-datatable');
-        }
-        @endif
     });
 </script>
    <!-- Modal Nouvelle Opération (opérations des agents : versements, ajouts espèces, etc.) -->
@@ -431,8 +366,8 @@ window.initOperationAgenceModal = window.initOperationAgenceModal || function() 
         return;
     }
     
-    // Nettoyer les anciens gestionnaires en remplaçant les éléments
-    if (agentSearchEl._hasOperationListener) return; // Déjà initialisé
+    // Éviter double-init sur le même élément DOM
+    if (agentSearchEl._hasOperationListener) return;
     agentSearchEl._hasOperationListener = true;
     
     // 1. Recherche d'agent
@@ -505,16 +440,23 @@ window.initOperationAgenceModal = window.initOperationAgenceModal || function() 
         });
     }
     
-    // 5. Fermer en cliquant dehors
-    document.addEventListener('click', function(e) {
-        if (agentListEl && agentSearchEl && !agentSearchEl.contains(e.target) && !agentListEl.contains(e.target)) {
-            agentListEl.classList.add('hidden');
-        }
-        if (operateurTrigger && operateurDropdown && !operateurTrigger.contains(e.target) && !operateurDropdown.contains(e.target)) {
-            operateurDropdown.classList.add('hidden');
-            if (operateurTrigger) operateurTrigger.setAttribute('aria-expanded', 'false');
-        }
-    });
+    // 5. Fermer en cliquant dehors (listener unique, pas de duplication AJAX)
+    if (!window._operationAgenceOutsideClickHandler) {
+        window._operationAgenceOutsideClickHandler = function(e) {
+            var agentList = document.getElementById('operation_agent_list');
+            var agentSearch = document.getElementById('operation_agent_search');
+            var opTrigger = document.getElementById('operation_operateur_trigger');
+            var opDropdown = document.getElementById('operation_operateur_dropdown');
+            if (agentList && agentSearch && !agentSearch.contains(e.target) && !agentList.contains(e.target)) {
+                agentList.classList.add('hidden');
+            }
+            if (opTrigger && opDropdown && !opTrigger.contains(e.target) && !opDropdown.contains(e.target)) {
+                opDropdown.classList.add('hidden');
+                opTrigger.setAttribute('aria-expanded', 'false');
+            }
+        };
+        document.addEventListener('click', window._operationAgenceOutsideClickHandler);
+    }
     
     // 6. Toggle opérateur requis
     function toggleOperateurBlock() {

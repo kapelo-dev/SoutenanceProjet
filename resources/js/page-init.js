@@ -235,11 +235,7 @@ window.initKiosquesPage = function() {
     // Les gestionnaires d'événements pour les kiosques seront ici
 };
 
-// Gestionnaire global pour la page transactions
-window.initTransactionsPage = function() {
-    console.log('Init: Transactions');
-    // Les gestionnaires d'événements pour les transactions seront ici
-};
+// Gestionnaire global pour la page transactions — implémenté dans pages/transactions/index.blade.php
 
 // Appeler toutes les fonctions init au chargement de la page ET après navigation AJAX
 document.addEventListener('DOMContentLoaded', function() {

@@ -311,6 +311,21 @@
         z-index: 100000 !important;
     }
     
+    /* Modal nouvel agent : taille fixe sur tous les onglets */
+    #modal_nouvel_agent > .kt-modal-content {
+        width: min(95vw, 1050px);
+        max-width: 1050px;
+        min-width: min(95vw, 900px);
+    }
+
+    #modal_nouvel_agent .kt-modal-body {
+        min-height: 580px;
+    }
+
+    #modal_nouvel_agent .kt-tab-content {
+        min-height: 520px;
+    }
+
     .kt-modal-content {
         z-index: 100001 !important;
     }
@@ -358,7 +373,7 @@
 
 <!-- Modal Nouvel Agent avec Kiosque -->
 <div class="kt-modal" data-kt-modal="true" data-kt-modal-disable-scroll="false" id="modal_nouvel_agent">
-    <div class="kt-modal-content max-w-[900px]">
+    <div class="kt-modal-content w-full max-w-[1050px]">
         <div class="kt-modal-header">
             <h3 class="kt-modal-title">
                 Nouvel Agent

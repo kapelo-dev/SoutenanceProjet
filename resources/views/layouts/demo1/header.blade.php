@@ -4,8 +4,7 @@ data-kt-sticky="true"
 data-kt-sticky-class="border-b border-border shadow-lg" 
 data-kt-sticky-name="header" 
 id="header"
-style="background-image: url('{{ asset('assets/media/images/bg-cover2.png') }}'); background-size: 40%; background-position: center 25%; background-repeat: repeat;"><div class="kt-container-fixed flex items-stretch justify-between lg:gap-4" id="headerContainer">
-<!-- Mobile Logo -->
+style="background-image: url('{{ asset('assets/media/images/bg-cover2.png') }}'); background-size: 40%; background-position: center 25%; background-repeat: repeat-x;"><div class="kt-container-fixed flex items-stretch justify-between lg:gap-4" id="headerContainer">
 <div class="-ms-1 flex items-center gap-2.5 lg:hidden">
 <a class="shrink-0 flex items-center gap-2.5" href="{{ url('/') }}" title="PDV Connect">
 <span class="flex items-center justify-center size-8 rounded-full bg-[#314e6c]" style="font-family: 'Geist Sans', system-ui, sans-serif;">

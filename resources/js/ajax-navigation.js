@@ -91,14 +91,16 @@ const AjaxNavigation = {
         document.body.classList.remove('modal-open');
         document.body.style.overflow = '';
         document.body.style.paddingRight = '';
-        // Thème Metronic: .kt-modal avec .open ET .kt-modal-backdrop (élément séparé avec blur)
         document.querySelectorAll('.kt-modal.open, .kt-modal.show, .kt-modal[style*="flex"]').forEach(modal => {
             modal.classList.remove('open', 'show');
             modal.classList.add('hidden');
             modal.style.display = 'none';
+            if (typeof KTModal !== 'undefined') {
+                const inst = KTModal.getInstance(modal);
+                if (inst) try { inst.hide(); } catch (e) {}
+            }
         });
-        // Supprimer le backdrop du thème (classe kt-modal-backdrop = flou/overlay)
-        document.querySelectorAll('.kt-modal-backdrop').forEach(el => {
+        document.querySelectorAll('.kt-modal-backdrop, [data-kt-modal-backdrop="true"]').forEach(el => {
             if (el.parentNode) el.parentNode.removeChild(el);
         });
         document.querySelectorAll('body > .modal-backdrop, body > [id*="backdrop"]').forEach(el => {
@@ -370,42 +372,65 @@ const AjaxNavigation = {
     
     // Réinitialiser les scripts et composants après chargement AJAX
     reinitialize() {
-        // Réinitialiser Alpine.js si nécessaire
-        if (window.Alpine) {
-            // Alpine scanne automatiquement le nouveau contenu
-        }
-        
-        // Réinitialiser les composants Metronic (y compris les tabs)
         if (window.MetronicCore && typeof window.MetronicCore.initMetronicCore === 'function') {
             window.MetronicCore.initMetronicCore();
         } else if (window.MetronicCore) {
-            // Rétrocompatibilité si initMetronicCore n'existe pas
             window.MetronicCore.initDrawers && window.MetronicCore.initDrawers();
             window.MetronicCore.initMenus && window.MetronicCore.initMenus();
-            window.MetronicCore.initModals && window.MetronicCore.initModals();
             window.MetronicCore.initTabs && window.MetronicCore.initTabs();
         }
-        
-        // Réinitialiser les événements onclick pour les boutons
+
         this.reinitializeButtonEvents();
-        
-        // Réinitialiser les cartes Leaflet
         this.reinitializeMaps();
-        
-        // Réinitialiser les datatables (pagination, etc.) pour le contenu chargé en AJAX
-        this.reinitializeDatatables();
-        
-        // Réinitialiser les modals pour qu'ils fonctionnent après navigation AJAX
-        this.reinitializeModals();
-        
-        // Appeler toutes les fonctions d'initialisation de pages (pattern window.init*)
+
+        // 1. Init pages (désactive datatable si vide, fix colspan…)
         this.reinitializePageFunctions();
-        
-        // Déclencher un événement personnalisé
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/26370817-2ad4-48a9-8621-53fe8856d785',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ajax-navigation.js:reinitialize',message:'before ajax-content-loaded dispatch',data:{hasDashboardEl:!!document.getElementById('dashboard_month_map'),hasL:typeof L!=='undefined'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
         document.dispatchEvent(new CustomEvent('ajax-content-loaded'));
+
+        // 2. Datatables après init page
+        this.reinitializeDatatables();
+
+        // 3. Modals après datatables
+        this.reinitializeModals();
+    },
+
+    /** Grille vide : colspan + désactiver KTDatatable si aucune ligne de données */
+    setupEmptyDatatable(tableId, colspan, isEmpty) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+
+        const applyFix = () => {
+            const emptyRow = table.querySelector('tbody tr.empty-row');
+            if (!emptyRow) return;
+            const td = emptyRow.querySelector('td');
+            if (td) {
+                td.setAttribute('colspan', String(colspan));
+                td.style.width = '100%';
+                td.style.border = 'none';
+            }
+            emptyRow.style.display = 'table-row';
+        };
+
+        applyFix();
+
+        if (!table._emptyRowObserver) {
+            table._emptyRowObserver = new MutationObserver(applyFix);
+            table._emptyRowObserver.observe(table, { childList: true, subtree: true });
+        }
+
+        if (isEmpty) {
+            const wrapper = table.closest('[data-kt-datatable="true"]');
+            if (wrapper) {
+                wrapper.removeAttribute('data-kt-datatable');
+                wrapper.setAttribute('data-kt-datatable-skip', 'true');
+            }
+        }
+    },
+
+    isEmptyDatatableTable(table) {
+        if (!table) return false;
+        return !!table.querySelector('tbody tr.empty-row')
+            && !table.querySelector('tbody tr:not(.empty-row)');
     },
     
     // Réinitialiser les datatables KTUI (pagination, select size, etc.) après chargement AJAX
@@ -415,11 +440,22 @@ const AjaxNavigation = {
             const KTDatatable = window.KTDataTable || window.KTDatatable;
             if (typeof KTDatatable === 'undefined') return;
             try {
+                const containers = this.contentContainer.querySelectorAll('[data-kt-datatable="true"]');
+                containers.forEach(el => {
+                    if (el.getAttribute('data-kt-datatable-skip') === 'true') return;
+                    const table = el.querySelector('[data-kt-datatable-table="true"]') || el.querySelector('table');
+                    if (this.isEmptyDatatableTable(table)) {
+                        el.removeAttribute('data-kt-datatable');
+                        el.setAttribute('data-kt-datatable-skip', 'true');
+                    }
+                });
+
                 if (typeof KTDatatable.createInstances === 'function') {
                     KTDatatable.createInstances();
                 } else {
                     this.contentContainer.querySelectorAll('[data-kt-datatable="true"]').forEach(el => {
                         if (el.getAttribute('data-kt-datatable-initialized') === 'true') return;
+                        if (el.getAttribute('data-kt-datatable-skip') === 'true') return;
                         if (typeof KTDatatable.getOrCreateInstance === 'function') {
                             KTDatatable.getOrCreateInstance(el);
                         }
@@ -428,7 +464,7 @@ const AjaxNavigation = {
             } catch (e) {
                 console.debug('[AjaxNav] Datatable init:', e);
             }
-        }, 50);
+        }, 100);
     },
 
     // Réinitialiser les événements des boutons après chargement AJAX
@@ -475,27 +511,38 @@ const AjaxNavigation = {
     // Réinitialiser les modals Metronic après navigation AJAX
     reinitializeModals() {
         setTimeout(() => {
-            // Réinitialiser les modals Metronic natifs (KTModal)
+            const root = this.contentContainer || document;
+
+            if (typeof window.portalModalsToBody === 'function') {
+                window.portalModalsToBody(root);
+            } else if (window.MetronicCore?.portalModalsToBody) {
+                window.MetronicCore.portalModalsToBody(root);
+            }
+
             if (typeof KTModal !== 'undefined') {
-                document.querySelectorAll('[data-kt-modal="true"]').forEach(modalEl => {
-                    // Détruire l'ancienne instance si elle existe
+                root.querySelectorAll('[data-kt-modal="true"]').forEach(modalEl => {
                     const existingInstance = KTModal.getInstance(modalEl);
                     if (existingInstance) {
-                        try { existingInstance.destroy(); } catch(e) {}
+                        try { existingInstance.destroy(); } catch (e) {}
                     }
-                    // Créer une nouvelle instance
+                    delete modalEl._ktModalInstance;
                     try {
                         modalEl._ktModalInstance = new KTModal(modalEl);
-                    } catch(e) {
+                    } catch (e) {
                         console.warn('KTModal reinit error:', e);
                     }
                 });
+            } else if (window.MetronicCore?.initModals) {
+                window.MetronicCore.initModals();
             }
-            // Fallback: appeler initModals() global si défini dans app.js
-            else if (typeof initModals === 'function') {
-                initModals();
-            }
-        }, 50);
+
+            setTimeout(() => {
+                if (typeof window.initOperationAgenceModal === 'function'
+                    && document.getElementById('modal_nouvelle_operation')) {
+                    window.initOperationAgenceModal();
+                }
+            }, 50);
+        }, 150);
     },
 
     // Réinitialiser les cartes Leaflet

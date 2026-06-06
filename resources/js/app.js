@@ -142,19 +142,51 @@ function initStickyHeaders() {
     });
 }
 
+// Déplacer les modals dans body (évite le flou / mauvais z-index dans #content)
+function portalModalsToBody(root = document) {
+    root.querySelectorAll('[data-kt-modal="true"]').forEach(modalEl => {
+        if (modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+    });
+}
+
+function cleanupOrphanModalBackdrops() {
+    const hasOpenModal = document.querySelector('.kt-modal.open');
+    if (!hasOpenModal) {
+        document.querySelectorAll('.kt-modal-backdrop, [data-kt-modal-backdrop="true"]').forEach(el => el.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+    }
+}
+
 // Modal functionality
 function initModals() {
-    // Initialiser les modals Metronic natifs (KTModal)
-    // KTModal gère déjà le backdrop, le z-index et les animations
+    portalModalsToBody();
+
     document.querySelectorAll('[data-kt-modal="true"]').forEach(modalEl => {
-        if (!modalEl._ktModalInstance) {
-            try {
-                if (typeof KTModal !== 'undefined') {
-                    modalEl._ktModalInstance = new KTModal(modalEl);
-                }
-            } catch(e) {
-                console.warn('KTModal init error:', e);
+        if (modalEl._ktModalInstance) return;
+        try {
+            if (typeof KTModal !== 'undefined') {
+                modalEl._ktModalInstance = new KTModal(modalEl);
             }
+        } catch (e) {
+            console.warn('KTModal init error:', e);
+        }
+    });
+}
+
+// Nettoyer les backdrops orphelins à la fermeture
+if (!document._modalDismissListener) {
+    document._modalDismissListener = true;
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-kt-modal-dismiss]')) {
+            setTimeout(cleanupOrphanModalBackdrops, 350);
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            setTimeout(cleanupOrphanModalBackdrops, 350);
         }
     });
 }
@@ -270,11 +302,15 @@ window.MetronicCore = {
     initModals,
     initTabs,
     initMetronicCore,
-    initSoldesPage
+    initSoldesPage,
+    portalModalsToBody,
+    cleanupOrphanModalBackdrops,
 };
 
 // Exposer initSoldesPage globalement pour le système de réinitialisation automatique
 window.initSoldesPage = initSoldesPage;
+window.portalModalsToBody = portalModalsToBody;
+window.cleanupOrphanModalBackdrops = cleanupOrphanModalBackdrops;
 
 // Mettre à jour les classes actives du menu après navigation AJAX
 function updateActiveMenuItems() {

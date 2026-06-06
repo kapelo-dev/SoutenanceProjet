@@ -8,7 +8,7 @@
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -189,4 +189,23 @@
   /* Ombre renforcée en dark mode sticky */
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Modals : au-dessus du layout, backdrop léger sans flou excessif */
+.kt-modal-backdrop {
+  z-index: 9998 !important;
+  backdrop-filter: blur(2px) !important;
+}
+
+.kt-modal {
+  z-index: 9999 !important;
+}
+
+.kt-modal.open {
+  display: flex !important;
+}
+
+/* Éviter qu'un transform sur #content piège les modals en position fixed */
+main#content.animate-slide-up {
+  transform: none !important;
 }
