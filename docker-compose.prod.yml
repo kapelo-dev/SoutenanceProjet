@@ -1,7 +1,7 @@
-# Docker Compose pour la production (Laravel + MySQL)
-# Usage : cp .env.example .env && configure .env puis :
-#   docker compose -f docker-compose.prod.yml up -d
-# Pour build : docker compose -f docker-compose.prod.yml build --no-cache
+# Docker Compose production — Laravel + base MySQL externe (AlwaysData)
+# Usage :
+#   cp .env.example .env   # puis configurer DB_*
+#   docker compose -f docker-compose.prod.yml up -d --build
 
 services:
   app:
@@ -16,14 +16,13 @@ services:
       APP_DEBUG: "false"
       APP_URL: ${APP_URL:-http://localhost}
       DB_CONNECTION: mysql
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_DATABASE: ${DB_DATABASE:-laravel}
-      DB_USERNAME: ${DB_USERNAME:-laravel}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       CACHE_STORE: database
       SESSION_DRIVER: database
-      # À définir dans .env : APP_KEY, DB_PASSWORD, SMS_API_TOKEN, etc.
     env_file:
       - .env
     volumes:
@@ -31,29 +30,7 @@ services:
       - storage_app:/var/www/html/storage/app
     ports:
       - "${APP_PORT:-80}:80"
-    depends_on:
-      mysql:
-        condition: service_healthy
-
-  mysql:
-    image: mysql:8.0
-    container_name: pdvconnect-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_DATABASE:-laravel}
-      MYSQL_USER: ${DB_USERNAME:-laravel}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - db_data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
 
 volumes:
-  db_data:
   storage_logs:
   storage_app:

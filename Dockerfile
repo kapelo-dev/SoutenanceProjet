@@ -13,7 +13,7 @@ COPY public ./public
 RUN npm run build
 
 # ========== Stage 2 : application Laravel ==========
-FROM php:8.2-apache
+FROM php:8.3-apache
 
 # Extensions PHP nécessaires pour Laravel
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -57,3 +57,6 @@ COPY docker/entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["apache2-foreground"]
+
+# Render injecte $PORT au runtime (entrypoint reconfigure Apache)
+EXPOSE 80

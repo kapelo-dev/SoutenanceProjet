@@ -1,0 +1,43 @@
+# Blueprint Render — PDV CONNECT (base MySQL AlwaysData)
+# Déploiement : Dashboard Render → New → Blueprint → connecter ce repo
+#
+# Définir DB_PASSWORD manuellement dans le dashboard Render (ne pas commiter le mot de passe).
+
+services:
+  - type: web
+    name: pdvconnect
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /up
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        value: mysql-kapelo.alwaysdata.net
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_DATABASE
+        value: kapelo_pdvconnect
+      - key: DB_USERNAME
+        value: kapelo
+      - key: DB_PASSWORD
+        sync: false
+      - key: CACHE_STORE
+        value: database
+      - key: SESSION_DRIVER
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: SMS_API_TOKEN
+        generateValue: true

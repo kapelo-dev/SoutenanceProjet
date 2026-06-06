@@ -12,6 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Render / reverse proxy (HTTPS, IP client)
+        if (env('APP_ENV') === 'production') {
+            $middleware->trustProxies(at: '*');
+        }
+
         // Configuration du middleware d'authentification
         $middleware->redirectUsersTo('/login');
         $middleware->redirectGuestsTo('/login');
