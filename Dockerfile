@@ -46,6 +46,14 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 COPY . .
 COPY --from=frontend /app/public/build ./public/build
 
+# Assets Metronic (styles.css, core.bundle.js…) — fallback si absents du repo
+RUN if [ ! -f public/assets/css/styles.css ]; then \
+      apt-get update && apt-get install -y --no-install-recommends git \
+      && rm -rf /var/lib/apt/lists/* \
+      && bash scripts/setup-assets.sh; \
+    fi \
+    && rm -f public/hot
+
 RUN composer dump-autoload --optimize
 
 # Droits pour storage et bootstrap/cache

@@ -11,6 +11,9 @@ fi
 
 cd /var/www/html
 
+# Ne jamais laisser public/hot actif en prod (force le dev server Vite → CSS absent)
+rm -f public/hot
+
 # .env requis par certains artisan (key:generate écrit dedans)
 if [ ! -f .env ]; then
   touch .env
