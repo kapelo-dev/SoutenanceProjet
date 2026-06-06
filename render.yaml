@@ -1,7 +1,7 @@
 # Blueprint Render — PDV CONNECT (base MySQL AlwaysData)
 # Déploiement : Dashboard Render → New → Blueprint → connecter ce repo
 #
-# Définir DB_PASSWORD manuellement dans le dashboard Render (ne pas commiter le mot de passe).
+# IMPORTANT : saisir DB_PASSWORD manuellement à la création du Blueprint.
 
 services:
   - type: web
@@ -17,8 +17,6 @@ services:
         value: production
       - key: APP_DEBUG
         value: "false"
-      - key: APP_KEY
-        generateValue: true
       - key: DB_CONNECTION
         value: mysql
       - key: DB_HOST
@@ -31,13 +29,16 @@ services:
         value: kapelo
       - key: DB_PASSWORD
         sync: false
-      - key: CACHE_STORE
-        value: database
+      # file/sync évite les 500 si tables cache/sessions absentes
       - key: SESSION_DRIVER
-        value: database
+        value: file
+      - key: CACHE_STORE
+        value: file
       - key: QUEUE_CONNECTION
-        value: database
+        value: sync
       - key: LOG_CHANNEL
         value: stderr
+      - key: LOG_LEVEL
+        value: error
       - key: SMS_API_TOKEN
         generateValue: true
