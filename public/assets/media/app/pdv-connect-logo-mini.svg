@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88" width="88" height="88">
+  <defs>
+    <mask id="pMaskMini">
+      <rect width="88" height="88" fill="white"/>
+      <polygon points="34,20 34,40 52,30" fill="black"/>
+    </mask>
+  </defs>
+
+  <text
+    x="4" y="46"
+    font-family="'Arial Black', Helvetica, sans-serif"
+    font-weight="900"
+    font-size="42"
+    letter-spacing="-2.5"
+    fill="#1a3a6e"
+    mask="url(#pMaskMini)">PDV</text>
+
+  <rect x="14" y="50" width="9" height="9" rx="1.5" fill="#f5c400"/>
+
+  <text
+    x="44" y="78"
+    text-anchor="middle"
+    font-family="'Arial Black', Helvetica, sans-serif"
+    font-weight="700"
+    font-style="italic"
+    font-size="17"
+    letter-spacing="1.2"
+    fill="#f5c400">CONNECT</text>
+</svg>

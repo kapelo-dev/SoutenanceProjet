@@ -8,7 +8,10 @@
     <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport"/>
     <meta content="Page de connexion" name="description"/>
     <link href="{{ asset('assets/media/app/favicon.svg') }}" rel="icon" type="image/svg+xml" />
-<link href="{{ asset('assets/media/app/favicon.ico') }}" rel="shortcut icon"/>
+    <link href="{{ asset('assets/media/app/apple-touch-icon.png') }}" rel="apple-touch-icon" sizes="180x180" />
+    <link href="{{ asset('assets/media/app/favicon-32x32.png') }}" rel="icon" sizes="32x32" type="image/png" />
+    <link href="{{ asset('assets/media/app/favicon-16x16.png') }}" rel="icon" sizes="16x16" type="image/png" />
+    <link href="{{ asset('assets/media/app/favicon.ico') }}" rel="shortcut icon" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
     <link href="{{ asset('assets/vendors/apexcharts/apexcharts.css') }}" rel="stylesheet"/>
     <link href="{{ asset('assets/vendors/keenicons/styles.bundle.css') }}" rel="stylesheet"/>
@@ -41,30 +44,37 @@
     
     <!-- Page -->
     <style>
-        .login-gradient-bg {
-            background: linear-gradient(160deg, #0a0a0a 0%, #1a1a2e 40%, #16213e 70%, #0f3460 100%);
+        .login-hero {
+            background: linear-gradient(145deg, #0f1f3d 0%, #1a3a6e 52%, #122847 100%);
             position: relative;
             overflow: hidden;
         }
-        .login-gradient-bg::before {
+        .login-hero::before {
             content: '';
             position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, rgba(251,191,36,0.08) 0%, transparent 60%);
+            inset: 0;
+            background:
+                radial-gradient(circle at 85% 15%, rgba(245, 196, 0, 0.14) 0%, transparent 42%),
+                radial-gradient(circle at 10% 90%, rgba(255, 255, 255, 0.06) 0%, transparent 38%);
             pointer-events: none;
         }
-        .login-gradient-bg::after {
+        .login-hero::after {
             content: '';
             position: absolute;
-            bottom: -30%;
-            left: -30%;
-            width: 80%;
-            height: 80%;
-            background: radial-gradient(circle, rgba(49,78,108,0.15) 0%, transparent 60%);
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+            background-size: 48px 48px;
+            mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.55) 0%, transparent 85%);
             pointer-events: none;
+        }
+        .login-hero-logo {
+            background: rgba(255, 255, 255, 0.97);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+        }
+        .login-hero-accent {
+            background: linear-gradient(90deg, #f5c400 0%, rgba(245, 196, 0, 0.15) 100%);
         }
     </style>
     
@@ -197,48 +207,48 @@
             </div>
         </div>
         
-        <div class="order-1 lg:order-2 login-gradient-bg flex flex-col justify-between p-8 lg:p-12">
-            <div class="relative z-10 flex flex-col gap-4">
-                <!-- Logo -->
-                <a href="{{ url('/') }}" style="font-family: 'Geist Sans', system-ui, sans-serif;">
-                    <span class="text-3xl font-extrabold tracking-tight">
-                        <span class="text-[#314e6c]">PDV</span><span class="text-[#fbbf24]"> Connect</span>
-                    </span>
+        <div class="order-1 lg:order-2 login-hero flex min-h-[280px] lg:min-h-full flex-col justify-start p-8 lg:p-12 xl:p-16">
+            <div class="relative z-10 flex w-full max-w-lg flex-col gap-8">
+                <a href="{{ url('/') }}" class="login-hero-logo inline-flex w-fit rounded-xl px-5 py-3.5 transition-transform hover:scale-[1.01]">
+                    <img src="{{ asset('assets/media/app/pdv-connect-logo.svg') }}" alt="PDV Connect" class="h-11 w-auto max-w-[240px] object-contain" />
                 </a>
-                <!-- Heading -->
-                <div class="flex flex-col gap-3 mt-4">
-                    <h3 class="text-3xl lg:text-4xl font-bold text-white leading-snug" style="font-family: 'Geist Sans', system-ui, sans-serif;">
-                        Gérez vos kiosques<br/>en toute <span class="text-[#fbbf24]">simplicité</span>
-                    </h3>
-                    <p class="text-base text-white/50 leading-relaxed max-w-xs">
-                        Plateforme centralisée de gestion des points de vente, agents et transactions financières.
+
+                <div class="flex flex-col gap-4">
+                    <div class="login-hero-accent h-1 w-14 rounded-full"></div>
+                    <h1 class="text-3xl font-bold leading-tight text-white lg:text-[2.35rem] lg:leading-[1.15]" style="font-family: 'Geist Sans', system-ui, sans-serif;">
+                        Pilotez vos points de vente<br/>
+                        <span class="text-[#f5c400]">mobile money</span> en temps réel
+                    </h1>
+                    <p class="max-w-md text-base leading-relaxed text-white/65">
+                        Centralisez la gestion de vos kiosques, agents et transactions Flooz &amp; Mixx by Yas depuis une plateforme unique, sécurisée et pensée pour le terrain.
                     </p>
                 </div>
+
+                <ul class="flex flex-col gap-3 border-t border-white/10 pt-6">
+                    <li class="flex items-center gap-3 text-sm text-white/80">
+                        <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/8 ring-1 ring-white/10">
+                            <i class="ki-filled ki-chart-line-up text-[#f5c400] text-sm"></i>
+                        </span>
+                        Suivi des transactions et soldes en direct
+                    </li>
+                    <li class="flex items-center gap-3 text-sm text-white/80">
+                        <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/8 ring-1 ring-white/10">
+                            <i class="ki-filled ki-shop text-[#f5c400] text-sm"></i>
+                        </span>
+                        Gestion des kiosques et réseau d'agents
+                    </li>
+                    <li class="flex items-center gap-3 text-sm text-white/80">
+                        <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/8 ring-1 ring-white/10">
+                            <i class="ki-filled ki-document text-[#f5c400] text-sm"></i>
+                        </span>
+                        Rapports et pilotage financier consolidés
+                    </li>
+                </ul>
             </div>
 
-            <!-- Bottom cards -->
-            <div class="relative z-10 flex flex-col gap-4 mt-8">
-                <!-- Card 1 -->
-                <div class="rounded-xl bg-white/[0.07] backdrop-blur-sm border border-white/10 p-5 flex items-start gap-4">
-                    <div class="flex items-center justify-center shrink-0 size-10 rounded-lg bg-[#fbbf24]/15">
-                        <i class="ki-filled ki-shield-tick text-[#fbbf24] text-lg"></i>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <span class="text-base font-semibold text-white" style="font-family: 'Geist Sans', system-ui, sans-serif;">Sécurité renforcée</span>
-                        <span class="text-sm text-white/50 leading-relaxed">Authentification multi-facteurs et chiffrement de bout en bout pour protéger vos données sensibles.</span>
-                    </div>
-                </div>
-                <!-- Card 2 -->
-                <div class="rounded-xl bg-white/[0.07] backdrop-blur-sm border border-white/10 p-5 flex items-start gap-4">
-                    <div class="flex items-center justify-center shrink-0 size-10 rounded-lg bg-[#314e6c]/30">
-                        <i class="ki-filled ki-chart-line-up text-[#5b8fb9] text-lg"></i>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <span class="text-base font-semibold text-white" style="font-family: 'Geist Sans', system-ui, sans-serif;">Suivi en temps réel</span>
-                        <span class="text-sm text-white/50 leading-relaxed">Tableau de bord interactif avec indicateurs clés, alertes instantanées et rapports détaillés.</span>
-                    </div>
-                </div>
-            </div>
+            <p class="relative z-10 mt-auto hidden pt-10 text-xs uppercase tracking-[0.22em] text-white/35 lg:block">
+                PDV Connect · Plateforme de gestion Mobile Money
+            </p>
         </div>
     </div>
     <!-- End of Page -->

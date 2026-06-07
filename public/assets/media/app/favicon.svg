@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&amp;display=swap');
+    </style>
+    <mask id="pMask">
+      <rect width="160" height="160" fill="white"/>
+      <polygon points="58,48 58,86 90,67" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="160" height="160" rx="24" fill="#ffffff"/>
+  <text
+    x="8" y="98"
+    font-family="Montserrat, 'Arial Black', Helvetica, sans-serif"
+    font-weight="900"
+    font-size="82"
+    letter-spacing="-4"
+    fill="#1a3a6e"
+    mask="url(#pMask)">PDV</text>
+  <rect x="22" y="108" width="16" height="16" rx="2" fill="#f5c400"/>
+</svg>

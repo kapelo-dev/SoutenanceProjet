@@ -63,6 +63,31 @@
   .demo1.kt-sidebar-collapse:has(#sidebar:hover) {
     --sidebar-width: var(--sidebar-default-width);
   }
+
+  .demo1 .kt-sidebar .small-logo {
+    display: none;
+  }
+
+  .demo1.kt-sidebar-collapse .kt-sidebar:not(:hover) #sidebar_header {
+    justify-content: center;
+    padding-inline: 0.5rem;
+  }
+
+  .demo1.kt-sidebar-collapse .kt-sidebar:not(:hover) .sidebar-brand-link {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .demo1.kt-sidebar-collapse .kt-sidebar:not(:hover) .default-logo {
+    display: none !important;
+  }
+
+  .demo1.kt-sidebar-collapse .kt-sidebar:not(:hover) .small-logo {
+    display: block !important;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-inline: auto;
+  }
 }
 
 /* Styles pour les éléments de menu actifs
