@@ -159,10 +159,18 @@ function renderAlerts(alerts) {
             ${actionable.map((a, i) => {
                 const sev = a.severity === 'critical';
                 const cls = sev ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-amber-50 text-amber-950 border-amber-200/40';
+                const resolveBtn = a.key && a.key !== 'status.ok'
+                    ? `<div class="mt-3 flex flex-wrap items-center gap-2">
+                        <button type="button" class="kt-btn kt-btn-sm kt-btn-success sec-resolve-alert-btn" data-alert-key="${a.key}" data-alert-title="${a.title}">
+                            <i class="ki-filled ki-check-circle"></i> Marquer comme résolue
+                        </button>
+                        <span class="text-xs text-secondary-foreground">La menace a été traitée (IP bloquée, compte sécurisé, etc.)</span>
+                    </div>`
+                    : '';
                 return `<div class="flex gap-4 p-5"><div class="flex size-8 shrink-0 items-center justify-center rounded-lg font-bold text-sm ${cls} border">${i + 1}</div>
                 <div class="min-w-0 flex-1"><div class="font-semibold mb-1">${a.title}</div>
                 <p class="text-sm text-secondary-foreground mb-2">${a.problem}</p>
-                <div class="rounded-lg bg-muted/50 border px-3 py-2 text-sm"><strong>Action :</strong> ${a.action}</div></div></div>`;
+                <div class="rounded-lg bg-muted/50 border px-3 py-2 text-sm"><strong>Action :</strong> ${a.action}</div>${resolveBtn}</div></div>`;
             }).join('')}
         </div></div>`;
 }
@@ -231,6 +239,41 @@ function initSecurityDashboard() {
     });
 
     root.addEventListener('click', async (e) => {
+        const resolveBtn = e.target.closest('.sec-resolve-alert-btn');
+        if (resolveBtn) {
+            const alertKey = resolveBtn.dataset.alertKey;
+            const alertTitle = resolveBtn.dataset.alertTitle || 'cette alerte';
+            if (!alertKey) return;
+
+            const note = prompt(`Note optionnelle pour « ${alertTitle} » (laisser vide si aucune) :`);
+            if (note === null) return;
+
+            resolveBtn.disabled = true;
+            try {
+                const res = await fetch(root.dataset.resolveAlertUrl, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({ alert_key: alertKey, note: note || null }),
+                });
+                const payload = await res.json();
+                if (!payload.success) {
+                    alert(payload.message || 'Impossible de lever l\'alerte.');
+                    return;
+                }
+                renderMetrics(payload.data);
+            } catch (err) {
+                console.error('[DashboardSecurite] resolve', err);
+            } finally {
+                resolveBtn.disabled = false;
+            }
+            return;
+        }
+
         const btn = e.target.closest('.sec-unblock-btn');
         if (!btn) return;
         const id = btn.dataset.blockId;

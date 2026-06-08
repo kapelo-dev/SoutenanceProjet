@@ -19,5 +19,17 @@
             <span class="font-medium text-foreground">Action : </span>
             <span data-alert-action>{{ $alert['action'] }}</span>
         </div>
+        @if(!empty($alert['key']) && $alert['key'] !== 'status.ok')
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+                <button type="button"
+                    class="kt-btn kt-btn-sm kt-btn-success sec-resolve-alert-btn"
+                    data-alert-key="{{ $alert['key'] }}"
+                    data-alert-title="{{ $alert['title'] }}">
+                    <i class="ki-filled ki-check-circle"></i>
+                    Marquer comme résolue
+                </button>
+                <span class="text-xs text-secondary-foreground">La menace a été traitée (IP bloquée, compte sécurisé, etc.)</span>
+            </div>
+        @endif
     </div>
 </div>

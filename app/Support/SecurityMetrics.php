@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\SecurityAlertResolution;
 use App\Models\SystemLog;
 use App\Services\IpBlockService;
 use Illuminate\Support\Facades\DB;
@@ -224,70 +225,120 @@ class SecurityMetrics
     {
         $alerts = [];
 
-        if ($stats['login_failed_24h'] >= 10) {
-            $alerts[] = [
-                'severity' => 'critical',
-                'title' => 'Tentatives de connexion massives',
-                'problem' => $stats['login_failed_24h'] . ' échecs de connexion en 24h.',
-                'action' => 'Vérifiez les IPs suspectes, activez Cloudflare ou Fail2ban, renforcez les mots de passe admin.',
-                'component' => 'auth',
-            ];
-        } elseif ($stats['login_failed_24h'] >= 3) {
-            $alerts[] = [
-                'severity' => 'warning',
-                'title' => 'Tentatives de connexion inhabituelles',
-                'problem' => $stats['login_failed_24h'] . ' échec(s) en 24h.',
-                'action' => 'Consultez les logs et surveillez les IPs listées ci-dessous.',
-                'component' => 'auth',
-            ];
+        $massiveAuth = $stats['login_failed_24h'] >= 10;
+        $unusualAuth = ! $massiveAuth && $stats['login_failed_24h'] >= 3;
+        $hasSuspiciousIps = $suspiciousIps->isNotEmpty();
+        $hasCompromise = $compromiseSignals->isNotEmpty();
+
+        SecurityAlertResolution::clearIfConditionEnded('auth.failed_massive', $massiveAuth);
+        SecurityAlertResolution::clearIfConditionEnded('auth.failed_unusual', $unusualAuth);
+        SecurityAlertResolution::clearIfConditionEnded('network.suspicious_ips', $hasSuspiciousIps);
+        SecurityAlertResolution::clearIfConditionEnded('compromise.same_ip_login', $hasCompromise);
+
+        if ($massiveAuth && ! SecurityAlertResolution::isSuppressed('auth.failed_massive')) {
+            $alerts[] = self::alertPayload(
+                'auth.failed_massive',
+                'critical',
+                'Tentatives de connexion massives',
+                $stats['login_failed_24h'] . ' échecs de connexion en 24h.',
+                'Vérifiez les IPs suspectes, bloquez-les si besoin, renforcez les mots de passe admin.',
+                'auth',
+            );
+        } elseif ($unusualAuth && ! SecurityAlertResolution::isSuppressed('auth.failed_unusual')) {
+            $alerts[] = self::alertPayload(
+                'auth.failed_unusual',
+                'warning',
+                'Tentatives de connexion inhabituelles',
+                $stats['login_failed_24h'] . ' échec(s) en 24h.',
+                'Consultez les logs et surveillez les IPs listées ci-dessous.',
+                'auth',
+            );
         }
 
-        if ($suspiciousIps->isNotEmpty()) {
+        if ($hasSuspiciousIps && ! SecurityAlertResolution::isSuppressed('network.suspicious_ips')) {
             $blockedCount = $suspiciousIps->where('is_blocked', true)->count();
-            $alerts[] = [
-                'severity' => $blockedCount > 0 ? 'warning' : 'warning',
-                'title' => $blockedCount > 0 ? 'IPs bloquées activement' : 'IPs à surveiller',
-                'problem' => $blockedCount > 0
+            $alerts[] = self::alertPayload(
+                'network.suspicious_ips',
+                'warning',
+                $blockedCount > 0 ? 'IPs bloquées activement' : 'IPs à surveiller',
+                $blockedCount > 0
                     ? $blockedCount . ' IP(s) suspecte(s) sont bloquées par l\'application.'
                     : $suspiciousIps->count() . ' adresse(s) IP avec plusieurs échecs de connexion.',
-                'action' => $blockedCount > 0
-                    ? 'Les IPs bloquées ne peuvent plus accéder au site. Débloquez-les depuis la section « IPs bloquées » si besoin.'
+                $blockedCount > 0
+                    ? 'Les IPs bloquées ne peuvent plus accéder au site. Marquez comme résolue une fois la menace traitée.'
                     : 'Surveillez ces IPs. Blocage automatique après ' . config('security.auto_block_threshold', 5) . ' échecs en 24h.',
-                'component' => 'network',
-            ];
+                'network',
+            );
         }
 
-        if ($compromiseSignals->isNotEmpty()) {
-            $alerts[] = [
-                'severity' => 'critical',
-                'title' => 'Connexions réussies après échecs (même IP)',
-                'problem' => $compromiseSignals->count() . ' connexion(s) depuis une IP ayant échoué récemment.',
-                'action' => 'Vérifiez immédiatement ces comptes, forcez un changement de mot de passe et auditez les actions récentes.',
-                'component' => 'compromise',
-            ];
+        if ($hasCompromise && ! SecurityAlertResolution::isSuppressed('compromise.same_ip_login')) {
+            $alerts[] = self::alertPayload(
+                'compromise.same_ip_login',
+                'critical',
+                'Connexions réussies après échecs (même IP)',
+                $compromiseSignals->count() . ' connexion(s) depuis une IP ayant échoué récemment.',
+                'Vérifiez ces comptes, forcez un changement de mot de passe et auditez les actions récentes.',
+                'compromise',
+            );
         }
 
-        if ($stats['sensitive_actions_24h'] >= 15) {
-            $alerts[] = [
-                'severity' => 'info',
-                'title' => 'Volume élevé d\'actions sensibles',
-                'problem' => $stats['sensitive_actions_24h'] . ' suppressions/exports en 24h.',
-                'action' => 'Confirmez que ces opérations sont légitimes dans Logs Système.',
-                'component' => 'audit',
-            ];
+        if ($stats['sensitive_actions_24h'] >= 15 && ! SecurityAlertResolution::isSuppressed('audit.sensitive_volume')) {
+            SecurityAlertResolution::clearIfConditionEnded('audit.sensitive_volume', true);
+            $alerts[] = self::alertPayload(
+                'audit.sensitive_volume',
+                'warning',
+                'Volume élevé d\'actions sensibles',
+                $stats['sensitive_actions_24h'] . ' suppressions/exports en 24h.',
+                'Confirmez que ces opérations sont légitimes dans Logs Système.',
+                'audit',
+            );
+        } else {
+            SecurityAlertResolution::clearIfConditionEnded('audit.sensitive_volume', $stats['sensitive_actions_24h'] >= 15);
         }
 
-        if (empty($alerts)) {
-            $alerts[] = [
-                'severity' => 'info',
-                'title' => 'Aucune menace détectée',
-                'problem' => 'Pas d\'anomalie significative sur les dernières 24h.',
-                'action' => 'Continuez la surveillance via ce tableau de bord et les Logs Système.',
-                'component' => 'status',
-            ];
+        $actionable = collect($alerts)->whereIn('severity', ['critical', 'warning']);
+
+        if ($actionable->isEmpty()) {
+            $alerts[] = self::alertPayload(
+                'status.ok',
+                'info',
+                'Aucune menace détectée',
+                'Pas d\'anomalie significative sur les dernières 24h.',
+                'Continuez la surveillance via ce tableau de bord et les Logs Système.',
+                'status',
+            );
         }
 
         return $alerts;
+    }
+
+    protected static function alertPayload(
+        string $key,
+        string $severity,
+        string $title,
+        string $problem,
+        string $action,
+        string $component,
+    ): array {
+        return [
+            'key' => $key,
+            'severity' => $severity,
+            'title' => $title,
+            'problem' => $problem,
+            'action' => $action,
+            'component' => $component,
+        ];
+    }
+
+    public static function validAlertKeys(): array
+    {
+        return [
+            'auth.failed_massive',
+            'auth.failed_unusual',
+            'network.suspicious_ips',
+            'compromise.same_ip_login',
+            'audit.sensitive_volume',
+        ];
     }
 
     protected static function health(array $alerts): array

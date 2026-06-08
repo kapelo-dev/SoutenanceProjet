@@ -33,6 +33,7 @@
 
 <div class="kt-container-fixed pb-8" id="sec_dashboard_root"
     data-metrics-url="{{ route('dashboard.securite.metrics') }}"
+    data-resolve-alert-url="{{ route('dashboard.securite.alerts.resolve') }}"
     data-block-url="{{ route('blocked-ips.store') }}"
     data-unblock-url="{{ url('/api/blocked-ips') }}"
     data-initial='@json($metrics)'>

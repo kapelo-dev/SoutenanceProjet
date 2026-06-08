@@ -20,6 +20,7 @@ return [
     'route_aliases' => [
         'dashboard.technique*' => 'dashboard.technique',
         'dashboard.securite*' => 'dashboard.securite',
+        'dashboard.securite.alerts.*' => 'dashboard.securite',
         'blocked-ips.*' => 'dashboard.securite',
 
         'agents.solde*' => 'agents.soldes',

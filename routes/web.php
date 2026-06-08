@@ -143,6 +143,7 @@ Route::middleware(['auth', 'require.password.change', 'route.permission'])->grou
     Route::get('/api/dashboard/technique/metrics', [TechnicalDashboardController::class, 'metrics'])->name('dashboard.technique.metrics');
     Route::get('/dashboard/securite', [\App\Http\Controllers\SecurityDashboardController::class, 'index'])->name('dashboard.securite');
     Route::get('/api/dashboard/securite/metrics', [\App\Http\Controllers\SecurityDashboardController::class, 'metrics'])->name('dashboard.securite.metrics');
+    Route::post('/api/dashboard/securite/alerts/resolve', [\App\Http\Controllers\SecurityDashboardController::class, 'resolveAlert'])->name('dashboard.securite.alerts.resolve');
     Route::post('/api/blocked-ips', [\App\Http\Controllers\BlockedIpController::class, 'store'])->name('blocked-ips.store');
     Route::delete('/api/blocked-ips/{blockedIp}', [\App\Http\Controllers\BlockedIpController::class, 'destroy'])->name('blocked-ips.destroy');
     Route::get('/api/dashboard/stats-temps-reel', [DashboardController::class, 'statsTempsReel']);
