@@ -23,6 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'require.password.change' => \App\Http\Middleware\RequirePasswordChange::class,
             'sms.api.token' => \App\Http\Middleware\ValidateSmsApiToken::class,
+            'check.blocked.ip' => \App\Http\Middleware\CheckBlockedIp::class,
+        ]);
+
+        $middleware->web(append: [
+            \App\Http\Middleware\CheckBlockedIp::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

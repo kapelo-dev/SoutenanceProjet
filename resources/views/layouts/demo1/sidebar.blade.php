@@ -22,7 +22,7 @@
             <!-- Sidebar Menu -->
             <div class="kt-menu flex grow flex-col gap-1" data-kt-menu="true" data-kt-menu-accordion-expand-all="false"
                 id="sidebar_menu">
-                <div class="kt-menu-item {{ request()->is('dashboard') && !request()->is('dashboard/technique*') ? 'kt-menu-item-active' : '' }}">
+                <div class="kt-menu-item {{ request()->is('dashboard') && !request()->is('dashboard/technique*') && !request()->is('dashboard/securite*') ? 'kt-menu-item-active' : '' }}">
                     <a href="{{ url('/dashboard') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
                         tabindex="0">
 
@@ -45,6 +45,17 @@
                         </span>
                         <span class="kt-menu-title kt-menu-item-active:text-primary text-sm font-medium text-foreground">
                             Dashboard Technique
+                        </span>
+                    </a>
+                </div>
+                <div class="kt-menu-item {{ request()->is('dashboard/securite*') ? 'kt-menu-item-active' : '' }}">
+                    <a href="{{ route('dashboard.securite') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
+                        tabindex="0">
+                        <span class="kt-menu-icon w-[20px] items-start text-muted-foreground">
+                            <i class="ki-filled ki-shield-search text-lg"></i>
+                        </span>
+                        <span class="kt-menu-title kt-menu-item-active:text-primary text-sm font-medium text-foreground">
+                            Dashboard Sécurité
                         </span>
                     </a>
                 </div>

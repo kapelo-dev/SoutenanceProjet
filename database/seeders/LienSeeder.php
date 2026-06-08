@@ -27,6 +27,22 @@ class LienSeeder extends Seeder
             'visible' => true,
         ]);
 
+        Lien::create([
+            'libelle' => 'Dashboard Technique',
+            'route' => 'dashboard.technique',
+            'icone' => 'ki-filled ki-chart-line-up-2',
+            'ordre' => 2,
+            'visible' => true,
+        ]);
+
+        Lien::create([
+            'libelle' => 'Dashboard Sécurité',
+            'route' => 'dashboard.securite',
+            'icone' => 'ki-filled ki-shield-search',
+            'ordre' => 3,
+            'visible' => true,
+        ]);
+
         $transactions = Lien::create([
             'libelle' => 'Transactions',
             'route' => 'transactions.index',
@@ -196,6 +212,14 @@ class LienSeeder extends Seeder
             'route' => 'parametres-app-mobile.index',
             'parent_id' => $menuConfig->id,
             'ordre' => 5,
+            'visible' => true,
+        ]);
+
+        Lien::create([
+            'libelle' => 'Logs Système',
+            'route' => 'system-logs.index',
+            'parent_id' => $menuConfig->id,
+            'ordre' => 6,
             'visible' => true,
         ]);
 

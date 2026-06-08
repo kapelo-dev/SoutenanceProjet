@@ -48,7 +48,7 @@ Route::get('/license', [PublicPagesController::class, 'license'])->name('public.
 |--------------------------------------------------------------------------
 */
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Routes pour le changement de mot de passe (première connexion)
@@ -141,6 +141,10 @@ Route::middleware(['auth', 'require.password.change'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/technique', [TechnicalDashboardController::class, 'index'])->name('dashboard.technique');
     Route::get('/api/dashboard/technique/metrics', [TechnicalDashboardController::class, 'metrics'])->name('dashboard.technique.metrics');
+    Route::get('/dashboard/securite', [\App\Http\Controllers\SecurityDashboardController::class, 'index'])->name('dashboard.securite');
+    Route::get('/api/dashboard/securite/metrics', [\App\Http\Controllers\SecurityDashboardController::class, 'metrics'])->name('dashboard.securite.metrics');
+    Route::post('/api/blocked-ips', [\App\Http\Controllers\BlockedIpController::class, 'store'])->name('blocked-ips.store');
+    Route::delete('/api/blocked-ips/{blockedIp}', [\App\Http\Controllers\BlockedIpController::class, 'destroy'])->name('blocked-ips.destroy');
     Route::get('/api/dashboard/stats-temps-reel', [DashboardController::class, 'statsTempsReel']);
     Route::get('/api/dashboard/graphique-transactions', [DashboardController::class, 'graphiqueTransactions']);
     Route::get('/api/dashboard/stats-par-operateur', [DashboardController::class, 'statsParOperateur']);

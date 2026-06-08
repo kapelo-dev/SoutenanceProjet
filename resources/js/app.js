@@ -5,6 +5,7 @@ import './ajax-navigation';
 import './maps/dashboard-month-map';
 import './dashboard-evolution-chart';
 import './dashboard-technique';
+import './dashboard-securite';
 import './maps/kiosques-map';
 // Importer le système de permissions de menu
 import './menu-permissions';

@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             LienSeeder::class,
             TypeOperationSeeder::class,
             OperateurSeeder::class,
+            LienSyncSeeder::class,
             // UtilisateurSeeder::class, // À décommenter si besoin
             // KiosqueSeeder::class, // À décommenter si besoin
         ]);

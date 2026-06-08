@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Utilisateur;
 use App\Models\SystemLog;
+use App\Services\IpBlockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        protected IpBlockService $ipBlockService
+    ) {}
     /**
      * Afficher le formulaire de connexion
      */
@@ -40,14 +44,7 @@ class AuthController extends Controller
         $utilisateur = Utilisateur::where('email', $email)->first();
 
         if (!$utilisateur) {
-            // Logger la tentative échouée
-            SystemLog::create([
-                'action' => 'login_failed',
-                'description' => "Tentative de connexion échouée pour l'email : {$email}",
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'metadata' => ['email' => $email],
-            ]);
+            $this->logLoginFailed($request, "Tentative de connexion échouée pour l'email : {$email}", null, ['email' => $email]);
             
             return back()->withErrors([
                 'email' => 'Les identifiants fournis sont incorrects.',
@@ -56,15 +53,12 @@ class AuthController extends Controller
 
         // Vérifier le statut de l'utilisateur
         if ($utilisateur->statut !== 'actif') {
-            // Logger la tentative échouée
-            SystemLog::create([
-                'user_id' => $utilisateur->id,
-                'action' => 'login_failed',
-                'description' => "Tentative de connexion sur compte {$utilisateur->statut} : {$utilisateur->nom} {$utilisateur->prenom}",
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'metadata' => ['statut' => $utilisateur->statut],
-            ]);
+            $this->logLoginFailed(
+                $request,
+                "Tentative de connexion sur compte {$utilisateur->statut} : {$utilisateur->nom} {$utilisateur->prenom}",
+                $utilisateur->id,
+                ['statut' => $utilisateur->statut]
+            );
             
             return back()->withErrors([
                 'email' => 'Votre compte est désactivé ou suspendu.',
@@ -80,15 +74,12 @@ class AuthController extends Controller
                 $utilisateur->mot_de_passe = Hash::make($password);
                 $utilisateur->save();
             } else {
-                // Logger la tentative échouée avec mauvais mot de passe
-                SystemLog::create([
-                    'user_id' => $utilisateur->id,
-                    'action' => 'login_failed',
-                    'description' => "Tentative de connexion échouée (mot de passe incorrect) : {$utilisateur->nom} {$utilisateur->prenom}",
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                    'metadata' => ['raison' => 'mot_de_passe_incorrect'],
-                ]);
+                $this->logLoginFailed(
+                    $request,
+                    "Tentative de connexion échouée (mot de passe incorrect) : {$utilisateur->nom} {$utilisateur->prenom}",
+                    $utilisateur->id,
+                    ['raison' => 'mot_de_passe_incorrect']
+                );
                 
                 return back()->withErrors([
                     'email' => 'Les identifiants fournis sont incorrects.',
@@ -206,5 +197,19 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
+    }
+
+    private function logLoginFailed(Request $request, string $description, ?int $userId = null, array $metadata = []): void
+    {
+        SystemLog::create([
+            'user_id' => $userId,
+            'action' => 'login_failed',
+            'description' => $description,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'metadata' => $metadata,
+        ]);
+
+        $this->ipBlockService->recordLoginFailure($request, $userId);
     }
 }
