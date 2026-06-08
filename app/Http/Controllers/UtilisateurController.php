@@ -247,101 +247,15 @@ class UtilisateurController extends Controller
     {
         try {
             $user = auth()->user();
-            
-            if (!$user) {
+
+            if (! $user) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Utilisateur non authentifié'
+                    'message' => 'Utilisateur non authentifié',
                 ], 401);
             }
 
-            // Récupérer les profils de l'utilisateur
-            $profils = $user->profils()->whereNull('user_profils.deleted_at')->get();
-            
-            if ($profils->isEmpty()) {
-                return response()->json([
-                    'success' => true,
-                    'profils' => [],
-                    'routes' => [],
-                    'permissions' => []
-                ]);
-            }
-
-            // Récupérer toutes les routes/liens accessibles par les profils de l'utilisateur
-            $profilIds = $profils->pluck('id')->toArray();
-            
-            $liens = DB::table('profil_liens')
-                ->join('liens', 'profil_liens.lien_id', '=', 'liens.id')
-                ->whereIn('profil_liens.profil_id', $profilIds)
-                ->whereNull('profil_liens.deleted_at')
-                ->whereNull('liens.deleted_at')
-                ->where('liens.visible', true)
-                ->select('liens.route', 'liens.url', 'liens.id as lien_id')
-                ->distinct()
-                ->get();
-
-            // IMPORTANT:
-            // Le sidebar utilise des href du type "/rapports" (URL), alors que la table "liens" stocke surtout le nom de route (ex: "rapports.index").
-            // On renvoie donc une liste d'URLs autorisées (pathnames) + on garde aussi les route names.
-            $allowedUrls = [];
-            $allowedRouteNames = [];
-            $permissionsByLien = [];
-
-            foreach ($liens as $lien) {
-                $permissionsByLien[$lien->lien_id] = $lien->route ?: $lien->url;
-
-                if (!empty($lien->url)) {
-                    // Normaliser l'URL pour qu'elle commence par /
-                    $url = $lien->url;
-                    if (!str_starts_with($url, '/')) {
-                        $url = '/' . $url;
-                    }
-                    // Enlever le slash final sauf pour la racine
-                    if (strlen($url) > 1 && str_ends_with($url, '/')) {
-                        $url = rtrim($url, '/');
-                    }
-                    $allowedUrls[] = $url;
-                }
-
-                if (!empty($lien->route)) {
-                    $allowedRouteNames[] = $lien->route;
-
-                    if (Route::has($lien->route)) {
-                        // route() retourne une URL complète; on ne garde que le path pour matcher le sidebar.
-                        $full = route($lien->route);
-                        $path = parse_url($full, PHP_URL_PATH);
-                        if (!empty($path)) {
-                            // Normaliser le path pour qu'il corresponde exactement au format du sidebar
-                            // Le path devrait déjà commencer par / grâce à parse_url
-                            // Enlever le slash final sauf pour la racine
-                            if (strlen($path) > 1 && str_ends_with($path, '/')) {
-                                $path = rtrim($path, '/');
-                            }
-                            $allowedUrls[] = $path;
-                        }
-                    }
-                }
-            }
-
-            $allowedUrls = array_values(array_unique(array_filter($allowedUrls)));
-            $allowedRouteNames = array_values(array_unique(array_filter($allowedRouteNames)));
-
-            return response()->json([
-                'success' => true,
-                'profils' => $profils->map(function($profil) {
-                    return [
-                        'id' => $profil->id,
-                        'libelle' => $profil->libelle,
-                        'niveau' => $profil->niveau
-                    ];
-                }),
-                // URLs utilisables directement côté front pour matcher href du sidebar
-                'routes' => $allowedUrls,
-                // Optionnel: noms de routes (debug / usage futur)
-                'route_names' => $allowedRouteNames,
-                // Map lien_id -> route/url (debug)
-                'permissions' => $permissionsByLien
-            ]);
+            return response()->json(\App\Support\UserMenuPermissions::forUser($user));
 
         } catch (\Exception $e) {
             \Log::error('Erreur dans UtilisateurController@getMyPermissions: ' . $e->getMessage());

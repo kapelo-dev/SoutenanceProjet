@@ -20,8 +20,19 @@
             data-kt-scrollable-dependencies="#sidebar_header" data-kt-scrollable-height="auto"
             data-kt-scrollable-offset="0px" data-kt-scrollable-wrappers="#sidebar_content" id="sidebar_scrollable">
             <!-- Sidebar Menu -->
-            <div class="kt-menu flex grow flex-col gap-1" data-kt-menu="true" data-kt-menu-accordion-expand-all="false"
+            <div class="kt-menu flex grow flex-col gap-1 kt-permissions-loading" data-kt-menu="true" data-kt-menu-accordion-expand-all="false"
                 id="sidebar_menu">
+                <div class="kt-sidebar-menu-skeleton" aria-hidden="true">
+                    <span style="width:88%"></span>
+                    <span style="width:72%"></span>
+                    <span style="width:80%"></span>
+                    <span style="width:65%"></span>
+                    <span style="width:76%"></span>
+                    <span style="width:70%"></span>
+                </div>
+                @auth
+                <script type="application/json" id="menu-permissions-data">@json($userMenuPermissions ?? ['success' => false, 'routes' => []])</script>
+                @endauth
                 <div class="kt-menu-item {{ request()->is('dashboard') && !request()->is('dashboard/technique*') && !request()->is('dashboard/securite*') ? 'kt-menu-item-active' : '' }}">
                     <a href="{{ url('/dashboard') }}" class="kt-menu-link flex grow cursor-pointer items-center gap-[10px] border border-transparent py-[6px] pe-[10px] ps-[10px] rounded-md"
                         tabindex="0">

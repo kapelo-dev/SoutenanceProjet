@@ -27,3 +27,12 @@
 <link href="{{ asset('assets/vendors/apexcharts/apexcharts.css') }}" rel="stylesheet" />
 <link href="{{ asset('assets/vendors/keenicons/styles.bundle.css') }}" rel="stylesheet" />
 <link href="{{ asset('assets/css/styles.css') }}" rel="stylesheet" />
+@auth
+<style>
+    #sidebar_menu.kt-permissions-loading > :not(.kt-sidebar-menu-skeleton) { display: none !important; }
+    #sidebar_menu.kt-permissions-loading .kt-sidebar-menu-skeleton { display: flex !important; }
+    .kt-sidebar-menu-skeleton { display: none; flex-direction: column; gap: 0.5rem; padding: 0.25rem 0.5rem; }
+    .kt-sidebar-menu-skeleton span { display: block; height: 2.25rem; border-radius: 0.375rem; background: linear-gradient(90deg, rgba(148,163,184,.15) 25%, rgba(148,163,184,.28) 50%, rgba(148,163,184,.15) 75%); background-size: 200% 100%; animation: kt-menu-skeleton 1.2s ease-in-out infinite; }
+    @keyframes kt-menu-skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+</style>
+@endauth

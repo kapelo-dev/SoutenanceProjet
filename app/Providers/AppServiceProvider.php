@@ -3,8 +3,11 @@
 namespace App\Providers;
 
 use App\Support\ClientIp;
+use App\Support\UserMenuPermissions;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -23,6 +26,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Request::macro('clientIp', fn () => ClientIp::from($this));
+
+        View::composer(['layouts.*.*', 'partials.sidebar-menu'], function ($view) {
+            if (Auth::check()) {
+                $view->with('userMenuPermissions', UserMenuPermissions::forUser(Auth::user()));
+            }
+        });
 
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
