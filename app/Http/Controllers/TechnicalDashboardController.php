@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\ServerMetrics;
+use Illuminate\Http\Request;
 
 class TechnicalDashboardController extends Controller
 {
