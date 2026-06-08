@@ -83,11 +83,11 @@ class OperateurController extends Controller
 
         // Statistiques
         $stats = [
-            'transactions_total' => $operateur->transactions()->count(),
-            'montant_total' => $operateur->transactions()->where('statut', 'valide')->sum('montant') ?? 0,
-            'commission_total' => $operateur->transactions()->where('statut', 'valide')->sum('commission') ?? 0,
-            'transactions_mois' => $operateur->transactions()->duMois()->count(),
-            'montant_mois' => $operateur->transactions()->duMois()->where('statut', 'valide')->sum('montant') ?? 0,
+            'transactions_total' => $operateur->transactions()->commerciale()->count(),
+            'montant_total' => $operateur->transactions()->commerciale()->where('statut', 'valide')->sum('montant') ?? 0,
+            'commission_total' => $operateur->transactions()->commerciale()->where('statut', 'valide')->sum('commission') ?? 0,
+            'transactions_mois' => $operateur->transactions()->commerciale()->duMois()->count(),
+            'montant_mois' => $operateur->transactions()->commerciale()->duMois()->where('statut', 'valide')->sum('montant') ?? 0,
         ];
 
         if ($request->ajax() || $request->wantsJson()) {
@@ -204,17 +204,17 @@ class OperateurController extends Controller
         $stats = [
             'operateur' => $operateur->only(['code', 'libelle', 'couleur']),
             'transactions' => [
-                'total' => $operateur->transactions()->valide()->count(),
-                'montant_total' => $operateur->transactions()->valide()->sum('montant'),
-                'commission_total' => $operateur->transactions()->valide()->sum('commission'),
+                'total' => $operateur->transactions()->commerciale()->valide()->count(),
+                'montant_total' => $operateur->transactions()->commerciale()->valide()->sum('montant'),
+                'commission_total' => $operateur->transactions()->commerciale()->valide()->sum('commission'),
             ],
             'jour' => [
-                'count' => $operateur->transactions()->valide()->duJour()->count(),
-                'montant' => $operateur->transactions()->valide()->duJour()->sum('montant'),
+                'count' => $operateur->transactions()->commerciale()->valide()->duJour()->count(),
+                'montant' => $operateur->transactions()->commerciale()->valide()->duJour()->sum('montant'),
             ],
             'mois' => [
-                'count' => $operateur->transactions()->valide()->duMois()->count(),
-                'montant' => $operateur->transactions()->valide()->duMois()->sum('montant'),
+                'count' => $operateur->transactions()->commerciale()->valide()->duMois()->count(),
+                'montant' => $operateur->transactions()->commerciale()->valide()->duMois()->sum('montant'),
             ],
         ];
 

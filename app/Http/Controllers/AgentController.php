@@ -447,12 +447,12 @@ class AgentController extends Controller
             // Statistiques
             $stats = [
                 'solde_total' => $agent->soldeTotal() ?? 0,
-                'transactions_total' => $agent->transactions()->count(),
-                'transactions_mois' => $agent->transactions()->duMois()->count(),
-                'montant_mois' => $agent->transactions()->duMois()->where('statut', 'valide')->sum('montant') ?? 0,
-                'commission_mois' => $agent->transactions()->duMois()->where('statut', 'valide')->sum('commission') ?? 0,
-                'transactions_jour' => $agent->transactions()->duJour()->count(),
-                'montant_jour' => $agent->transactions()->duJour()->where('statut', 'valide')->sum('montant') ?? 0,
+                'transactions_total' => $agent->transactions()->commerciale()->count(),
+                'transactions_mois' => $agent->transactions()->commerciale()->duMois()->count(),
+                'montant_mois' => $agent->transactions()->commerciale()->duMois()->where('statut', 'valide')->sum('montant') ?? 0,
+                'commission_mois' => $agent->transactions()->commerciale()->duMois()->where('statut', 'valide')->sum('commission') ?? 0,
+                'transactions_jour' => $agent->transactions()->commerciale()->duJour()->count(),
+                'montant_jour' => $agent->transactions()->commerciale()->duJour()->where('statut', 'valide')->sum('montant') ?? 0,
             ];
 
             if ($request->ajax() || $request->wantsJson()) {
@@ -856,9 +856,16 @@ class AgentController extends Controller
             ];
         })->toArray();
 
-        $filename = 'agents_' . now()->format('Y-m-d_His') . '.pdf';
+        $filename = 'agents_' . now()->format('Y-m-d_His');
 
-        return $this->exportToPdf('Liste des Agents', $headers, $data, $filename);
+        if ($this->wantsExcelExport($request)) {
+            return $this->exportToExcel($headers, $data, $this->excelFilename($filename), 'Liste des Agents', 'Répertoire des agents PDV Connect', $this->buildAgentExportFilters($request));
+        }
+
+        return $this->exportToPdf('Liste des Agents', $headers, $data, $filename . '.pdf', 'portrait', $request, [
+            'subtitle' => 'Répertoire des agents PDV Connect',
+            'filtersText' => $this->buildAgentExportFilters($request),
+        ]);
     }
 
     /**
@@ -927,8 +934,28 @@ class AgentController extends Controller
             $data[] = $row;
         }
 
-        $filename = 'soldes_agents_' . now()->format('Y-m-d_His') . '.pdf';
+        $filename = 'soldes_agents_' . now()->format('Y-m-d_His');
 
-        return $this->exportToPdf('Soldes des Agents', $headers, $data, $filename);
+        if ($this->wantsExcelExport($request)) {
+            return $this->exportToExcel($headers, $data, $this->excelFilename($filename), 'Soldes des Agents', 'État des soldes espèces et virtuels', $request->filled('search') ? 'Recherche : ' . $request->search : null);
+        }
+
+        return $this->exportToPdf('Soldes des Agents', $headers, $data, $filename . '.pdf', 'portrait', $request, [
+            'subtitle' => 'État des soldes espèces et virtuels',
+            'filtersText' => $request->filled('search') ? 'Recherche : ' . $request->search : null,
+        ]);
+    }
+
+    private function buildAgentExportFilters(Request $request): ?string
+    {
+        $parts = [];
+        if ($request->filled('statut')) {
+            $parts[] = 'Statut : ' . ucfirst($request->statut);
+        }
+        if ($request->filled('search')) {
+            $parts[] = 'Recherche : ' . $request->search;
+        }
+
+        return $parts ? implode(' · ', $parts) : null;
     }
 }

@@ -13,9 +13,18 @@
             </div>
         </div>      
         <div class="flex items-center gap-2.5">
-            <a href="{{ route('agents.export', request()->all()) }}" class="kt-btn kt-btn-outline" data-ajax="false" target="_blank">
+            <button type="button"
+                class="kt-btn kt-btn-outline"
+                data-pdf-preview
+                data-pdf-url="{{ route('agents.export', request()->all()) }}"
+                data-pdf-title="Liste des agents">
                 <img src="{{ asset('assets/media/app/pdf-icon.svg') }}" alt="PDF" class="w-5 h-5 inline-block mr-2" />
                 Exporter en PDF
+            </button>
+            <a href="{{ route('agents.export', array_merge(request()->all(), ['format' => 'excel'])) }}"
+                class="kt-btn kt-btn-outline" data-ajax="false">
+                <img src="{{ asset('assets/media/file-types/excel.svg') }}" alt="Excel" class="w-5 h-5 inline-block mr-2" />
+                Exporter en Excel
             </a>
         
             <button class="kt-btn kt-btn-primary" data-kt-modal-toggle="#modal_nouvel_agent">
@@ -311,19 +320,17 @@
         z-index: 100000 !important;
     }
     
-    /* Modal nouvel agent : taille fixe sur tous les onglets */
+    /* Modal nouvel agent : taille stable = 1er onglet sur les 3 */
     #modal_nouvel_agent > .kt-modal-content {
         width: min(95vw, 1050px);
         max-width: 1050px;
         min-width: min(95vw, 900px);
     }
 
-    #modal_nouvel_agent .kt-modal-body {
-        min-height: 580px;
-    }
-
     #modal_nouvel_agent .kt-tab-content {
         min-height: 520px;
+        max-height: 520px;
+        overflow-y: auto;
     }
 
     .kt-modal-content {
@@ -1995,7 +2002,7 @@ document.addEventListener('ajax-content-loaded', function() {
                 </div>
             </div>
         </div>
-        <div class="kt-modal-body kt-scrollable-y py-0 mb-5 ps-6 pr-3 me-3">
+        <div class="kt-modal-body py-0 mb-5 ps-6 pe-6">
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 lg:gap-7.5">
                 <div class="col-span-1">
                     <div class="grid gap-5 lg:gap-7.5">

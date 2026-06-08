@@ -176,6 +176,7 @@
 .kt-btn-primary {
   background-color: #314e6c !important;
   border-color: #314e6c !important;
+  color: #ffffff !important;
 }
 
 .kt-btn-primary:hover {
@@ -187,6 +188,7 @@
 .dark .kt-btn-primary {
   background-color: #314e6c !important;
   border-color: #314e6c !important;
+  color: #ffffff !important;
 }
 
 .dark .kt-btn-primary:hover {
@@ -228,6 +230,30 @@
 
 .kt-modal.open {
   display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Le fond blanc suit tout le contenu (header + body + footer) */
+.kt-modal-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100dvh - 2rem);
+  overflow: hidden;
+  background-color: var(--popover);
+}
+
+.kt-modal-header,
+.kt-modal-footer {
+  flex-shrink: 0;
+}
+
+.kt-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  background-color: inherit;
 }
 
 /* Éviter qu'un transform sur #content piège les modals en position fixed */

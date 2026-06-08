@@ -18,7 +18,7 @@ class TransactionController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Transaction::with(['agent.utilisateur', 'operateur']);
+        $query = Transaction::commerciale()->with(['agent.utilisateur', 'operateur']);
 
         // Filtres
         if ($request->filled('statut')) {
@@ -346,7 +346,7 @@ class TransactionController extends Controller
     {
         $periode = $request->get('periode', 'jour'); // jour, semaine, mois, annee
 
-        $query = Transaction::valide();
+        $query = Transaction::commerciale()->valide();
 
         switch ($periode) {
             case 'jour':
@@ -403,7 +403,7 @@ class TransactionController extends Controller
      */
     public function export(Request $request)
     {
-        $query = Transaction::with(['agent', 'operateur']);
+        $query = Transaction::commerciale()->with(['agent', 'operateur']);
 
         // Appliquer les mêmes filtres que l'index
         if ($request->filled('statut')) {
@@ -490,9 +490,35 @@ class TransactionController extends Controller
             ];
         })->toArray();
 
-        $filename = 'transactions_' . now()->format('Y-m-d_His') . '.pdf';
+        $filename = 'transactions_' . now()->format('Y-m-d_His');
 
-        return $this->exportToPdf('Liste des Transactions', $headers, $data, $filename);
+        if ($this->wantsExcelExport($request)) {
+            return $this->exportToExcel($headers, $data, $this->excelFilename($filename), 'Liste des Transactions', 'Historique des opérations Mobile Money', $this->buildTransactionExportFilters($request));
+        }
+
+        return $this->exportToPdf('Liste des Transactions', $headers, $data, $filename . '.pdf', 'portrait', $request, [
+            'subtitle' => 'Historique des opérations Mobile Money',
+            'filtersText' => $this->buildTransactionExportFilters($request),
+        ]);
+    }
+
+    private function buildTransactionExportFilters(Request $request): ?string
+    {
+        $parts = [];
+        if ($request->filled('date_debut') || $request->filled('date_fin')) {
+            $parts[] = 'Période : ' . ($request->date_debut ?? '…') . ' — ' . ($request->date_fin ?? '…');
+        }
+        if ($request->filled('statut')) {
+            $parts[] = 'Statut : ' . ucfirst($request->statut);
+        }
+        if ($request->filled('type')) {
+            $parts[] = 'Type : ' . ucfirst($request->type);
+        }
+        if ($request->filled('search')) {
+            $parts[] = 'Recherche : ' . $request->search;
+        }
+
+        return $parts ? implode(' · ', $parts) : null;
     }
 
     /**

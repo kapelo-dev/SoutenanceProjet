@@ -634,6 +634,14 @@ const AjaxNavigation = {
                 window.dashboardMonthMapInstance.init();
             }, 200);
         }
+
+        const evolutionChartElement = document.getElementById('dashboard_evolution_chart');
+        if (evolutionChartElement && window.dashboardEvolutionChartInstance) {
+            window.dashboardEvolutionChartInstance.destroy();
+            setTimeout(() => {
+                window.dashboardEvolutionChartInstance.init();
+            }, 200);
+        }
         
         // Autres cartes peuvent être ajoutées ici
         if (document.getElementById('map') && typeof initMap === 'function') {

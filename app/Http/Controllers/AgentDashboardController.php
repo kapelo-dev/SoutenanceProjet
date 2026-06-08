@@ -19,7 +19,7 @@ class AgentDashboardController extends Controller
             abort(403, 'Accès réservé aux agents.');
         }
 
-        $baseQuery = Transaction::with(['operateur'])
+        $baseQuery = Transaction::commerciale()->with(['operateur'])
             ->where('agent_id', $agent->id);
 
         $todayQuery = (clone $baseQuery)->duJour()->valide();

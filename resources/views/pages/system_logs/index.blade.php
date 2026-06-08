@@ -12,14 +12,18 @@
             </div>
         </div>
         <div class="flex items-center gap-2.5">
-            <a class="kt-btn kt-btn-sm kt-btn-outline" href="{{ route('system-logs.export.excel', request()->query()) }}">
-                <i class="ki-filled ki-file-down"></i>
+            <a class="kt-btn kt-btn-sm kt-btn-outline" href="{{ route('system-logs.export.excel', request()->query()) }}" data-ajax="false">
+                <img src="{{ asset('assets/media/file-types/excel.svg') }}" alt="Excel" class="w-5 h-5 inline-block mr-2" />
                 Excel
             </a>
-            <a class="kt-btn kt-btn-sm kt-btn-outline" href="{{ route('system-logs.export.pdf', request()->query()) }}">
+            <button type="button"
+                class="kt-btn kt-btn-sm kt-btn-outline"
+                data-pdf-preview
+                data-pdf-url="{{ route('system-logs.export.pdf', request()->query()) }}"
+                data-pdf-title="Logs système">
                 <i class="ki-filled ki-file-down"></i>
                 PDF
-            </a>
+            </button>
         </div>
     </div>
 </div>

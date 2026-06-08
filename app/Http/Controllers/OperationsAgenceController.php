@@ -19,7 +19,7 @@ class OperationsAgenceController extends Controller
     public function index(Request $request)
     {
         // Transactions les plus récentes avec les relations nécessaires
-        $transactions = Transaction::with(['agent.utilisateur', 'operateur', 'typeOperation'])
+        $transactions = Transaction::operationAgence()->with(['agent.utilisateur', 'operateur', 'typeOperation'])
             ->latest('date')
             ->paginate(20);
 

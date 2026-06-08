@@ -18,11 +18,20 @@
                 </div>
             </div>
             <div class="flex items-center gap-2.5">
-                <a href="{{ route('rapports.export', request()->all()) }}" class="kt-btn kt-btn-outline" data-ajax="false" target="_blank">
+                <button type="button"
+                    class="kt-btn kt-btn-outline"
+                    data-pdf-preview
+                    data-pdf-url="{{ route('rapports.export', request()->all()) }}"
+                    data-pdf-title="Rapport des transactions">
                     <img src="{{ asset('assets/media/app/pdf-icon.svg') }}" alt="PDF" class="w-5 h-5 inline-block mr-2" />
                     Exporter en PDF
+                </button>
+                <a href="{{ route('rapports.export', array_merge(request()->all(), ['format' => 'excel'])) }}"
+                    class="kt-btn kt-btn-outline" data-ajax="false">
+                    <img src="{{ asset('assets/media/file-types/excel.svg') }}" alt="Excel" class="w-5 h-5 inline-block mr-2" />
+                    Exporter en Excel
                 </a>
-                <button class="kt-btn kt-btn-outline kt-btn-primary" data-kt-modal-toggle="#modal_filtres_rapports">
+                <button class="kt-btn kt-btn-primary" data-kt-modal-toggle="#modal_filtres_rapports">
                     <i class="ki-filled ki-setting-4"></i>
                     Filtres
                 </button>

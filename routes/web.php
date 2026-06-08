@@ -19,6 +19,7 @@ use App\Http\Controllers\OperationsAgenceController;
 use App\Http\Controllers\PublicPagesController;
 use App\Http\Controllers\GestionEntrepriseController;
 use App\Http\Controllers\ConfigAppMobileController;
+use App\Http\Controllers\TechnicalDashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -138,6 +139,8 @@ Route::get('/demo10', function () {
 Route::middleware(['auth', 'require.password.change'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/technique', [TechnicalDashboardController::class, 'index'])->name('dashboard.technique');
+    Route::get('/api/dashboard/technique/metrics', [TechnicalDashboardController::class, 'metrics'])->name('dashboard.technique.metrics');
     Route::get('/api/dashboard/stats-temps-reel', [DashboardController::class, 'statsTempsReel']);
     Route::get('/api/dashboard/graphique-transactions', [DashboardController::class, 'graphiqueTransactions']);
     Route::get('/api/dashboard/stats-par-operateur', [DashboardController::class, 'statsParOperateur']);
@@ -228,6 +231,7 @@ Route::middleware(['auth', 'require.password.change'])->group(function () {
     Route::get('/parametres-app-mobile', [ConfigAppMobileController::class, 'index'])->name('parametres-app-mobile.index');
     Route::post('/parametres-app-mobile', [ConfigAppMobileController::class, 'store'])->name('parametres-app-mobile.store');
     Route::post('/parametres-app-mobile/generate-token', [ConfigAppMobileController::class, 'generateToken'])->name('parametres-app-mobile.generate-token');
+    Route::post('/parametres-app-mobile/ping-api', [ConfigAppMobileController::class, 'pingApi'])->name('parametres-app-mobile.ping-api');
 
     // Logs système
     Route::get('/system-logs', [\App\Http\Controllers\SystemLogController::class, 'index'])->name('system-logs.index');

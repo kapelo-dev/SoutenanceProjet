@@ -122,4 +122,25 @@ class Transaction extends Model
         return $query->whereYear('date', now()->year)
                      ->whereMonth('date', now()->month);
     }
+
+    /**
+     * Transactions Mobile Money (hors opérations en agence et montants initiaux).
+     */
+    public function scopeCommerciale($query)
+    {
+        return $query->whereNull('type_operation_id');
+    }
+
+    /**
+     * Opérations en agence : approvisionnements, retraits internes, montants initiaux, etc.
+     */
+    public function scopeOperationAgence($query)
+    {
+        return $query->whereNotNull('type_operation_id');
+    }
+
+    public function isOperationAgence(): bool
+    {
+        return $this->type_operation_id !== null;
+    }
 }

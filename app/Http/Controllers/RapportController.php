@@ -24,7 +24,7 @@ class RapportController extends Controller
         $dateFin = $request->filled('date_fin') ? Carbon::parse($request->date_fin)->endOfDay() : Carbon::now()->endOfDay();
         
         // Construire la requête de base
-        $query = Transaction::with(['agent.utilisateur', 'operateur', 'agent.kiosque'])
+        $query = Transaction::commerciale()->with(['agent.utilisateur', 'operateur', 'agent.kiosque'])
             ->whereBetween('date', [$dateDebut, $dateFin]);
         
         // Appliquer les filtres
@@ -112,11 +112,11 @@ class RapportController extends Controller
         // Top agents (par nombre de transactions ou montant) - Top 10 comme dans le PDF
         $topAgents = Agent::with(['utilisateur', 'kiosque'])
             ->whereHas('transactions', function($q) use ($dateDebut, $dateFin) {
-                $q->whereBetween('date', [$dateDebut, $dateFin]);
+                $q->commerciale()->whereBetween('date', [$dateDebut, $dateFin]);
             })
             ->get()
             ->map(function($agent) use ($request, $dateDebut, $dateFin) {
-                $agentQuery = Transaction::whereBetween('date', [$dateDebut, $dateFin])
+                $agentQuery = Transaction::commerciale()->whereBetween('date', [$dateDebut, $dateFin])
                     ->where('agent_id', $agent->id);
                 
                 // Appliquer les mêmes filtres que la requête principale
@@ -218,7 +218,7 @@ class RapportController extends Controller
         $dateFin = $request->filled('date_fin') ? Carbon::parse($request->date_fin)->endOfDay() : Carbon::now()->endOfDay();
         
         // Construire la requête de base
-        $query = Transaction::with(['agent.utilisateur', 'operateur', 'agent.kiosque'])
+        $query = Transaction::commerciale()->with(['agent.utilisateur', 'operateur', 'agent.kiosque'])
             ->whereBetween('date', [$dateDebut, $dateFin]);
         
         // Appliquer les filtres (même logique que index)
@@ -316,11 +316,11 @@ class RapportController extends Controller
         // Top agents
         $topAgents = Agent::with(['utilisateur', 'kiosque'])
             ->whereHas('transactions', function($q) use ($dateDebut, $dateFin) {
-                $q->whereBetween('date', [$dateDebut, $dateFin]);
+                $q->commerciale()->whereBetween('date', [$dateDebut, $dateFin]);
             })
             ->get()
             ->map(function($agent) use ($request, $dateDebut, $dateFin) {
-                $agentQuery = Transaction::whereBetween('date', [$dateDebut, $dateFin])
+                $agentQuery = Transaction::commerciale()->whereBetween('date', [$dateDebut, $dateFin])
                     ->where('agent_id', $agent->id);
                 
                 // Appliquer les mêmes filtres
@@ -450,29 +450,32 @@ class RapportController extends Controller
             }
         }
 
-        $title = 'Rapport des Transactions' . (!empty($filtresText) ? ' - ' . implode(' | ', $filtresText) : '');
+        $title = 'Rapport des Transactions';
         
-        $filename = 'rapport_transactions_' . now()->format('Y-m-d_His') . '.pdf';
+        $filename = 'rapport_transactions_' . now()->format('Y-m-d_His');
+        $filtersText = !empty($filtresText) ? implode(' · ', $filtresText) : null;
 
-        // Utiliser un template spécialisé pour les rapports avec statistiques
-        try {
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('exports.rapport-pdf-template', compact(
-                'title',
-                'headers',
-                'data',
-                'statsGlobales',
-                'statsOperateurs',
-                'topAgents',
-                'dateDebut',
-                'dateFin'
-            ));
-            $pdf->setPaper('a4', 'landscape');
-            $pdf->setOption('enable-local-file-access', true);
-            
-            return $pdf->download($filename);
-        } catch (\Exception $e) {
-            \Log::error('Erreur export PDF rapport: ' . $e->getMessage());
-            return response('Erreur lors de la génération du PDF: ' . $e->getMessage(), 500);
+        if ($this->wantsExcelExport($request)) {
+            return $this->exportRapportToExcel(
+                $filename,
+                $headers,
+                $data,
+                $statsGlobales,
+                $statsOperateurs,
+                $topAgents,
+                $dateDebut,
+                $dateFin,
+                $filtersText
+            );
         }
+
+        return $this->exportRapportToPdf($title, $headers, $data, $filename . '.pdf', [
+            'statsGlobales' => $statsGlobales,
+            'statsOperateurs' => $statsOperateurs,
+            'topAgents' => $topAgents,
+            'dateDebut' => $dateDebut,
+            'dateFin' => $dateFin,
+            'filtersText' => $filtersText,
+        ], $request);
     }
 }

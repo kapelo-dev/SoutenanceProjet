@@ -30,6 +30,7 @@
         <!-- End of Page -->
 
         @include('layouts.partials.scripts')
+        @include('partials.pdf-preview-modal')
         @stack('scripts')
     </body>
 </html>

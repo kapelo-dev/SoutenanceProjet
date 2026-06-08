@@ -57,6 +57,15 @@ Route::prefix('agents')->group(function () {
     Route::get('/{agent}/soldes', [AgentController::class, 'getSoldes']);
 });
 
+// Santé API mobile (ping depuis la page Configuration App Mobile)
+Route::get('/mobile/ping', function () {
+    return response()->json([
+        'ok' => true,
+        'app' => config('app.name', 'PDV Connect'),
+        'message' => 'API mobile accessible.',
+    ]);
+});
+
 // Transactions
 Route::prefix('transactions')->group(function () {
     Route::get('/statistiques', [TransactionController::class, 'statistiques']);

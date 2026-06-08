@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 160" width="560" height="160">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,900;1,700&amp;display=swap');
+    </style>
+    <mask id="pMask">
+      <rect width="560" height="160" fill="white"/>
+      <polygon points="72,58 72,96 104,77" fill="black"/>
+    </mask>
+  </defs>
+
+  <text
+    x="12" y="108"
+    font-family="Montserrat, 'Arial Black', Helvetica, sans-serif"
+    font-weight="900"
+    font-size="88"
+    letter-spacing="-5"
+    fill="#1a3a6e"
+    mask="url(#pMask)">PDV</text>
+
+  <rect x="28" y="118" width="18" height="18" rx="2" fill="#f5c400"/>
+
+  <text
+    x="168" y="146"
+    font-family="Montserrat, 'Arial Black', Helvetica, sans-serif"
+    font-weight="700"
+    font-style="italic"
+    font-size="54"
+    letter-spacing="2.5"
+    fill="#f5c400">CONNECT</text>
+</svg>

@@ -150,7 +150,7 @@
           </div>
          </div>
          <div class="kt-card-footer justify-center gap-2">
-          <a class="kt-btn kt-btn-sm kt-btn-outline {{ $kiosque->statut == 'actif' ? 'kt-btn-primary' : ($kiosque->statut == 'en_travaux' ? 'kt-btn-warning' : '') }}">
+          <a class="kt-btn kt-btn-sm {{ $kiosque->statut == 'actif' ? 'kt-btn-primary' : ($kiosque->statut == 'en_travaux' ? 'kt-btn-warning' : 'kt-btn-outline') }}">
            <i class="ki-filled ki-check-circle">
            </i>
            {{ ucfirst(str_replace('_', ' ', $kiosque->statut)) }}
@@ -258,7 +258,7 @@
            </div>
           </div>
           <div class="text-right flex items-center gap-2">
-           <a class="kt-btn kt-btn-sm kt-btn-outline {{ $kiosque->statut == 'actif' ? 'kt-btn-primary' : ($kiosque->statut == 'en_travaux' ? 'kt-btn-warning' : '') }}">
+           <a class="kt-btn kt-btn-sm {{ $kiosque->statut == 'actif' ? 'kt-btn-primary' : ($kiosque->statut == 'en_travaux' ? 'kt-btn-warning' : 'kt-btn-outline') }}">
             <i class="ki-filled ki-check-circle">
             </i>
             {{ ucfirst(str_replace('_', ' ', $kiosque->statut)) }}

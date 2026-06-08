@@ -13,9 +13,18 @@
             </div>
         </div>
         <div class="flex items-center gap-2.5">
-            <a href="{{ route('agents.solde.export', request()->all()) }}" class="kt-btn kt-btn-outline" data-ajax="false" target="_blank">
+            <button type="button"
+                class="kt-btn kt-btn-outline"
+                data-pdf-preview
+                data-pdf-url="{{ route('agents.solde.export', request()->all()) }}"
+                data-pdf-title="Soldes des agents">
                 <img src="{{ asset('assets/media/app/pdf-icon.svg') }}" alt="PDF" class="w-5 h-5 inline-block mr-2" />
                 Exporter en PDF
+            </button>
+            <a href="{{ route('agents.solde.export', array_merge(request()->all(), ['format' => 'excel'])) }}"
+                class="kt-btn kt-btn-outline" data-ajax="false">
+                <img src="{{ asset('assets/media/file-types/excel.svg') }}" alt="Excel" class="w-5 h-5 inline-block mr-2" />
+                Exporter en Excel
             </a>
         </div>
     </div>
@@ -101,7 +110,7 @@
                                 $totalVirtuel = $soldesVirtuels->sum('montant');
                                 $soldeTotal = ($soldeEspece ? $soldeEspece->montant : 0) + $totalVirtuel;
                                 $derniereMaj = $agent->soldes->max('date') ?? $agent->updated_at;
-                                $commissions = $agent->transactions()->where('statut', 'valide')->sum('commission') ?? 0;
+                                $commissions = $agent->transactions()->commerciale()->where('statut', 'valide')->sum('commission') ?? 0;
                                 
                                 // Déterminer le statut de l'agent pour le badge
                                 $statutBadge = 'success'; // Actif par défaut

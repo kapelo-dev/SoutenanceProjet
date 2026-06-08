@@ -41,12 +41,19 @@
                     <label class="text-sm font-medium" for="api_base_url">
                         URL de base de l'API
                     </label>
-                    <input type="url"
-                           name="api_base_url"
-                           id="api_base_url"
-                           class="kt-input"
-                           value="{{ old('api_base_url', $config->api_base_url) }}"
-                           placeholder="https://votredomaine.com">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input type="url"
+                               name="api_base_url"
+                               id="api_base_url"
+                               class="kt-input flex-1 min-w-[200px]"
+                               value="{{ old('api_base_url', $config->api_base_url) }}"
+                               placeholder="https://votredomaine.com">
+                        <button type="button" id="btn_ping_api" class="kt-btn kt-btn-outline kt-btn-sm whitespace-nowrap">
+                            <i class="ki-filled ki-wifi me-1"></i>
+                            Tester
+                        </button>
+                    </div>
+                    <div id="ping_api_result" class="hidden kt-alert text-sm"></div>
                     <span class="text-xs text-muted-foreground">
                         L'application Android utilisera cette URL pour envoyer les transactions (ex: https://votredomaine.com).
                     </span>
@@ -190,10 +197,75 @@
 
 <script>
 (function() {
+    var btnPing = document.getElementById('btn_ping_api');
+    var inputUrl = document.getElementById('api_base_url');
+    var inputToken = document.getElementById('api_token');
+    var pingResult = document.getElementById('ping_api_result');
+
+    function showPingResult(success, message, checks) {
+        if (!pingResult) return;
+        pingResult.classList.remove('hidden', 'kt-alert-success', 'kt-alert-danger');
+        pingResult.classList.add(success ? 'kt-alert-success' : 'kt-alert-danger');
+
+        var html = '<i class="ki-filled ' + (success ? 'ki-check-circle' : 'ki-information-2') + '"></i>';
+        html += '<div><div class="font-medium mb-1">' + message + '</div>';
+        if (checks && checks.length) {
+            html += '<ul class="space-y-0.5 text-xs opacity-90 list-none m-0 p-0">';
+            checks.forEach(function(c) {
+                var icon = c.ok ? '✓' : '✗';
+                var latency = c.latency_ms != null ? ' (' + c.latency_ms + ' ms)' : '';
+                html += '<li>' + icon + ' <strong>' + c.name + '</strong> — ' + c.detail + latency + '</li>';
+            });
+            html += '</ul>';
+        }
+        html += '</div>';
+        pingResult.innerHTML = html;
+    }
+
+    if (btnPing && inputUrl) {
+        btnPing.addEventListener('click', function() {
+            var url = inputUrl.value.trim();
+            if (!url) {
+                inputUrl.focus();
+                showPingResult(false, 'Saisissez une URL de base avant de tester.', []);
+                return;
+            }
+
+            btnPing.disabled = true;
+            var icon = btnPing.querySelector('i');
+            icon?.classList.add('animate-spin');
+            if (pingResult) pingResult.classList.add('hidden');
+
+            fetch('{{ route("parametres-app-mobile.ping-api") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || document.querySelector('input[name="_token"]')?.value,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    api_base_url: url,
+                    api_token: inputToken ? inputToken.value.trim() : ''
+                })
+            })
+            .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+            .then(function(res) {
+                showPingResult(res.data.success, res.data.message || (res.ok ? 'Connexion réussie.' : 'Échec du test.'), res.data.checks || []);
+            })
+            .catch(function() {
+                showPingResult(false, 'Impossible de contacter le serveur pour le test.', []);
+            })
+            .finally(function() {
+                btnPing.disabled = false;
+                icon?.classList.remove('animate-spin');
+            });
+        });
+    }
+
     // Générer un token via l'API et le mettre dans le champ + copier dans le presse-papier
     var btnGenerate = document.getElementById('btn_generate_token');
     var btnCopy = document.getElementById('btn_copy_token');
-    var inputToken = document.getElementById('api_token');
+    if (!inputToken) inputToken = document.getElementById('api_token');
     if (btnGenerate && inputToken) {
         btnGenerate.addEventListener('click', function() {
             btnGenerate.disabled = true;

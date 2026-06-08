@@ -9,12 +9,11 @@
          Roles
         </h1>
         <div class="flex items-center gap-2 text-sm font-normal text-secondary-foreground">
-         Overview of all team members and roles.
-        </div>
+                 </div>
        </div>
        <div class="flex items-center gap-2.5">
         <button class="kt-btn kt-btn-outline" data-kt-modal-toggle="#modal_nouveau_role">
-         New Role
+          Nouveau Role
         </button>
        </div>
       </div>
@@ -176,10 +175,10 @@
           </div>
           <div class="flex flex-col text-center">
            <span class="text-lg font-medium text-mono hover:text-primary mb-px">
-            Add New Role
+            Ajouter un Nouveau Role
            </span>
            <span class="text-sm text-secondary-foreground">
-            Ignite Professional Adventures
+            Ajouter un nouveau rôle pour gérer les permissions et les accès des utilisateurs.
            </span>
           </div>
          </div>

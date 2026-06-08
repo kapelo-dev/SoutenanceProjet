@@ -123,6 +123,26 @@
             </div>
             <!-- end: grid -->
 
+            <!-- begin: Évolution -->
+            <div class="kt-card">
+                <div class="kt-card-header flex-wrap gap-3">
+                    <div class="flex flex-col gap-1">
+                        <h3 class="kt-card-title">Évolution de l'activité</h3>
+                        <span class="text-xs text-secondary-foreground">Montant et volume des transactions validées</span>
+                    </div>
+                    <div class="flex items-center gap-2 ms-auto">
+                        <button type="button" class="kt-btn kt-btn-sm kt-btn-primary" data-dashboard-evolution-period="7jours">7 jours</button>
+                        <button type="button" class="kt-btn kt-btn-sm kt-btn-outline" data-dashboard-evolution-period="30jours">30 jours</button>
+                        <button type="button" class="kt-btn kt-btn-sm kt-btn-outline" data-dashboard-evolution-period="12mois">12 mois</button>
+                    </div>
+                </div>
+                <div class="kt-card-content px-2 pb-2 lg:px-5">
+                    <div id="dashboard_evolution_chart"
+                        data-initial='@json($evolutionTransactions->values())'></div>
+                </div>
+            </div>
+            <!-- end: Évolution -->
+
             <!-- begin: grid -->
             <div class="grid items-stretch gap-5 lg:grid-cols-3 lg:gap-7.5">
                 <div class="lg:col-span-1">

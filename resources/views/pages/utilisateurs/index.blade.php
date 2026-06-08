@@ -160,7 +160,7 @@
           </div>
          </div>
          <div class="kt-card-footer justify-center gap-2">
-          <a class="kt-btn kt-btn-sm kt-btn-outline {{ $utilisateur->statut == 'actif' ? 'kt-btn-primary' : '' }}">
+          <a class="kt-btn kt-btn-sm {{ $utilisateur->statut == 'actif' ? 'kt-btn-primary' : 'kt-btn-outline' }}">
            <i class="ki-filled ki-check-circle">
            </i>
            {{ $utilisateur->statut == 'actif' ? 'Actif' : ($utilisateur->statut == 'suspendu' ? 'Suspendu' : 'Inactif') }}
@@ -270,7 +270,7 @@
 
           <!-- Colonne 3 : boutons actions -->
           <div class="text-right flex items-center gap-2">
-           <a class="kt-btn kt-btn-sm kt-btn-outline {{ $utilisateur->statut == 'actif' ? 'kt-btn-primary' : '' }}">
+           <a class="kt-btn kt-btn-sm {{ $utilisateur->statut == 'actif' ? 'kt-btn-primary' : 'kt-btn-outline' }}">
             <i class="ki-filled ki-check-circle">
             </i>
             {{ $utilisateur->statut == 'actif' ? 'Actif' : ($utilisateur->statut == 'suspendu' ? 'Suspendu' : 'Inactif') }}
@@ -386,7 +386,7 @@
 
    <!-- Modal de Profil Utilisateur -->
    <div class="kt-modal" data-kt-modal="true" data-kt-modal-disable-scroll="false" id="modal_profile" style="display: none;">
-      <div class="kt-modal-content max-w-[600px] p-0 overflow-hidden" id="modal_profile_content">
+      <div class="kt-modal-content max-w-[600px] p-0" id="modal_profile_content">
        <!-- Header with gradient + avatar -->
        <div class="relative">
         <div class="h-32 bg-gradient-to-r from-primary/80 to-primary/40 dark:from-primary/60 dark:to-primary/20"></div>

@@ -197,7 +197,9 @@ class GestionEntrepriseController extends Controller
 
                 // Calculer les commissions basées sur les transactions de l'agent
                 $transactions = Transaction::where('agent_id', $agent->id)
-                    ->whereBetween('created_at', [$dateDebut, $dateFin])
+                    ->commerciale()
+                    ->valide()
+                    ->whereBetween('date', [$dateDebut, $dateFin])
                     ->get();
 
                 $totalTransactions = $transactions->sum('montant');

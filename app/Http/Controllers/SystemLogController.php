@@ -145,7 +145,7 @@ class SystemLogController extends Controller
             ];
         });
 
-        return $this->exportToExcel($headers, $data, 'logs_systeme_' . now()->format('Y-m-d'));
+        return $this->exportToExcel($headers, $data->toArray(), $this->excelFilename('logs_systeme_' . now()->format('Y-m-d_His')), 'Journal système', 'Historique des actions et événements');
     }
 
     /**
@@ -188,15 +188,33 @@ class SystemLogController extends Controller
                 $log->model_name ?? '-',
                 substr($log->description, 0, 100) . (strlen($log->description) > 100 ? '...' : ''),
             ];
-        });
+        })->toArray();
 
         return $this->exportToPdf(
+            'Logs Système',
             $headers,
             $data,
-            'Logs Système',
-            'logs_systeme_' . now()->format('Y-m-d'),
-            'landscape'
+            'logs_systeme_' . now()->format('Y-m-d_His') . '.pdf',
+            'portrait',
+            $request,
+            [
+                'subtitle' => 'Journal d\'audit et traçabilité',
+                'filtersText' => $this->buildLogExportFilters($request),
+            ]
         );
+    }
+
+    private function buildLogExportFilters(Request $request): ?string
+    {
+        $parts = [];
+        if ($request->filled('date_debut') || $request->filled('date_fin')) {
+            $parts[] = 'Période : ' . ($request->date_debut ?? '…') . ' — ' . ($request->date_fin ?? '…');
+        }
+        if ($request->filled('action')) {
+            $parts[] = 'Action : ' . $request->action;
+        }
+
+        return $parts ? implode(' · ', $parts) : null;
     }
 
     /**

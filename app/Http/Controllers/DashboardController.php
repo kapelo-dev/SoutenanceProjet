@@ -20,14 +20,14 @@ class DashboardController extends Controller
         // Statistiques globales
         $stats = [
             // Transactions du jour
-            'transactions_jour' => Transaction::valide()->duJour()->count(),
-            'montant_jour' => Transaction::valide()->duJour()->sum('montant'),
-            'commission_jour' => Transaction::valide()->duJour()->sum('commission'),
+            'transactions_jour' => Transaction::commerciale()->valide()->duJour()->count(),
+            'montant_jour' => Transaction::commerciale()->valide()->duJour()->sum('montant'),
+            'commission_jour' => Transaction::commerciale()->valide()->duJour()->sum('commission'),
             
             // Transactions du mois
-            'transactions_mois' => Transaction::valide()->duMois()->count(),
-            'montant_mois' => Transaction::valide()->duMois()->sum('montant'),
-            'commission_mois' => Transaction::valide()->duMois()->sum('commission'),
+            'transactions_mois' => Transaction::commerciale()->valide()->duMois()->count(),
+            'montant_mois' => Transaction::commerciale()->valide()->duMois()->sum('montant'),
+            'commission_mois' => Transaction::commerciale()->valide()->duMois()->sum('commission'),
             
             // Agents et kiosques
             'agents_actifs' => Agent::actif()->count(),
@@ -38,21 +38,21 @@ class DashboardController extends Controller
 
         // Transactions par type (du jour)
         $transactionsParType = [
-            'depot' => Transaction::valide()->depot()->duJour()->sum('montant'),
-            'retrait' => Transaction::valide()->retrait()->duJour()->sum('montant'),
-            'transfert' => Transaction::valide()->where('type', 'transfert')->duJour()->sum('montant'),
-            'paiement' => Transaction::valide()->where('type', 'paiement')->duJour()->sum('montant'),
+            'depot' => Transaction::commerciale()->valide()->depot()->duJour()->sum('montant'),
+            'retrait' => Transaction::commerciale()->valide()->retrait()->duJour()->sum('montant'),
+            'transfert' => Transaction::commerciale()->valide()->where('type', 'transfert')->duJour()->sum('montant'),
+            'paiement' => Transaction::commerciale()->valide()->where('type', 'paiement')->duJour()->sum('montant'),
         ];
 
         // Transactions par opérateur (du mois)
         $operateurs = Operateur::actif()->get()->map(function($operateur) {
             return [
                 'operateur' => $operateur,
-                'transactions' => Transaction::valide()
+                'transactions' => Transaction::commerciale()->valide()
                     ->where('operateur_id', $operateur->id)
                     ->duMois()
                     ->count(),
-                'montant' => Transaction::valide()
+                'montant' => Transaction::commerciale()->valide()
                     ->where('operateur_id', $operateur->id)
                     ->duMois()
                     ->sum('montant'),
@@ -74,6 +74,7 @@ class DashboardController extends Controller
             ])
             ->join('transactions', 'agents.id', '=', 'transactions.agent_id')
             ->where('transactions.statut', 'valide')
+            ->whereNull('transactions.type_operation_id')
             ->whereMonth('transactions.date', now()->month)
             ->groupBy([
                 'agents.id',
@@ -91,7 +92,7 @@ class DashboardController extends Controller
             ->get();
 
         // Dernières transactions
-        $dernieresTransactions = Transaction::with(['agent', 'operateur'])
+        $dernieresTransactions = Transaction::commerciale()->with(['agent', 'operateur'])
             ->latest('date')
             ->limit(10)
             ->get();
@@ -102,8 +103,8 @@ class DashboardController extends Controller
             return [
                 'date' => $date->format('Y-m-d'),
                 'jour' => $date->locale('fr')->isoFormat('dddd'),
-                'count' => Transaction::valide()->whereDate('date', $date)->count(),
-                'montant' => Transaction::valide()->whereDate('date', $date)->sum('montant'),
+                'count' => Transaction::commerciale()->valide()->whereDate('date', $date)->count(),
+                'montant' => Transaction::commerciale()->valide()->whereDate('date', $date)->sum('montant'),
             ];
         });
 
@@ -132,10 +133,10 @@ class DashboardController extends Controller
     public function statsTempsReel()
     {
         $stats = [
-            'transactions_jour' => Transaction::valide()->duJour()->count(),
-            'montant_jour' => Transaction::valide()->duJour()->sum('montant'),
+            'transactions_jour' => Transaction::commerciale()->valide()->duJour()->count(),
+            'montant_jour' => Transaction::commerciale()->valide()->duJour()->sum('montant'),
             'agents_en_ligne' => Agent::actif()->count(),
-            'derniere_transaction' => Transaction::with(['agent', 'operateur'])
+            'derniere_transaction' => Transaction::commerciale()->with(['agent', 'operateur'])
                 ->latest('date')
                 ->first(),
         ];
@@ -157,8 +158,8 @@ class DashboardController extends Controller
                     return [
                         'label' => $date->locale('fr')->isoFormat('DD MMM'),
                         'date' => $date->format('Y-m-d'),
-                        'montant' => Transaction::valide()->whereDate('date', $date)->sum('montant'),
-                        'count' => Transaction::valide()->whereDate('date', $date)->count(),
+                        'montant' => Transaction::commerciale()->valide()->whereDate('date', $date)->sum('montant'),
+                        'count' => Transaction::commerciale()->valide()->whereDate('date', $date)->count(),
                     ];
                 });
                 break;
@@ -169,8 +170,8 @@ class DashboardController extends Controller
                     return [
                         'label' => $date->format('d/m'),
                         'date' => $date->format('Y-m-d'),
-                        'montant' => Transaction::valide()->whereDate('date', $date)->sum('montant'),
-                        'count' => Transaction::valide()->whereDate('date', $date)->count(),
+                        'montant' => Transaction::commerciale()->valide()->whereDate('date', $date)->sum('montant'),
+                        'count' => Transaction::commerciale()->valide()->whereDate('date', $date)->count(),
                     ];
                 });
                 break;
@@ -181,11 +182,11 @@ class DashboardController extends Controller
                     return [
                         'label' => $date->locale('fr')->isoFormat('MMM YYYY'),
                         'date' => $date->format('Y-m'),
-                        'montant' => Transaction::valide()
+                        'montant' => Transaction::commerciale()->valide()
                             ->whereYear('date', $date->year)
                             ->whereMonth('date', $date->month)
                             ->sum('montant'),
-                        'count' => Transaction::valide()
+                        'count' => Transaction::commerciale()->valide()
                             ->whereYear('date', $date->year)
                             ->whereMonth('date', $date->month)
                             ->count(),
@@ -209,21 +210,21 @@ class DashboardController extends Controller
             return [
                 'operateur' => $operateur->only(['id', 'code', 'libelle', 'couleur']),
                 'jour' => [
-                    'count' => Transaction::valide()
+                    'count' => Transaction::commerciale()->valide()
                         ->where('operateur_id', $operateur->id)
                         ->duJour()
                         ->count(),
-                    'montant' => Transaction::valide()
+                    'montant' => Transaction::commerciale()->valide()
                         ->where('operateur_id', $operateur->id)
                         ->duJour()
                         ->sum('montant'),
                 ],
                 'mois' => [
-                    'count' => Transaction::valide()
+                    'count' => Transaction::commerciale()->valide()
                         ->where('operateur_id', $operateur->id)
                         ->duMois()
                         ->count(),
-                    'montant' => Transaction::valide()
+                    'montant' => Transaction::commerciale()->valide()
                         ->where('operateur_id', $operateur->id)
                         ->duMois()
                         ->sum('montant'),
@@ -253,6 +254,7 @@ class DashboardController extends Controller
                 ->leftJoin('transactions', function ($join) {
                     $join->on('transactions.agent_id', '=', 'agents.id')
                         ->where('transactions.statut', 'valide')
+                        ->whereNull('transactions.type_operation_id')
                         ->whereBetween('transactions.date', [now()->startOfMonth(), now()->endOfMonth()]);
                 })
                 ->groupBy('kiosques.id', 'kiosques.nom', 'kiosques.latitude', 'kiosques.longitude')

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use App\Traits\LogsActivity;
 
 class Utilisateur extends Authenticatable
@@ -150,5 +151,19 @@ class Utilisateur extends Authenticatable
     public function hasProfil($profilLibelle)
     {
         return $this->profils()->where('libelle', $profilLibelle)->exists();
+    }
+
+    public function canAccessRoute(string $routeName): bool
+    {
+        return DB::table('profil_liens')
+            ->join('liens', 'profil_liens.lien_id', '=', 'liens.id')
+            ->join('user_profils', 'profil_liens.profil_id', '=', 'user_profils.profil_id')
+            ->where('user_profils.user_id', $this->id)
+            ->where('liens.route', $routeName)
+            ->whereNull('profil_liens.deleted_at')
+            ->whereNull('liens.deleted_at')
+            ->whereNull('user_profils.deleted_at')
+            ->where('liens.visible', true)
+            ->exists();
     }
 }

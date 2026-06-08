@@ -3,11 +3,14 @@ import Alpine from 'alpinejs';
 import './ajax-navigation';
 // Importer les modules de cartes
 import './maps/dashboard-month-map';
+import './dashboard-evolution-chart';
+import './dashboard-technique';
 import './maps/kiosques-map';
 // Importer le système de permissions de menu
 import './menu-permissions';
 // Importer le système d'initialisation des pages
 import './page-init';
+import './pdf-preview';
 
 // Start Alpine.js
 window.Alpine = Alpine;
