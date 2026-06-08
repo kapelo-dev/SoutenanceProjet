@@ -175,6 +175,49 @@ function toggleMenuItem(element, visible) {
     element.setAttribute('data-permission-hidden', 'true');
 }
 
+function isMenuItemVisible(element) {
+    return element && !element.hasAttribute('data-permission-hidden');
+}
+
+function isSectionHeadingItem(item) {
+    return (
+        item?.querySelector('.kt-menu-heading') &&
+        !item.querySelector('a[href]') &&
+        !item.hasAttribute('data-kt-menu-item-toggle')
+    );
+}
+
+function getSidebarTopLevelItems(sidebarMenu) {
+    return Array.from(sidebarMenu.children).filter((el) => {
+        if (el.classList.contains('kt-sidebar-menu-skeleton') || el.tagName === 'SCRIPT') {
+            return false;
+        }
+
+        return el.classList.contains('kt-menu-item');
+    });
+}
+
+function hideEmptySectionHeadings(sidebarMenu) {
+    const items = getSidebarTopLevelItems(sidebarMenu);
+
+    items.forEach((item, index) => {
+        if (!isSectionHeadingItem(item)) return;
+
+        let hasVisibleItem = false;
+
+        for (let i = index + 1; i < items.length; i++) {
+            if (isSectionHeadingItem(items[i])) break;
+
+            if (isMenuItemVisible(items[i])) {
+                hasVisibleItem = true;
+                break;
+            }
+        }
+
+        toggleMenuItem(item, hasVisibleItem);
+    });
+}
+
 function applyMenuPermissions() {
     const sidebarMenu = document.getElementById('sidebar_menu');
     if (!sidebarMenu) return;
@@ -206,25 +249,7 @@ function applyMenuPermissions() {
         toggleMenuItem(accordion, children.length === 0 || visibleChildren.length > 0);
     });
 
-    sidebarMenu.querySelectorAll('.kt-menu-heading').forEach((heading) => {
-        const menuItem = heading.closest('.kt-menu-item');
-        if (!menuItem) return;
-
-        let nextSibling = menuItem.nextElementSibling;
-        let hasVisibleSibling = false;
-
-        while (nextSibling) {
-            if (nextSibling.classList.contains('kt-menu-item')) {
-                if (!nextSibling.hasAttribute('data-permission-hidden')) {
-                    hasVisibleSibling = true;
-                    break;
-                }
-            }
-            nextSibling = nextSibling.nextElementSibling;
-        }
-
-        toggleMenuItem(menuItem, hasVisibleSibling);
-    });
+    hideEmptySectionHeadings(sidebarMenu);
 }
 
 function initMenuPermissions() {
