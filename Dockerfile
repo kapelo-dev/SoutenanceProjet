@@ -10,7 +10,10 @@ COPY tailwind.config.js vite.config.js ./
 COPY resources ./resources
 COPY public ./public
 
-RUN npm run build
+ENV NODE_ENV=production
+RUN npm run build \
+    && test -f public/build/manifest.json \
+    || (echo "Échec build Vite — manifest.json introuvable" && exit 1)
 
 # ========== Stage 2 : application Laravel ==========
 FROM php:8.3-apache

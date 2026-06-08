@@ -2,7 +2,7 @@
 <html class="h-full" data-kt-theme="true" data-kt-theme-mode="light" dir="ltr" lang="en">
     <head>
         @include('layouts.partials.head')
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @vite(['resources/css/app.css'])
     </head>
     <body class="antialiased flex h-full text-base text-foreground bg-background [--header-height:54px] [--sidebar-width:200px]">
         @include('partials.theme-toggle')

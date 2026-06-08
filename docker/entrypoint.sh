@@ -20,8 +20,14 @@ if [ ! -f .env ]; then
   chown www-data:www-data .env
 fi
 
-if [ -z "$APP_URL" ] && [ -n "$RENDER_EXTERNAL_URL" ]; then
+if [ -n "$RENDER_EXTERNAL_URL" ]; then
   export APP_URL="$RENDER_EXTERNAL_URL"
+fi
+
+if [ ! -f public/build/manifest.json ]; then
+  echo "ERREUR: public/build/manifest.json absent — le build Vite npm n'a pas été copié dans l'image."
+  echo "Vérifiez le stage Docker frontend (npm run build) et redéployez avec « Clear build cache »."
+  exit 1
 fi
 
 # APP_KEY : ne pas utiliser key:generate (écrit .env, échoue souvent sur Render)
