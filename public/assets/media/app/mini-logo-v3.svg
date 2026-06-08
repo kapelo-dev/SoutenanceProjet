@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" fill="none" aria-label="PDV">
+  <!-- Design épuré et moderne -->
+  <g>
+    <!-- Hexagone stylisé -->
+    <path d="M18 6 L26 10 L26 18 L18 22 L10 18 L10 10 Z" fill="#FBBF24" opacity="0.95"/>
+    <path d="M18 8 L24 11 L24 17 L18 20 L12 17 L12 11 Z" fill="white" opacity="0.2"/>
+    
+    <!-- Point central -->
+    <circle cx="18" cy="14" r="3" fill="white"/>
+    
+    <!-- Lignes de connexion -->
+    <path d="M26 12 L30 8 M26 16 L30 20" stroke="#FBBF24" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="30" cy="8" r="3" fill="#FBBF24"/>
+    <circle cx="30" cy="20" r="3" fill="#FBBF24"/>
+  </g>
+</svg>

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 38" fill="none" aria-label="PDV Connect">
+  <!-- Design professionnel avec gradient -->
+  <defs>
+    <linearGradient id="yellowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FBBF24;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Icône avec design professionnel -->
+  <g>
+    <!-- Cercle principal avec gradient -->
+    <circle cx="18" cy="19" r="9" fill="url(#yellowGrad)"/>
+    <circle cx="18" cy="19" r="6" fill="none" stroke="white" stroke-width="1.5" opacity="0.7"/>
+    
+    <!-- Signal de connexion -->
+    <path d="M27 13 L35 9 M27 25 L35 29" stroke="#FBBF24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Points de connexion avec ombre -->
+    <circle cx="35" cy="9" r="4.5" fill="url(#yellowGrad)"/>
+    <circle cx="35" cy="29" r="4.5" fill="url(#yellowGrad)"/>
+    
+    <!-- Point central brillant -->
+    <circle cx="18" cy="19" r="2.5" fill="white" opacity="0.9"/>
+  </g>
+  
+  <!-- Texte PDV avec style moderne -->
+  <text x="46" y="26" font-family="Inter, -apple-system, sans-serif" font-size="21" font-weight="700" fill="#FBBF24" letter-spacing="-0.4">PDV</text>
+  
+  <!-- Texte CONNECT avec style élégant -->
+  <text x="92" y="26" font-family="Inter, -apple-system, sans-serif" font-size="21" font-weight="500" fill="#6B7280" letter-spacing="0.8">CONNECT</text>
+  
+  <!-- Accent décoratif -->
+  <rect x="92" y="28" width="85" height="2" rx="1" fill="#FBBF24" opacity="0.4"/>
+</svg>

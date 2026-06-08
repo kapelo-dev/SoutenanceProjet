@@ -236,7 +236,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * API pour la carte de performance du mois (chiffre d'affaires par kiosque)
+     * API pour la carte de performance du mois (chiffre d'affaires par zone / quartier)
      */
     public function cartePerformanceMois()
     {
@@ -246,7 +246,10 @@ class DashboardController extends Controller
                 'ip' => request()->ip(),
             ]);
 
-            // Agréger le montant total des transactions valides du mois par kiosque (via les agents)
+            $zoneExpr = "COALESCE(NULLIF(TRIM(kiosques.quartier), ''), 'Non renseignée')";
+            $villeExpr = "COALESCE(NULLIF(TRIM(kiosques.ville), ''), 'Lomé')";
+
+            // Agréger par zone (quartier + ville) : plusieurs kiosques peuvent partager la même zone
             $points = Kiosque::query()
                 ->whereNotNull('latitude')
                 ->whereNotNull('longitude')
@@ -257,24 +260,41 @@ class DashboardController extends Controller
                         ->whereNull('transactions.type_operation_id')
                         ->whereBetween('transactions.date', [now()->startOfMonth(), now()->endOfMonth()]);
                 })
-                ->groupBy('kiosques.id', 'kiosques.nom', 'kiosques.latitude', 'kiosques.longitude')
+                ->groupByRaw("{$zoneExpr}, {$villeExpr}")
                 ->select([
-                    'kiosques.id',
-                    'kiosques.nom',
-                    'kiosques.latitude',
-                    'kiosques.longitude',
+                    DB::raw("{$zoneExpr} as zone"),
+                    DB::raw("{$villeExpr} as ville"),
+                    DB::raw('AVG(kiosques.latitude) as latitude'),
+                    DB::raw('AVG(kiosques.longitude) as longitude'),
+                    DB::raw('COUNT(DISTINCT kiosques.id) as kiosques'),
                     DB::raw('COALESCE(SUM(transactions.montant), 0) as montant'),
+                    DB::raw('COUNT(transactions.id) as transactions'),
                 ])
                 ->get()
-                ->map(function ($row) {
-                    return [
-                        'id' => $row->id,
-                        'nom' => $row->nom,
-                        'latitude' => (float) $row->latitude,
-                        'longitude' => (float) $row->longitude,
-                        'montant' => (float) $row->montant,
-                    ];
-                });
+                ->sortByDesc('montant')
+                ->values();
+
+            $totalMois = $points->sum('montant');
+
+            $points = $points->map(function ($row, $index) use ($totalMois) {
+                $montant = (float) $row->montant;
+                $zone = $row->zone;
+                $ville = $row->ville;
+
+                return [
+                    'id' => md5($zone . '|' . $ville),
+                    'zone' => $zone,
+                    'ville' => $ville,
+                    'nom' => $zone . ($ville ? ', ' . $ville : ''),
+                    'latitude' => (float) $row->latitude,
+                    'longitude' => (float) $row->longitude,
+                    'kiosques' => (int) $row->kiosques,
+                    'montant' => $montant,
+                    'transactions' => (int) $row->transactions,
+                    'rang' => $index + 1,
+                    'part_pct' => $totalMois > 0 ? round(($montant / $totalMois) * 100, 1) : 0,
+                ];
+            });
 
             Log::info('[Dashboard] cartePerformanceMois points calculés', [
                 'count' => $points->count(),

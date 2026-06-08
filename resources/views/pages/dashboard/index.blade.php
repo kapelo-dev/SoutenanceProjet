@@ -1,5 +1,14 @@
 @extends('layouts.demo1.base')
 
+@push('styles')
+<style>
+    .dashboard-kiosk-marker-wrap {
+        background: transparent !important;
+        border: none !important;
+    }
+</style>
+@endpush
+
 @section('content')
     <!-- Container -->
     <div class="kt-container-fixed">
@@ -54,7 +63,7 @@
                             <i class="ki-filled ki-dollar ms-5 mt-4 text-3xl text-emerald-500/80"></i>
                             <div class="flex flex-col gap-1 px-5 pb-4">
                                 <span class="text-3xl font-semibold text-mono">
-                                    {{ number_format($stats['montant_jour'] / 1000000, 1) }}M
+                                    {{ number_format($stats['montant_jour'], 0, ',', ' ') }}
                                 </span>
                                 <span class="text-sm font-normal text-secondary-foreground">
                                     FCFA Aujourd'hui
@@ -91,7 +100,7 @@
                     <div class="kt-card h-full">
                         <div class="kt-card-header">
                             <h3 class="kt-card-title">
-                                Performance du Mois
+                                Performance par Zone
                             </h3>
                             <div class="flex flex-col items-end gap-0.5 text-right">
                                 <span class="text-xs text-secondary-foreground">
@@ -107,10 +116,8 @@
                             </div>
                         </div>
                         <div class="kt-card-content">
-                            <div id="dashboard_month_map" class="rounded-lg overflow-hidden" style="height: 260px; width: 100%;"></div>
-                            <p class="mt-3 text-xs text-secondary-foreground">
-                                Le cercle le plus large indique la zone avec le plus fort chiffre d'affaires du mois.
-                            </p>
+                            <div id="dashboard_month_map" class="rounded-lg overflow-hidden border border-border" style="height: 220px; width: 100%;"></div>
+                            <div id="dashboard_month_map_ranking" class="mt-4"></div>
                         </div>
                         <div class="kt-card-footer justify-center">
                             <a class="kt-link kt-link-underlined kt-link-dashed"

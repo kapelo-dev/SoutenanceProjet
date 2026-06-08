@@ -1,224 +1,267 @@
 /**
- * Module pour la carte de performance du mois sur le dashboard
- * Gère la création, destruction et réinitialisation de la carte Leaflet
+ * Carte de performance du mois — marqueurs classés (sans cercles géants qui se chevauchent)
  */
 
 class DashboardMonthMap {
     constructor() {
         this.map = null;
-        this.circles = [];
+        this.markers = [];
         this.isInitializing = false;
     }
 
-    /**
-     * Initialiser la carte si l'élément existe dans le DOM
-     */
     init() {
-        // Éviter les initialisations multiples simultanées
-        if (this.isInitializing) {
-            console.debug('[DashboardMap] Initialisation déjà en cours');
-            return;
-        }
+        if (this.isInitializing) return;
 
-        // Vérifier si l'élément existe
         const mapElement = document.getElementById('dashboard_month_map');
-        if (!mapElement) {
-            // Ne pas logger si l'élément n'existe pas (page normale sans carte)
-            return;
-        }
+        if (!mapElement) return;
+        if (this.map) return;
 
-        // Si la carte existe déjà, ne pas réinitialiser
-        if (this.map) {
-            console.debug('[DashboardMap] Carte déjà initialisée');
-            return;
-        }
-
-        // Vérifier que Leaflet est disponible
         if (typeof L === 'undefined') {
-            console.debug('[DashboardMap] Leaflet non disponible, retry dans 200ms');
             setTimeout(() => this.init(), 200);
             return;
         }
 
         this.isInitializing = true;
-        console.debug('[DashboardMap] Initialisation de la carte...');
 
         try {
-            // Coordonnées par défaut (Lomé, Togo)
-            const defaultLat = 6.1375;
-            const defaultLng = 1.2123;
+            this.map = L.map('dashboard_month_map', { zoomControl: true }).setView([6.1375, 1.2123], 13);
 
-            // Créer la carte
-            this.map = L.map('dashboard_month_map', {
-                zoomControl: true
-            }).setView([defaultLat, defaultLng], 14);
-
-            // Ajouter la couche de tuiles
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 19
+                attribution: '© OpenStreetMap',
+                maxZoom: 19,
             }).addTo(this.map);
 
-            // Charger les données
             this.loadData();
 
-            // Après injection AJAX le conteneur peut avoir une taille 0 ; forcer le recalcul après layout
             setTimeout(() => {
                 if (this.map) this.map.invalidateSize();
             }, 250);
         } catch (error) {
-            console.error('[DashboardMap] Erreur lors de l\'initialisation:', error);
+            console.error('[DashboardMap] Erreur initialisation:', error);
             this.isInitializing = false;
         }
     }
 
-    /**
-     * Charger les données de performance du mois
-     */
     async loadData() {
         try {
-            console.debug('[DashboardMap] Chargement des données...');
             const response = await fetch('/api/dashboard/carte-performance-mois');
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             const points = await response.json();
-            console.debug('[DashboardMap] Points reçus:', points);
-
             if (!Array.isArray(points) || points.length === 0) {
-                console.debug('[DashboardMap] Aucun point à afficher');
+                this.renderRanking([]);
                 this.isInitializing = false;
                 return;
             }
 
             this.renderPoints(points);
+            this.renderRanking(points);
             this.isInitializing = false;
         } catch (error) {
-            console.error('[DashboardMap] Erreur lors du chargement des données:', error);
+            console.error('[DashboardMap] Erreur chargement:', error);
             this.isInitializing = false;
         }
     }
 
-    /**
-     * Afficher les points sur la carte
-     */
-    renderPoints(points) {
-        // Nettoyer les cercles existants
-        this.clearCircles();
+    /** Décale légèrement les kiosques au même emplacement GPS */
+    spreadOverlapping(points) {
+        const groups = {};
+        points.forEach((p) => {
+            const key = `${p.latitude.toFixed(4)}|${p.longitude.toFixed(4)}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(p);
+        });
 
-        const montants = points.map(p => p.montant || 0);
-        const maxMontant = Math.max(...montants);
-        const primaryBlue = '#3b82f6';
-        const bounds = [];
-
-        points.forEach(point => {
-            if (!point.latitude || !point.longitude) {
+        const spread = [];
+        Object.values(groups).forEach((group) => {
+            if (group.length === 1) {
+                spread.push(group[0]);
                 return;
             }
+            const step = (2 * Math.PI) / group.length;
+            const offsetM = 120;
+            group.forEach((p, i) => {
+                const angle = i * step;
+                const latRad = (p.latitude * Math.PI) / 180;
+                spread.push({
+                    ...p,
+                    latitude: p.latitude + (offsetM / 111320) * Math.cos(angle),
+                    longitude: p.longitude + (offsetM / (111320 * Math.cos(latRad))) * Math.sin(angle),
+                });
+            });
+        });
+        return spread;
+    }
+
+    performanceTier(point, maxMontant) {
+        if (maxMontant <= 0 || point.montant <= 0) return 'low';
+        const ratio = point.montant / maxMontant;
+        if (ratio >= 0.66) return 'high';
+        if (ratio >= 0.33) return 'mid';
+        return 'low';
+    }
+
+    tierStyles(tier) {
+        const map = {
+            high: { bg: '#059669', ring: '#34d399', label: 'Forte' },
+            mid: { bg: '#d97706', ring: '#fbbf24', label: 'Moyenne' },
+            low: { bg: '#64748b', ring: '#94a3b8', label: 'Faible' },
+        };
+        return map[tier] || map.low;
+    }
+
+    formatMontant(montant) {
+        return new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: 'XOF',
+            maximumFractionDigits: 0,
+        }).format(montant || 0);
+    }
+
+    createMarkerIcon(point, tier) {
+        const style = this.tierStyles(tier);
+        const html = `
+            <div class="dashboard-kiosk-marker" style="
+                width:36px;height:36px;border-radius:50%;
+                background:${style.bg};color:#fff;
+                border:3px solid ${style.ring};
+                display:flex;align-items:center;justify-content:center;
+                font-size:13px;font-weight:700;
+                box-shadow:0 4px 12px rgba(15,23,42,.25);
+            ">${point.rang || '—'}</div>`;
+
+        return L.divIcon({
+            html,
+            className: 'dashboard-kiosk-marker-wrap',
+            iconSize: [36, 36],
+            iconAnchor: [18, 18],
+            popupAnchor: [0, -20],
+        });
+    }
+
+    renderPoints(points) {
+        this.clearMarkers();
+
+        const sorted = [...points].sort((a, b) => (b.montant || 0) - (a.montant || 0));
+        const maxMontant = sorted[0]?.montant || 0;
+        const spread = this.spreadOverlapping(sorted);
+        const bounds = [];
+
+        spread.forEach((point) => {
+            if (!point.latitude || !point.longitude) return;
 
             const center = [point.latitude, point.longitude];
             bounds.push(center);
+            const tier = this.performanceTier(point, maxMontant);
+            const style = this.tierStyles(tier);
 
-            const montant = point.montant || 0;
-            const ratio = maxMontant > 0 ? (montant / maxMontant) : 0;
-
-            // Rayon en mètres : base + amplification par le CA
-            const radius = 300 + 2500 * ratio;
-
-            const isTop = montant === maxMontant && maxMontant > 0;
-
-            const circle = L.circle(center, {
-                radius: radius,
-                color: primaryBlue,
-                weight: isTop ? 3 : 1.5,
-                fillColor: primaryBlue,
-                fillOpacity: isTop ? 0.25 : 0.12
+            const marker = L.marker(center, {
+                icon: this.createMarkerIcon(point, tier),
+                zIndexOffset: 1000 - (point.rang || 99),
             }).addTo(this.map);
 
-            const montantFormatte = new Intl.NumberFormat('fr-FR', {
-                style: 'currency',
-                currency: 'XOF',
-                maximumFractionDigits: 0
-            }).format(montant);
-
-            circle.bindPopup(`
-                <div style="min-width: 200px;">
-                    <strong>${point.nom}</strong><br/>
-                    Chiffre d'affaires du mois : ${montantFormatte}
+            const zoneLabel = point.zone || point.nom || 'Zone';
+            const villeLabel = point.ville ? `, ${point.ville}` : '';
+            marker.bindPopup(`
+                <div style="min-width:220px;font-size:13px;line-height:1.5">
+                    <div style="font-weight:700;margin-bottom:6px">Zone ${zoneLabel}${villeLabel}</div>
+                    <div><strong>Rang :</strong> #${point.rang || '—'}</div>
+                    <div><strong>Kiosques :</strong> ${point.kiosques ?? 1}</div>
+                    <div><strong>CA du mois :</strong> ${this.formatMontant(point.montant)}</div>
+                    <div><strong>Part :</strong> ${point.part_pct ?? 0} %</div>
+                    <div><strong>Transactions :</strong> ${point.transactions ?? 0}</div>
+                    <div style="margin-top:6px;color:${style.bg};font-weight:600">Performance ${style.label.toLowerCase()}</div>
                 </div>
             `);
 
-            this.circles.push(circle);
+            this.markers.push(marker);
         });
 
-        // Ajuster la vue
         if (bounds.length === 1) {
-            this.map.setView(bounds[0], 15);
+            this.map.setView(bounds[0], 14);
         } else if (bounds.length > 1) {
-            this.map.fitBounds(bounds, { padding: [40, 40] });
+            this.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 14 });
         }
     }
 
-    /**
-     * Nettoyer tous les cercles de la carte
-     */
-    clearCircles() {
-        this.circles.forEach(circle => {
-            if (this.map && circle) {
-                this.map.removeLayer(circle);
-            }
-        });
-        this.circles = [];
+    renderRanking(points) {
+        const container = document.getElementById('dashboard_month_map_ranking');
+        if (!container) return;
+
+        if (!points.length) {
+            container.innerHTML = '<p class="text-xs text-secondary-foreground">Aucune zone géolocalisée avec activité ce mois.</p>';
+            return;
+        }
+
+        const sorted = [...points].sort((a, b) => (a.rang || 99) - (b.rang || 99));
+        const maxMontant = Math.max(...sorted.map((p) => p.montant || 0), 1);
+
+        container.innerHTML = `
+            <div class="flex flex-wrap items-center gap-3 mb-3 text-xs text-secondary-foreground">
+                <span class="inline-flex items-center gap-1.5"><span style="width:10px;height:10px;border-radius:50%;background:#059669;display:inline-block"></span> Forte</span>
+                <span class="inline-flex items-center gap-1.5"><span style="width:10px;height:10px;border-radius:50%;background:#d97706;display:inline-block"></span> Moyenne</span>
+                <span class="inline-flex items-center gap-1.5"><span style="width:10px;height:10px;border-radius:50%;background:#64748b;display:inline-block"></span> Faible</span>
+            </div>
+            <div class="flex flex-col gap-2.5">
+                ${sorted.map((p) => {
+                    const tier = this.performanceTier(p, maxMontant);
+                    const style = this.tierStyles(tier);
+                    const width = Math.max(4, Math.round(((p.montant || 0) / maxMontant) * 100));
+                    return `
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center justify-between gap-2 text-xs">
+                                <span class="font-medium text-foreground truncate">
+                                    <span style="color:${style.bg};font-weight:700">#${p.rang}</span> ${p.nom}
+                                </span>
+                                <span class="shrink-0 font-semibold text-foreground">${this.formatMontant(p.montant)}</span>
+                            </div>
+                            <div class="h-2 rounded-full bg-muted overflow-hidden">
+                                <div class="h-full rounded-full transition-all" style="width:${width}%;background:${style.bg}"></div>
+                            </div>
+                            <div class="text-[11px] text-secondary-foreground">${p.kiosques ?? 1} kiosque(s) · ${p.transactions ?? 0} trans. · ${p.part_pct ?? 0} % du CA</div>
+                        </div>`;
+                }).join('')}
+            </div>`;
     }
 
-    /**
-     * Détruire complètement la carte
-     */
+    clearMarkers() {
+        this.markers.forEach((m) => {
+            if (this.map && m) this.map.removeLayer(m);
+        });
+        this.markers = [];
+    }
+
     destroy() {
-        console.debug('[DashboardMap] Destruction de la carte...');
-        
         if (this.map) {
             try {
-                this.clearCircles();
+                this.clearMarkers();
                 this.map.remove();
                 this.map = null;
-            } catch (error) {
-                console.warn('[DashboardMap] Erreur lors de la destruction:', error);
+            } catch (e) {
+                console.warn('[DashboardMap] destroy:', e);
             }
         }
-        
+        const ranking = document.getElementById('dashboard_month_map_ranking');
+        if (ranking) ranking.innerHTML = '';
         this.isInitializing = false;
     }
 
-    /**
-     * Vérifier si la carte est initialisée
-     */
     isInitialized() {
         return this.map !== null;
     }
 }
 
-// Créer une instance unique (singleton)
 const dashboardMonthMapInstance = new DashboardMonthMap();
-
-// Exposer globalement pour être accessible depuis ajax-navigation.js
 window.DashboardMonthMap = DashboardMonthMap;
 window.dashboardMonthMapInstance = dashboardMonthMapInstance;
 
-// Auto-initialisation si le DOM est prêt
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => dashboardMonthMapInstance.init(), 200);
-    });
+    document.addEventListener('DOMContentLoaded', () => setTimeout(() => dashboardMonthMapInstance.init(), 200));
 } else {
     setTimeout(() => dashboardMonthMapInstance.init(), 200);
 }
 
-// Réinitialisation après navigation AJAX : ne faire que destroy, l'init est géré par ajax-navigation (initAllMaps)
 document.addEventListener('ajax-content-loaded', () => {
-    console.debug('[DashboardMap] ajax-content-loaded déclenché');
     dashboardMonthMapInstance.destroy();
 });
 

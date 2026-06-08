@@ -141,17 +141,22 @@ class Agent extends Model
         return $query->first();
     }
 
-    // Obtenir tous les soldes actuels
-    public function soldesActuels()
+    // Obtenir tous les soldes actuels (1 espèce + 1 virtuel par opérateur)
+    public function soldesActuels(array $with = [])
     {
-        return $this->soldes()
-            ->whereIn('id', function($query) {
+        $query = $this->soldes()
+            ->whereIn('id', function ($query) {
                 $query->selectRaw('MAX(id)')
                     ->from('soldes')
                     ->where('agent_id', $this->id)
                     ->groupBy('operateur_id', 'type');
-            })
-            ->get();
+            });
+
+        if ($with !== []) {
+            $query->with($with);
+        }
+
+        return $query->get();
     }
 
     // Calculer le solde total

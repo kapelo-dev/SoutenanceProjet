@@ -69,7 +69,7 @@ class AgentController extends Controller
     public function soldes(Request $request)
     {
         try {
-            $query = Agent::with(['kiosque', 'utilisateur', 'soldes.operateur']);
+            $query = Agent::with(['kiosque', 'utilisateur']);
 
             // Filtrer uniquement les agents avec soldes positifs
             if ($request->has('soldes_positifs') && $request->soldes_positifs == 1) {
@@ -97,8 +97,9 @@ class AgentController extends Controller
             \Log::error('Erreur dans AgentController@soldes: ' . $e->getMessage());
             return $this->ajaxView('pages.agents.solde.index', [
                 'agents' => collect(),
-                'operateurs' => Operateur::actif()->get()
-            ])->with('error', 'Une erreur est survenue lors du chargement des données.');
+                'operateurs' => Operateur::actif()->get(),
+                'error' => 'Une erreur est survenue lors du chargement des données.',
+            ]);
         }
     }
 
@@ -669,7 +670,7 @@ class AgentController extends Controller
      */
     public function getSoldes(Agent $agent)
     {
-        $soldesActuels = $agent->soldesActuels();
+        $soldesActuels = $agent->soldesActuels(['operateur']);
         
         $soldes = $soldesActuels->map(function($solde) {
             return [
@@ -873,7 +874,7 @@ class AgentController extends Controller
      */
     public function exportSoldes(Request $request)
     {
-        $query = Agent::with(['kiosque', 'utilisateur', 'soldes.operateur']);
+        $query = Agent::with(['kiosque', 'utilisateur']);
 
         // Filtrer uniquement les agents avec soldes positifs
         if ($request->has('soldes_positifs') && $request->soldes_positifs == 1) {
@@ -903,12 +904,10 @@ class AgentController extends Controller
 
         $data = [];
         foreach ($agents as $agent) {
-            // Récupérer le solde en espèce
-            $soldeEspece = $agent->soldes->where('type', 'espece')->first();
+            $soldesCourants = $agent->soldesActuels(['operateur']);
+            $soldeEspece = $soldesCourants->where('type', 'espece')->first();
             $montantEspece = $soldeEspece ? $soldeEspece->montant : 0;
-            
-            // Récupérer les soldes virtuels par opérateur
-            $soldesVirtuels = $agent->soldes->where('type', 'virtuel');
+            $soldesVirtuels = $soldesCourants->where('type', 'virtuel');
             
             $row = [
                 $agent->code_agent ?? '-',

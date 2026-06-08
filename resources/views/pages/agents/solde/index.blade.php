@@ -105,11 +105,14 @@
                         <tbody>
                             @forelse($agents as $agent)
                             @php
-                                $soldeEspece = $agent->soldes->where('type', 'espece')->first();
-                                $soldesVirtuels = $agent->soldes->where('type', 'virtuel');
+                                $soldesCourants = $agent->soldesActuels(['operateur']);
+                                $soldeEspece = $soldesCourants->where('type', 'espece')->first();
+                                $soldesVirtuels = $soldesCourants->where('type', 'virtuel');
                                 $totalVirtuel = $soldesVirtuels->sum('montant');
                                 $soldeTotal = ($soldeEspece ? $soldeEspece->montant : 0) + $totalVirtuel;
-                                $derniereMaj = $agent->soldes->max('date') ?? $agent->updated_at;
+                                $derniereMaj = \Illuminate\Support\Carbon::parse(
+                                    $agent->soldes()->max('date') ?? $agent->updated_at
+                                );
                                 $commissions = $agent->transactions()->commerciale()->where('statut', 'valide')->sum('commission') ?? 0;
                                 
                                 // Déterminer le statut de l'agent pour le badge
