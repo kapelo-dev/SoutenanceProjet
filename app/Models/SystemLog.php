@@ -119,7 +119,7 @@ class SystemLog extends Model
             'description' => $description,
             'old_values' => $oldValues,
             'new_values' => $newValues,
-            'ip_address' => request()->ip(),
+            'ip_address' => request()->clientIp(),
             'user_agent' => request()->userAgent(),
             'metadata' => $metadata,
         ]);
@@ -133,7 +133,7 @@ class SystemLog extends Model
             'description' => $success 
                 ? "Connexion réussie de {$user->nom} {$user->prenom}"
                 : "Tentative de connexion échouée pour {$user->email}",
-            'ip_address' => request()->ip(),
+            'ip_address' => request()->clientIp(),
             'user_agent' => request()->userAgent(),
             'metadata' => [
                 'email' => $user->email ?? null,
@@ -147,7 +147,7 @@ class SystemLog extends Model
             'user_id' => $user->id,
             'action' => 'logout',
             'description' => "Déconnexion de {$user->nom} {$user->prenom}",
-            'ip_address' => request()->ip(),
+            'ip_address' => request()->clientIp(),
             'user_agent' => request()->userAgent(),
         ]);
     }

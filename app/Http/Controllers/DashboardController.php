@@ -243,7 +243,7 @@ class DashboardController extends Controller
         try {
             Log::info('[Dashboard] cartePerformanceMois appelée', [
                 'timestamp' => now()->toDateTimeString(),
-                'ip' => request()->ip(),
+                'ip' => request()->clientIp(),
             ]);
 
             $zoneExpr = "COALESCE(NULLIF(TRIM(kiosques.quartier), ''), 'Non renseignée')";

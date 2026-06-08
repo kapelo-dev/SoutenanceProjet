@@ -29,7 +29,7 @@ class IpBlockService
 
     public function recordLoginFailure(Request $request, ?int $userId = null): void
     {
-        $ip = $request->ip();
+        $ip = $request->clientIp();
         if (! $ip || $this->isBlocked($ip)) {
             return;
         }

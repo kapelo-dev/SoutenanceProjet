@@ -205,7 +205,7 @@ class AuthController extends Controller
             'user_id' => $userId,
             'action' => 'login_failed',
             'description' => $description,
-            'ip_address' => $request->ip(),
+            'ip_address' => $request->clientIp(),
             'user_agent' => $request->userAgent(),
             'metadata' => $metadata,
         ]);

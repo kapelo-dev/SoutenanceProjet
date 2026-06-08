@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Support\ClientIp;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,6 +22,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Request::macro('clientIp', fn () => ClientIp::from($this));
+
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
 

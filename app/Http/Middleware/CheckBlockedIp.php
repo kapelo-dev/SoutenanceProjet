@@ -15,7 +15,7 @@ class CheckBlockedIp
 
     public function handle(Request $request, Closure $next): Response
     {
-        $ip = $request->ip();
+        $ip = $request->clientIp();
         $block = $this->ipBlockService->getActiveBlock($ip);
 
         if (! $block) {
