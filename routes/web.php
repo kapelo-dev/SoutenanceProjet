@@ -136,7 +136,7 @@ Route::get('/demo10', function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'require.password.change'])->group(function () {
+Route::middleware(['auth', 'require.password.change', 'route.permission'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/technique', [TechnicalDashboardController::class, 'index'])->name('dashboard.technique');

@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Enregistrer le middleware pour vérifier le changement de mot de passe
         $middleware->alias([
             'require.password.change' => \App\Http\Middleware\RequirePasswordChange::class,
+            'route.permission' => \App\Http\Middleware\CheckRoutePermission::class,
             'sms.api.token' => \App\Http\Middleware\ValidateSmsApiToken::class,
             'check.blocked.ip' => \App\Http\Middleware\CheckBlockedIp::class,
         ]);
