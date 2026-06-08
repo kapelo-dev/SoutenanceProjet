@@ -20,7 +20,7 @@ class LienSyncSeeder extends Seeder
         }
 
         $topLevel = [
-            ['libelle' => 'Dashboard Technique', 'route' => 'dashboard.technique', 'icone' => 'ki-filled ki-chart-line-up-2', 'ordre' => 2],
+            ['libelle' => 'Métrique serveur', 'route' => 'dashboard.technique', 'icone' => 'ki-filled ki-chart-line-up-2', 'ordre' => 2],
             ['libelle' => 'Dashboard Sécurité', 'route' => 'dashboard.securite', 'icone' => 'ki-filled ki-shield-search', 'ordre' => 3],
         ];
 

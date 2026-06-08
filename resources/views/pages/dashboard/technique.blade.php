@@ -19,7 +19,7 @@
 <div class="kt-container-fixed">
     <div class="flex flex-wrap items-center justify-between gap-5 pb-7.5">
         <div>
-            <h1 class="text-xl font-semibold text-mono">Dashboard Technique</h1>
+            <h1 class="text-xl font-semibold text-mono">Métrique serveur</h1>
             <p class="text-sm text-secondary-foreground mt-1">Supervision serveur et diagnostic applicatif</p>
         </div>
         <div class="flex items-center gap-3">

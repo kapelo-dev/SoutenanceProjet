@@ -28,7 +28,7 @@ class LienSeeder extends Seeder
         ]);
 
         Lien::create([
-            'libelle' => 'Dashboard Technique',
+            'libelle' => 'Métrique serveur',
             'route' => 'dashboard.technique',
             'icone' => 'ki-filled ki-chart-line-up-2',
             'ordre' => 2,

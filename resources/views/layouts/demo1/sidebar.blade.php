@@ -55,7 +55,7 @@
                             <i class="ki-filled ki-chart-line-up-2 text-lg"></i>
                         </span>
                         <span class="kt-menu-title kt-menu-item-active:text-primary text-sm font-medium text-foreground">
-                            Dashboard Technique
+                            Métrique serveur
                         </span>
                     </a>
                 </div>
