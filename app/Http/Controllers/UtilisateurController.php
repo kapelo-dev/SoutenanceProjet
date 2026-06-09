@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\Rule;
 
 class UtilisateurController extends Controller
 {
@@ -60,6 +61,8 @@ class UtilisateurController extends Controller
      */
     public function store(Request $request)
     {
+        $agentProfilId = Profil::where('libelle', 'Agent')->value('id');
+
         $validated = $request->validate([
             'nom' => 'required|string|max:100',
             'prenom' => 'required|string|max:100',
@@ -68,8 +71,13 @@ class UtilisateurController extends Controller
             'telephone' => 'nullable|string|max:20',
             'photo_profil' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'statut' => 'required|in:actif,inactif,suspendu',
-            'profils' => 'required|array|min:1',
-            'profils.*' => 'exists:profils,id',
+            'profil_id' => [
+                'required',
+                'exists:profils,id',
+                ...($agentProfilId ? [Rule::notIn([$agentProfilId])] : []),
+            ],
+        ], [
+            'profil_id.not_in' => 'Les agents se créent depuis le module Agents, pas ici.',
         ]);
 
         // Hasher le mot de passe
@@ -82,13 +90,12 @@ class UtilisateurController extends Controller
         }
 
         // Créer l'utilisateur
-        $profils = $validated['profils'];
-        unset($validated['profils']);
+        $profilId = $validated['profil_id'];
+        unset($validated['profil_id']);
         
         $utilisateur = Utilisateur::create($validated);
         
-        // Attacher les profils
-        $utilisateur->profils()->attach($profils);
+        $utilisateur->profils()->attach([$profilId]);
 
         return redirect()->route('utilisateurs.index')
             ->with('success', 'Utilisateur créé avec succès !');
@@ -164,10 +171,14 @@ class UtilisateurController extends Controller
      */
     public function update(Request $request, Utilisateur $utilisateur)
     {
+        $emailRules = $utilisateur->isAgent()
+            ? 'nullable|email|max:100|unique:utilisateurs,email,' . $utilisateur->id
+            : 'required|email|max:100|unique:utilisateurs,email,' . $utilisateur->id;
+
         $validated = $request->validate([
             'nom' => 'required|string|max:100',
             'prenom' => 'required|string|max:100',
-            'email' => 'required|email|max:100|unique:utilisateurs,email,' . $utilisateur->id,
+            'email' => $emailRules,
             'mot_de_passe' => 'nullable|string|min:8|confirmed',
             'telephone' => 'nullable|string|max:20',
             'photo_profil' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',

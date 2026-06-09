@@ -9,12 +9,12 @@ use Illuminate\Support\Facades\Route;
 class UserHomeRedirect
 {
     /**
-     * URL du premier menu accessible (ordre sidebar / table liens).
+     * Chemin relatif du premier menu accessible (préserve le port en local).
      */
-    public static function urlFor(?Utilisateur $user): string
+    public static function pathFor(?Utilisateur $user): string
     {
         if (! $user) {
-            return route('login');
+            return route('login', [], false);
         }
 
         $profilIds = $user->profils()
@@ -23,7 +23,7 @@ class UserHomeRedirect
             ->toArray();
 
         if ($profilIds === []) {
-            return route('dashboard');
+            return route('dashboard', [], false);
         }
 
         $lien = DB::table('liens')
@@ -45,19 +45,25 @@ class UserHomeRedirect
             ->first();
 
         if (! $lien) {
-            return route('dashboard');
+            return route('dashboard', [], false);
         }
 
         if (! empty($lien->url)) {
-            $url = $lien->url;
+            $path = $lien->url;
 
-            return str_starts_with($url, '/') ? url($url) : $url;
+            return str_starts_with($path, '/') ? $path : '/'.$path;
         }
 
         if (! empty($lien->route) && Route::has($lien->route)) {
-            return route($lien->route);
+            return route($lien->route, [], false);
         }
 
-        return route('dashboard');
+        return route('dashboard', [], false);
+    }
+
+    /** @deprecated Préférer pathFor() pour les redirections internes */
+    public static function urlFor(?Utilisateur $user): string
+    {
+        return self::pathFor($user);
     }
 }

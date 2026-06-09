@@ -29,6 +29,10 @@ class IpBlockService
 
     public function recordLoginFailure(Request $request, ?int $userId = null): void
     {
+        if (! config('security.ip_blocking_enabled', true)) {
+            return;
+        }
+
         $ip = $request->clientIp();
         if (! $ip || $this->isBlocked($ip)) {
             return;

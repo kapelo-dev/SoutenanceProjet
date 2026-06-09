@@ -301,7 +301,7 @@
     <!-- End of Container -->
 
    <!-- Modal Nouvel Utilisateur -->
-   <div class="kt-modal" data-kt-modal="true" id="modal_nouvel_utilisateur" style="display: none;">
+   <div class="kt-modal" data-kt-modal="true" data-kt-modal-disable-scroll="false" id="modal_nouvel_utilisateur" style="display: none;">
     <div class="kt-modal-content max-w-2xl">
      <div class="kt-modal-header">
       <h3 class="kt-modal-title">Créer un utilisateur</h3>
@@ -359,13 +359,28 @@
         </select>
        </div>
        <div class="flex flex-col gap-2">
-        <label class="kt-label" for="create_profils">Profils <span class="text-destructive">*</span></label>
-        <select name="profils[]" id="create_profils" class="kt-select" data-kt-select="true" multiple required>
-         @foreach($profils ?? [] as $profil)
-          <option value="{{ $profil->id }}" {{ in_array($profil->id, old('profils', [])) ? 'selected' : '' }}>{{ $profil->libelle }}</option>
+        <span class="kt-label">Profil <span class="text-destructive">*</span></span>
+        <div class="flex flex-col gap-2.5 rounded-lg border border-border p-3.5" id="create_profils">
+         @php
+          $selectedProfilId = old('profil_id', old('profils.0'));
+         @endphp
+         @foreach(($profils ?? collect())->where('libelle', '!=', 'Agent') as $profil)
+         <label class="flex cursor-pointer items-center gap-2.5">
+          <input
+           type="radio"
+           name="profil_id"
+           value="{{ $profil->id }}"
+           class="kt-radio"
+           {{ (string) $selectedProfilId === (string) $profil->id ? 'checked' : '' }}
+           @if($loop->first) required @endif
+          />
+          <span class="text-sm font-medium text-foreground">{{ $profil->libelle }}</span>
+          @if($profil->description)
+          <span class="text-xs text-muted-foreground">— {{ $profil->description }}</span>
+          @endif
+         </label>
          @endforeach
-        </select>
-        <span class="text-xs text-muted-foreground">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs profils.</span>
+        </div>
        </div>
        <div class="flex flex-col gap-2">
         <label class="kt-label" for="create_photo_profil">Photo de profil</label>
@@ -427,7 +442,7 @@
    <!-- End Modal de Profil Utilisateur -->
 
    <!-- Modal Modifier Utilisateur -->
-   <div class="kt-modal" data-kt-modal="true" id="modal_edit_utilisateur" style="display: none;">
+   <div class="kt-modal" data-kt-modal="true" data-kt-modal-disable-scroll="false" id="modal_edit_utilisateur" style="display: none;">
     <div class="kt-modal-content max-w-2xl">
      <div class="kt-modal-header">
       <h3 class="kt-modal-title">Modifier l'utilisateur</h3>
@@ -531,7 +546,7 @@ window.loadUserEdit = function(id) {
     const modal = document.getElementById('modal_edit_utilisateur');
     if (!modal) {
         console.error('Modal de modification introuvable');
-        alert('Modal de modification introuvable');
+        AppToast.error('Modal de modification introuvable');
         return;
     }
     
@@ -698,7 +713,7 @@ window.loadUserEdit = function(id) {
     })
     .catch(error => {
         console.error('Erreur:', error);
-        alert('Une erreur est survenue lors du chargement des données: ' + error.message);
+        AppToast.error('Une erreur est survenue lors du chargement des données : ' + error.message);
     });
 };
 
@@ -710,24 +725,8 @@ window.initUtilisateursPage = function() {
             window.MetronicCore.initModals();
         }
         
-        // Réinitialiser les selects Metronic pour le modal de création
-        const createProfilsSelect = document.getElementById('create_profils');
+        // Réinitialiser le select Metronic statut (modal création)
         const createStatutSelect = document.getElementById('create_statut');
-        
-        if (createProfilsSelect) {
-            createProfilsSelect.setAttribute('data-kt-select', 'true');
-            if (typeof KTSelect !== 'undefined') {
-                try {
-                    const existingInstance = KTSelect.getInstance(createProfilsSelect);
-                    if (existingInstance) {
-                        existingInstance.destroy();
-                    }
-                    new KTSelect(createProfilsSelect);
-                } catch (error) {
-                    console.warn('Erreur initialisation select profils:', error);
-                }
-            }
-        }
         
         if (createStatutSelect) {
             createStatutSelect.setAttribute('data-kt-select', 'true');
@@ -752,13 +751,13 @@ window.initUtilisateursPage = function() {
                 const file = e.target.files[0];
                 if (file) {
                     if (file.size > 2 * 1024 * 1024) {
-                        alert('Le fichier est trop volumineux. Taille maximale: 2MB');
+                        AppToast.warning('Le fichier est trop volumineux. Taille maximale : 2 Mo');
                         this.value = '';
                         return;
                     }
                     
                     if (!file.type.match('image.*')) {
-                        alert('Veuillez sélectionner une image valide');
+                        AppToast.warning('Veuillez sélectionner une image valide');
                         this.value = '';
                         return;
                     }
@@ -853,8 +852,8 @@ document.addEventListener('ajax-content-loaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Recharger la page pour afficher les modifications
-                    window.location.reload();
+                    AppToast.reload(data.message || 'Utilisateur mis à jour avec succès.', 'success');
+                    return;
                 } else {
                     // Afficher les erreurs
                     if (data.errors) {
@@ -885,7 +884,7 @@ document.addEventListener('ajax-content-loaded', function() {
             })
             .catch(error => {
                 console.error('Erreur:', error);
-                alert('Une erreur est survenue lors de l\'enregistrement.');
+                AppToast.error('Une erreur est survenue lors de l\'enregistrement.');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             });

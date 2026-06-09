@@ -1,4 +1,6 @@
-version: "3.9"
+# Dev local — MySQL + phpMyAdmin uniquement
+# App : php artisan serve (ou docker compose -f docker-compose.vps.yml pour prod-like)
+# MinIO : voir docker-compose.minio.yml (VPS séparé ou local)
 
 services:
   mysql:

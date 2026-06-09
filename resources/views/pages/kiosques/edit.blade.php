@@ -32,12 +32,6 @@
             @csrf
             @method('PUT')
 
-            @if(session('success'))
-                <div class="kt-alert kt-alert-success mb-5">
-                    <div class="kt-alert-content">{{ session('success') }}</div>
-                </div>
-            @endif
-
             @if($errors->any())
                 <div class="kt-alert kt-alert-danger mb-5">
                     <div class="kt-alert-content">

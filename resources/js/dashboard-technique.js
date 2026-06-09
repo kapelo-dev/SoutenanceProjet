@@ -126,12 +126,56 @@ function renderHealth(health) {
     if (warn) warn.textContent = health.warnings ?? 0;
 }
 
+function renderBackups(backups) {
+    if (!backups) return;
+
+    const last = document.querySelector('[data-backup-last]');
+    const lastFile = document.querySelector('[data-backup-last-file]');
+    const size = document.querySelector('[data-backup-size]');
+    const duration = document.querySelector('[data-backup-duration]');
+    const minioStatus = document.querySelector('[data-backup-minio-status]');
+    const bucket = document.querySelector('[data-backup-bucket]');
+    const tbody = document.getElementById('tech_backups_body');
+
+    if (last) last.textContent = backups.last_success?.created_at_human || '—';
+    if (lastFile) lastFile.textContent = backups.last_success?.filename || 'Aucune';
+    if (size) size.textContent = backups.last_success?.size || '—';
+    if (duration) duration.textContent = backups.last_success?.duration_ms ? `${backups.last_success.duration_ms} ms` : '—';
+
+    if (minioStatus) {
+        minioStatus.textContent = backups.minio?.reachable ? 'Connecté' : (backups.minio?.configured ? 'Injoignable' : 'Non configuré');
+    }
+    if (bucket) bucket.textContent = backups.minio?.bucket || '—';
+
+    if (!tbody) return;
+
+    const rows = backups.recent || [];
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-secondary-foreground">Aucune sauvegarde enregistrée.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = rows.map(row => {
+        const badge = row.status === 'success' ? 'kt-badge-success' : 'kt-badge-destructive';
+        const label = row.status === 'success' ? 'OK' : 'Échec';
+        return `<tr>
+            <td class="px-4 py-3 whitespace-nowrap">${row.created_at_human || '—'}</td>
+            <td class="px-4 py-3 font-mono text-xs">${row.filename}</td>
+            <td class="px-4 py-3">${row.size}</td>
+            <td class="px-4 py-3">${row.duration_ms} ms</td>
+            <td class="px-4 py-3">${row.trigger}</td>
+            <td class="px-4 py-3 text-right"><span class="kt-badge kt-badge-sm ${badge}">${label}</span></td>
+        </tr>`;
+    }).join('');
+}
+
 function renderMetrics(data) {
     renderHealth(data.health || {});
     renderAlerts(data.alerts || [], data.health);
     Object.entries(data.gauges || {}).forEach(([k, g]) => renderGauge(k, g));
     renderServices(data.services || []);
     renderSystem(data.system || []);
+    renderBackups(data.backups || {});
 
     const updated = document.getElementById('tech_updated');
     if (updated && data.generated_at) {
@@ -158,6 +202,42 @@ function initTechnicalDashboard() {
     };
 
     document.getElementById('tech_refresh')?.addEventListener('click', refresh);
+
+    const backupBtn = document.getElementById('tech_run_backup');
+    if (backupBtn && root.dataset.backupUrl) {
+        backupBtn.addEventListener('click', async () => {
+            if (!confirm('Lancer une sauvegarde complète de la base de données vers MinIO ?')) return;
+            backupBtn.disabled = true;
+            const original = backupBtn.innerHTML;
+            backupBtn.innerHTML = '<i class="ki-filled ki-loading"></i> Sauvegarde…';
+            try {
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                const res = await fetch(root.dataset.backupUrl, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrf,
+                    },
+                });
+                const payload = await res.json();
+                if (payload.success && payload.data) {
+                    renderMetrics(payload.data);
+                    window.AppToast?.success(payload.message || 'Sauvegarde réussie.');
+                } else {
+                    window.AppToast?.error(payload.message || 'Échec de la sauvegarde.');
+                    if (payload.data) renderMetrics(payload.data);
+                }
+            } catch (e) {
+                console.error('[DashboardTechnique] backup', e);
+                window.AppToast?.error('Erreur lors de la sauvegarde.');
+            } finally {
+                backupBtn.disabled = false;
+                backupBtn.innerHTML = original;
+            }
+        });
+    }
+
     root._techTimer = setInterval(refresh, 15000);
 
     document.addEventListener('ajax-content-loaded', () => {

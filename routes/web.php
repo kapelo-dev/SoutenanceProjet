@@ -49,7 +49,12 @@ Route::get('/license', [PublicPagesController::class, 'license'])->name('public.
 |--------------------------------------------------------------------------
 */
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+Route::post('/login', [AuthController::class, 'login'])
+    ->middleware(
+        config('security.login_rate_limit_enabled', true)
+            ? 'throttle:' . config('security.login_rate_limit', '10,1')
+            : []
+    );
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Routes pour le changement de mot de passe (première connexion)
@@ -67,7 +72,7 @@ Route::get('/', function () {
             return redirect()->route('password.change');
         }
         
-        return redirect()->to(UserHomeRedirect::urlFor(auth()->user()));
+        return redirect()->to(UserHomeRedirect::pathFor(auth()->user()));
     }
     return redirect()->route('login');
 });
@@ -137,6 +142,7 @@ Route::middleware(['auth', 'require.password.change', 'route.permission'])->grou
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/technique', [TechnicalDashboardController::class, 'index'])->name('dashboard.technique');
     Route::get('/api/dashboard/technique/metrics', [TechnicalDashboardController::class, 'metrics'])->name('dashboard.technique.metrics');
+    Route::post('/api/dashboard/technique/backup', [TechnicalDashboardController::class, 'runBackup'])->name('dashboard.technique.backup');
     Route::get('/dashboard/securite', [\App\Http\Controllers\SecurityDashboardController::class, 'index'])->name('dashboard.securite');
     Route::get('/api/dashboard/securite/metrics', [\App\Http\Controllers\SecurityDashboardController::class, 'metrics'])->name('dashboard.securite.metrics');
     Route::post('/api/dashboard/securite/alerts/resolve', [\App\Http\Controllers\SecurityDashboardController::class, 'resolveAlert'])->name('dashboard.securite.alerts.resolve');

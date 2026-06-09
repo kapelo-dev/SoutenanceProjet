@@ -255,8 +255,8 @@ function saveRoute() {
             // Réinitialiser le formulaire
             resetRouteModal();
             
-            // Recharger la page pour afficher la nouvelle route
-            window.location.reload();
+            AppToast.reload(data.message || 'Route créée avec succès.', 'success');
+            return;
         } else {
             // Afficher les erreurs
             if (data.errors) {
@@ -275,7 +275,7 @@ function saveRoute() {
                     }
                 }
             } else if (data.message) {
-                alert('Erreur: ' + data.message);
+                AppToast.error('Erreur : ' + data.message);
             }
             
             submitBtn.disabled = false;
@@ -284,7 +284,7 @@ function saveRoute() {
     })
     .catch(error => {
         console.error('Erreur:', error);
-        alert('Une erreur est survenue lors de la création de la route.');
+        AppToast.error('Une erreur est survenue lors de la création de la route.');
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
     });
@@ -315,7 +315,7 @@ function saveRoutesVisibility() {
     });
     
     if (routes.length === 0) {
-        alert('Aucune route à mettre à jour.');
+        AppToast.warning('Aucune route à mettre à jour.');
         return;
     }
     
@@ -344,18 +344,18 @@ function saveRoutesVisibility() {
     .then(data => {
         if (data.success) {
             // Afficher un message de succès
-            alert(data.message || 'Modifications enregistrées avec succès !');
+            AppToast.success(data.message || 'Modifications enregistrées avec succès.');
             // Optionnel: recharger la page pour s'assurer de la synchronisation
             // window.location.reload();
         } else {
             // Afficher les erreurs
             if (data.errors) {
                 const errorMessages = Object.values(data.errors).flat().join('\n');
-                alert('Erreur: ' + errorMessages);
+                AppToast.error('Erreur : ' + errorMessages);
             } else if (data.message) {
-                alert('Erreur: ' + data.message);
+                AppToast.error('Erreur : ' + data.message);
             } else {
-                alert('Une erreur est survenue lors de l\'enregistrement.');
+                AppToast.error('Une erreur est survenue lors de l\'enregistrement.');
             }
             
             saveBtn.disabled = false;
@@ -364,7 +364,7 @@ function saveRoutesVisibility() {
     })
     .catch(error => {
         console.error('Erreur:', error);
-        alert('Une erreur est survenue lors de l\'enregistrement: ' + (error?.message || error));
+        AppToast.error('Une erreur est survenue lors de l\'enregistrement : ' + (error?.message || error));
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalText;
     });

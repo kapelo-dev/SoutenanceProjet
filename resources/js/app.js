@@ -1,4 +1,5 @@
 import './bootstrap';
+import './toast';
 import Alpine from 'alpinejs';
 import './ajax-navigation';
 // Importer les modules de cartes
@@ -71,60 +72,141 @@ function initDrawers() {
     });
 }
 
-// Menu functionality
-function initMenus() {
-    const menus = document.querySelectorAll('[data-kt-menu="true"]');
+function parseMenuOffset(value) {
+    if (!value) return { x: 0, y: 4 };
+    const parts = value.split(',').map(v => parseFloat(v.trim()));
+    return { x: Number.isFinite(parts[0]) ? parts[0] : 0, y: Number.isFinite(parts[1]) ? parts[1] : 4 };
+}
 
-    menus.forEach(menu => {
-        // Réinitialiser le flag pour permettre la réinitialisation après AJAX
-        // (après navigation AJAX, les éléments sont nouveaux, donc pas besoin de vérifier)
-        menu._menuInitialized = true;
+function restoreMenuDropdown(dropdown) {
+    if (dropdown._menuOriginalParent && dropdown.parentElement === document.body) {
+        dropdown._menuOriginalParent.appendChild(dropdown);
+    }
+}
 
-        const items = menu.querySelectorAll('[data-kt-menu-item-toggle="dropdown"]');
-
-        items.forEach(item => {
-            const trigger = item.querySelector('[data-kt-menu-item-trigger="click"], [data-kt-menu-item-trigger="click|lg:hover"], .kt-menu-toggle');
-            const dropdown = item.querySelector('.kt-menu-dropdown');
-
-            if (trigger && dropdown) {
-                // Retirer l'ancien listener s'il existe (pour éviter les doublons après AJAX)
-                if (trigger._menuListenerAttached && trigger._menuClickHandler) {
-                    trigger.removeEventListener('click', trigger._menuClickHandler);
-                }
-                
-                // Créer un nouveau handler
-                trigger._menuClickHandler = function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    // Fermer tous les autres menus ouverts
-                    document.querySelectorAll('.kt-menu-dropdown:not(.hidden)').forEach(otherDropdown => {
-                        if (otherDropdown !== dropdown) {
-                            otherDropdown.classList.add('hidden');
-                        }
-                    });
-                    
-                    // Toggle le menu actuel
-                    dropdown.classList.toggle('hidden');
-                };
-                
-                trigger.addEventListener('click', trigger._menuClickHandler);
-                trigger._menuListenerAttached = true;
-            }
-        });
+function closeAllMenuDropdowns() {
+    document.querySelectorAll('.kt-menu-dropdown.show').forEach(dropdown => {
+        dropdown.classList.remove('show');
+        dropdown.style.display = '';
+        dropdown.style.position = '';
+        dropdown.style.top = '';
+        dropdown.style.right = '';
+        dropdown.style.left = '';
+        dropdown.style.width = '';
+        dropdown.style.minWidth = '';
+        dropdown.style.maxWidth = '';
+        dropdown.style.zIndex = '';
+        dropdown.style.margin = '';
+        restoreMenuDropdown(dropdown);
+        const parentItem = dropdown._menuOriginalParent || dropdown.closest('[data-kt-menu-item-toggle="dropdown"]');
+        if (parentItem) {
+            parentItem.classList.remove('show', 'kt-menu-item-dropdown');
+        }
     });
-    
-    // Gérer la fermeture des menus au clic extérieur (une seule fois au niveau du document)
-    if (!document._menuOutsideClickHandler) {
-        document._menuOutsideClickHandler = function(e) {
-            // Si le clic n'est pas dans un menu, fermer tous les menus ouverts
-            if (!e.target.closest('[data-kt-menu="true"]')) {
-                document.querySelectorAll('.kt-menu-dropdown:not(.hidden)').forEach(dropdown => {
-                    dropdown.classList.add('hidden');
-                });
+}
+
+function openMenuDropdown(trigger, item, dropdown) {
+    dropdown._menuOriginalParent = item;
+
+    item.classList.add('show', 'kt-menu-item-dropdown');
+
+    if (dropdown.parentElement !== document.body) {
+        document.body.appendChild(dropdown);
+    }
+
+    const rect = trigger.getBoundingClientRect();
+    const placement = item.getAttribute('data-kt-menu-item-placement') || 'bottom-end';
+    const offset = parseMenuOffset(item.getAttribute('data-kt-menu-item-offset'));
+
+    dropdown.style.position = 'fixed';
+    dropdown.style.zIndex = '99999';
+    dropdown.style.margin = '0';
+    dropdown.style.width = '175px';
+    dropdown.style.minWidth = '175px';
+    dropdown.style.maxWidth = '175px';
+    dropdown.classList.add('show');
+    dropdown.style.display = 'flex';
+
+    const dropdownWidth = dropdown.offsetWidth || 175;
+    const dropdownHeight = dropdown.offsetHeight || 0;
+
+    let top = placement.includes('top')
+        ? rect.top - dropdownHeight - offset.y
+        : rect.bottom + offset.y;
+
+    let left;
+    if (placement.includes('end')) {
+        left = rect.right - dropdownWidth + offset.x;
+    } else if (placement.includes('start')) {
+        left = rect.left + offset.x;
+    } else {
+        left = rect.left + (rect.width - dropdownWidth) / 2 + offset.x;
+    }
+
+    left = Math.max(8, Math.min(left, window.innerWidth - dropdownWidth - 8));
+    top = Math.max(8, Math.min(top, window.innerHeight - dropdownHeight - 8));
+
+    dropdown.style.top = `${top}px`;
+    dropdown.style.left = `${left}px`;
+    dropdown.style.right = 'auto';
+    dropdown._menuTrigger = trigger;
+    dropdown._menuItem = item;
+}
+
+function repositionOpenMenuDropdowns() {
+    document.querySelectorAll('.kt-menu-dropdown.show').forEach(dropdown => {
+        if (dropdown._menuTrigger && dropdown._menuItem) {
+            openMenuDropdown(dropdown._menuTrigger, dropdown._menuItem, dropdown);
+        }
+    });
+}
+
+function cleanupPortaledMenus() {
+    closeAllMenuDropdowns();
+    document.querySelectorAll('body > .kt-menu-dropdown').forEach(el => el.remove());
+}
+
+// Menu functionality — délégation d'événements (compatible navigation AJAX)
+function initMenus() {
+    if (document._ktMenuDelegationInited) {
+        return;
+    }
+    document._ktMenuDelegationInited = true;
+
+    document.addEventListener('click', function(e) {
+        const menuLink = e.target.closest('.kt-menu-dropdown .kt-menu-link');
+        if (menuLink) {
+            setTimeout(() => closeAllMenuDropdowns(), 0);
+            return;
+        }
+
+        const trigger = e.target.closest('.kt-menu-toggle');
+        if (trigger) {
+            const item = trigger.closest('[data-kt-menu-item-toggle="dropdown"]');
+            if (!item) return;
+            const dropdown = item.querySelector('.kt-menu-dropdown');
+            if (!dropdown) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const isOpen = dropdown.classList.contains('show');
+            closeAllMenuDropdowns();
+            if (!isOpen) {
+                openMenuDropdown(trigger, item, dropdown);
             }
-        };
-        document.addEventListener('click', document._menuOutsideClickHandler);
+            return;
+        }
+
+        if (!e.target.closest('.kt-menu-dropdown')) {
+            closeAllMenuDropdowns();
+        }
+    });
+
+    if (!document._menuRepositionHandler) {
+        document._menuRepositionHandler = repositionOpenMenuDropdowns;
+        window.addEventListener('scroll', document._menuRepositionHandler, true);
+        window.addEventListener('resize', document._menuRepositionHandler);
     }
 }
 
@@ -309,6 +391,8 @@ window.MetronicCore = {
     initSoldesPage,
     portalModalsToBody,
     cleanupOrphanModalBackdrops,
+    closeAllMenuDropdowns,
+    cleanupPortaledMenus,
 };
 
 // Exposer initSoldesPage globalement pour le système de réinitialisation automatique

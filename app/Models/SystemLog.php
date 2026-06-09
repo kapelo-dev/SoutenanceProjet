@@ -111,6 +111,10 @@ class SystemLog extends Model
     
     public static function logAction($action, $description, $model = null, $oldValues = null, $newValues = null, $metadata = [])
     {
+        if (! config('security.audit_logging_enabled', true)) {
+            return null;
+        }
+
         return self::create([
             'user_id' => auth()->id(),
             'action' => $action,
@@ -127,6 +131,10 @@ class SystemLog extends Model
 
     public static function logLogin($user, $success = true)
     {
+        if (! config('security.audit_logging_enabled', true)) {
+            return null;
+        }
+
         return self::create([
             'user_id' => $success ? $user->id : null,
             'action' => $success ? 'login' : 'login_failed',
@@ -143,6 +151,10 @@ class SystemLog extends Model
 
     public static function logLogout($user)
     {
+        if (! config('security.audit_logging_enabled', true)) {
+            return null;
+        }
+
         return self::create([
             'user_id' => $user->id,
             'action' => 'logout',

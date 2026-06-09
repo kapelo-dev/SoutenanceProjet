@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Services\DatabaseBackupService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -16,7 +17,8 @@ class ServerMetrics
         $disk = self::disk();
         $phpMemory = self::phpMemory();
         $services = self::services();
-        $alerts = self::buildAlerts($cpu, $ram, $disk, $phpMemory, $services);
+        $backups = app(DatabaseBackupService::class)->metrics();
+        $alerts = self::buildAlerts($cpu, $ram, $disk, $phpMemory, $services, $backups);
         $health = self::health($alerts);
 
         return [
@@ -31,6 +33,7 @@ class ServerMetrics
             ],
             'services' => $services,
             'system' => self::systemInfo(),
+            'backups' => $backups,
         ];
     }
 
@@ -72,7 +75,7 @@ class ServerMetrics
         ];
     }
 
-    protected static function buildAlerts(array $cpu, array $ram, array $disk, array $phpMemory, array $services): array
+    protected static function buildAlerts(array $cpu, array $ram, array $disk, array $phpMemory, array $services, array $backups = []): array
     {
         $alerts = [];
 
@@ -148,6 +151,18 @@ class ServerMetrics
 
         if (config('app.debug') && config('app.env') === 'production') {
             $add('warning', 'Mode debug activé en production', 'APP_DEBUG=true expose des informations sensibles.', 'Dans .env : APP_DEBUG=false puis php artisan config:clear', 'app');
+        }
+
+        if (! ($backups['enabled'] ?? true)) {
+            $add('info', 'Sauvegardes désactivées', 'BACKUP_ENABLED=false.', 'Activez BACKUP_ENABLED=true et configurez MinIO pour automatiser les dumps.', 'backup');
+        } elseif (! ($backups['minio']['configured'] ?? false)) {
+            $add('warning', 'MinIO non configuré', 'Les variables MINIO_* sont incomplètes.', 'Renseignez MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY et MINIO_BUCKET dans .env.', 'backup');
+        } elseif (! ($backups['minio']['reachable'] ?? false)) {
+            $add('critical', 'MinIO inaccessible', 'Impossible de joindre le bucket de sauvegarde.', 'Vérifiez que MinIO tourne et que le bucket existe.', 'backup');
+        } elseif (empty($backups['last_success'])) {
+            $add('warning', 'Aucune sauvegarde réussie', 'Aucun dump n\'a encore été enregistré.', 'Lancez : php artisan backup:database ou utilisez le bouton sur cette page.', 'backup');
+        } elseif ($backups['is_stale'] ?? false) {
+            $add('warning', 'Sauvegarde obsolète', 'Dernière sauvegarde il y a plus de ' . ($backups['stale_hours'] ?? 48) . ' h.', 'Vérifiez le cron (schedule:run) ou lancez une sauvegarde manuelle.', 'backup');
         }
 
         return $alerts;
@@ -260,6 +275,18 @@ class ServerMetrics
         } catch (\Throwable $e) {
             $services[] = self::service('public_disk', 'Disque public', 'error', 'Erreur', $e->getMessage());
         }
+
+        $backupMetrics = app(DatabaseBackupService::class)->metrics();
+        $backupStatus = match ($backupMetrics['status'] ?? 'warning') {
+            'ok' => 'ok',
+            'error' => 'error',
+            default => 'warning',
+        };
+        $backupValue = $backupMetrics['last_success']['created_at_human'] ?? 'Jamais';
+        $backupDetail = ($backupMetrics['minio']['reachable'] ?? false)
+            ? 'MinIO · ' . ($backupMetrics['total_success'] ?? 0) . ' sauvegarde(s)'
+            : (($backupMetrics['minio']['configured'] ?? false) ? 'MinIO injoignable' : 'MinIO non configuré');
+        $services[] = self::service('backup', 'Sauvegarde BDD', $backupStatus, $backupValue, $backupDetail);
 
         return $services;
     }

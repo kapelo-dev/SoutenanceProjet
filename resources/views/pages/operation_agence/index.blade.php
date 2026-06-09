@@ -491,10 +491,10 @@ window.initOperationAgenceModal = window.initOperationAgenceModal || function() 
             var typeOp = document.getElementById('operation_type_operation_id');
             var typeOpt = typeOp ? typeOp.selectedOptions[0] : null;
             var req = typeOpt && typeOpt.getAttribute('data-requiert-operateur') === '1';
-            if (!agId) { alert('Veuillez sélectionner un agent.'); return; }
-            if (!typeId) { alert('Veuillez sélectionner un type d\'opération.'); return; }
-            if (req && !opId) { alert('Veuillez sélectionner un opérateur.'); return; }
-            if (!mont || parseFloat(mont) <= 0) { alert('Veuillez saisir un montant valide.'); return; }
+            if (!agId) { AppToast.warning('Veuillez sélectionner un agent.'); return; }
+            if (!typeId) { AppToast.warning('Veuillez sélectionner un type d\'opération.'); return; }
+            if (req && !opId) { AppToast.warning('Veuillez sélectionner un opérateur.'); return; }
+            if (!mont || parseFloat(mont) <= 0) { AppToast.warning('Veuillez saisir un montant valide.'); return; }
             var note = document.getElementById('operation_note') ? document.getElementById('operation_note').value : '';
             var csrf = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
             var url = '{{ route("operations-agence.store") }}';
@@ -508,18 +508,13 @@ window.initOperationAgenceModal = window.initOperationAgenceModal || function() 
             .then(function(res) {
                 btnSave.disabled = false;
                 if (res.ok && res.data.success) {
-                    alert(res.data.message || 'Opération enregistrée avec succès.');
-                    if (modalOp) { var d = modalOp.querySelector('[data-kt-modal-dismiss="true"]'); if (d) d.click(); }
-                    if (formOp) formOp.reset();
-                    if (document.getElementById('operation_agent_id')) document.getElementById('operation_agent_id').value = '';
-                    if (document.getElementById('operation_operateur_id')) document.getElementById('operation_operateur_id').value = '';
-                    if (operateurDisplay) { operateurDisplay.innerHTML = 'Sélectionnez un opérateur'; operateurDisplay.classList.add('text-muted-foreground'); }
-                    window.location.reload();
+                    AppToast.reload(res.data.message || 'Opération enregistrée avec succès.', 'success');
+                    return;
                 } else {
-                    alert((res.data && res.data.message) || 'Erreur lors de l\'enregistrement.');
+                    AppToast.error((res.data && res.data.message) || 'Erreur lors de l\'enregistrement.');
                 }
             })
-            .catch(function() { btnSave.disabled = false; alert('Erreur réseau.'); });
+            .catch(function() { btnSave.disabled = false; AppToast.error('Erreur réseau.'); });
         });
     }
 };

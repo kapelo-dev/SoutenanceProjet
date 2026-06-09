@@ -11,13 +11,6 @@
         </div>
     </div>
 
-    @if(session('success'))
-        <div class="kt-alert kt-alert-success mb-5">
-            <i class="ki-filled ki-check-circle"></i>
-            <span>{{ session('success') }}</span>
-        </div>
-    @endif
-
     @if($errors->any())
         <div class="kt-alert kt-alert-danger mb-5">
             <i class="ki-filled ki-information-2"></i>

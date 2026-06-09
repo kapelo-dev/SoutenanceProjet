@@ -110,6 +110,12 @@ const AjaxNavigation = {
 
     // Gérer la réponse HTML
     handleHtmlResponse(html, url) {
+        if (window.MetronicCore?.cleanupPortaledMenus) {
+            window.MetronicCore.cleanupPortaledMenus();
+        } else if (window.MetronicCore?.closeAllMenuDropdowns) {
+            window.MetronicCore.closeAllMenuDropdowns();
+        }
+
         // Si la réponse est déjà du HTML pur (sans layout), il faut quand même exécuter les <script>
         // (sinon les fonctions onclick comme saveAllPermissions ne sont pas définies après navigation AJAX)
         if (html.trim().startsWith('<') && !html.includes('<!DOCTYPE')) {
@@ -304,19 +310,12 @@ const AjaxNavigation = {
                 } else {
                 // Exécuter le script inline
                 try {
-                    // Créer un élément script temporaire et l'injecter dans le DOM
-                    // IMPORTANT: Ne PAS wrapper dans une fonction anonyme pour que les fonctions
-                    // déclarées avec 'function nom() {}' soient disponibles dans le scope global (window)
                     const scriptElement = document.createElement('script');
                     scriptElement.textContent = script.content;
                     document.head.appendChild(scriptElement);
-                    
-                    // Retirer après exécution pour éviter l'encombrement
-                    setTimeout(() => {
-                        if (scriptElement.parentNode) {
-                            document.head.removeChild(scriptElement);
-                        }
-                    }, 0);
+                    if (scriptElement.parentNode) {
+                        scriptElement.parentNode.removeChild(scriptElement);
+                    }
                 } catch (e) {
                     console.error('Erreur lors de l\'exécution du script inline:', e);
                     // En cas d'échec, essayer avec eval dans un try-catch (fallback)
@@ -372,6 +371,10 @@ const AjaxNavigation = {
     
     // Réinitialiser les scripts et composants après chargement AJAX
     reinitialize() {
+        if (window.MetronicCore?.cleanupPortaledMenus) {
+            window.MetronicCore.cleanupPortaledMenus();
+        }
+
         if (window.MetronicCore && typeof window.MetronicCore.initMetronicCore === 'function') {
             window.MetronicCore.initMetronicCore();
         } else if (window.MetronicCore) {

@@ -227,7 +227,7 @@ function initSecurityDashboard() {
             });
             const payload = await res.json();
             if (!payload.success) {
-                alert(payload.message || 'Erreur lors du blocage.');
+                window.AppToast?.error(payload.message || 'Erreur lors du blocage.');
                 return;
             }
             form.reset();
@@ -262,7 +262,7 @@ function initSecurityDashboard() {
                 });
                 const payload = await res.json();
                 if (!payload.success) {
-                    alert(payload.message || 'Impossible de lever l\'alerte.');
+                    window.AppToast?.error(payload.message || 'Impossible de lever l\'alerte.');
                     return;
                 }
                 renderMetrics(payload.data);
@@ -289,7 +289,7 @@ function initSecurityDashboard() {
             });
             const payload = await res.json();
             if (!payload.success) {
-                alert(payload.message || 'Erreur lors du déblocage.');
+                window.AppToast?.error(payload.message || 'Erreur lors du déblocage.');
                 return;
             }
             renderBlockedIps(payload.blocked_ips);

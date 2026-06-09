@@ -6,6 +6,8 @@ use App\Models\SecurityAlertResolution;
 use App\Models\SystemLog;
 use App\Services\IpBlockService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 
 class SecurityMetrics
 {
@@ -377,13 +379,81 @@ class SecurityMetrics
 
     protected static function monitoringTools(): array
     {
+        $threshold = config('security.auto_block_threshold', 5);
+        $rateLimit = config('security.login_rate_limit', '10,1');
+
         return [
-            ['name' => 'Logs Système (PDV Connect)', 'role' => 'Audit applicatif', 'status' => 'actif', 'scope' => 'Connexions, CRUD, exports'],
-            ['name' => 'Cloudflare', 'role' => 'WAF / anti-DDoS', 'status' => 'recommandé', 'scope' => 'Trafic HTTP avant l\'app'],
-            ['name' => 'Fail2ban', 'role' => 'Blocage IP', 'status' => 'recommandé', 'scope' => 'Serveur / SSH / login'],
-            ['name' => 'Sentry', 'role' => 'Erreurs & anomalies', 'status' => 'optionnel', 'scope' => 'Exceptions PHP'],
-            ['name' => 'Blocage IP (PDV Connect)', 'role' => 'Liste noire applicative', 'status' => 'actif', 'scope' => 'Auto après ' . config('security.auto_block_threshold', 5) . ' échecs / déblocage manuel'],
-            ['name' => 'Rate limiting Laravel', 'role' => 'Anti brute-force', 'status' => 'actif', 'scope' => 'Route /login (10/min)'],
+            [
+                'name' => 'Logs Système (PDV Connect)',
+                'role' => 'Audit applicatif',
+                'status' => self::auditLoggingStatus(),
+                'scope' => 'Connexions, CRUD, exports',
+            ],
+            [
+                'name' => 'Blocage IP (PDV Connect)',
+                'role' => 'Liste noire applicative',
+                'status' => self::ipBlockingStatus(),
+                'scope' => $threshold > 0
+                    ? "Auto après {$threshold} échecs / déblocage manuel"
+                    : 'Blocage auto désactivé (seuil = 0)',
+            ],
+            [
+                'name' => 'Rate limiting Laravel',
+                'role' => 'Anti brute-force',
+                'status' => self::loginRateLimitStatus(),
+                'scope' => 'Route /login (' . str_replace(',', ' req/', $rateLimit) . ' min)',
+            ],
         ];
+    }
+
+    protected static function auditLoggingStatus(): string
+    {
+        if (! config('security.audit_logging_enabled', true)) {
+            return 'inactif';
+        }
+
+        if (! Schema::hasTable('system_logs')) {
+            return 'inactif';
+        }
+
+        return 'actif';
+    }
+
+    protected static function ipBlockingStatus(): string
+    {
+        if (! config('security.ip_blocking_enabled', true)) {
+            return 'inactif';
+        }
+
+        if (! Schema::hasTable('blocked_ips')) {
+            return 'inactif';
+        }
+
+        if (config('security.auto_block_threshold', 5) <= 0) {
+            return 'inactif';
+        }
+
+        return 'actif';
+    }
+
+    protected static function loginRateLimitStatus(): string
+    {
+        if (! config('security.login_rate_limit_enabled', true)) {
+            return 'inactif';
+        }
+
+        $loginPost = collect(Route::getRoutes())->first(
+            fn ($route) => in_array('POST', $route->methods(), true) && trim($route->uri(), '/') === 'login'
+        );
+
+        if (! $loginPost) {
+            return 'inactif';
+        }
+
+        $hasThrottle = collect($loginPost->gatherMiddleware())->contains(
+            fn ($middleware) => is_string($middleware) && str_starts_with($middleware, 'throttle')
+        );
+
+        return $hasThrottle ? 'actif' : 'inactif';
     }
 }

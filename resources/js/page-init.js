@@ -201,7 +201,7 @@ window.loadUserProfile = function(userId) {
     })
     .catch(error => {
         console.error('Erreur chargement profil:', error);
-        alert('Une erreur est survenue lors du chargement des données');
+        window.AppToast?.error('Une erreur est survenue lors du chargement des données');
         if (about) about.innerHTML = '<div class="col-span-2 text-center py-8 text-destructive"><i class="ki-filled ki-information-circle text-2xl mb-2"></i><div>Erreur de chargement</div></div>';
     });
 };

@@ -33,6 +33,7 @@
 
 <div class="kt-container-fixed pb-8" id="tech_dashboard_root"
     data-metrics-url="{{ route('dashboard.technique.metrics') }}"
+    data-backup-url="{{ route('dashboard.technique.backup') }}"
     data-initial='@json($metrics)'>
 
     {{-- Bandeau statut --}}
@@ -151,6 +152,95 @@
                         </div>
                     @endforeach
                 </dl>
+            </div>
+        </div>
+    </div>
+
+    @php $backups = $metrics['backups'] ?? []; @endphp
+    <div class="mt-6 kt-card" id="tech_backups_panel">
+        <div class="kt-card-header flex-wrap gap-3">
+            <div>
+                <h3 class="kt-card-title flex items-center gap-2">
+                    <i class="ki-filled ki-cloud-download text-primary"></i>
+                    Sauvegardes base de données
+                </h3>
+                <p class="text-xs text-secondary-foreground mt-1">Dumps MySQL compressés vers MinIO (S3)</p>
+            </div>
+            <button type="button" class="kt-btn kt-btn-sm kt-btn-primary" id="tech_run_backup" @disabled(!($backups['enabled'] ?? false))>
+                <i class="ki-filled ki-cloud-add"></i> Sauvegarder maintenant
+            </button>
+        </div>
+        <div class="kt-card-content p-5 pt-0">
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-5" id="tech_backup_summary">
+                <div class="rounded-xl border border-border p-4">
+                    <div class="text-xs text-secondary-foreground mb-1">Dernière sauvegarde</div>
+                    <div class="font-semibold" data-backup-last>{{ $backups['last_success']['created_at_human'] ?? '—' }}</div>
+                    <div class="text-xs text-secondary-foreground mt-1" data-backup-last-file>{{ $backups['last_success']['filename'] ?? 'Aucune' }}</div>
+                </div>
+                <div class="rounded-xl border border-border p-4">
+                    <div class="text-xs text-secondary-foreground mb-1">Taille / durée</div>
+                    <div class="font-semibold" data-backup-size>{{ $backups['last_success']['size'] ?? '—' }}</div>
+                    <div class="text-xs text-secondary-foreground mt-1" data-backup-duration>
+                        @if(!empty($backups['last_success']['duration_ms']))
+                            {{ $backups['last_success']['duration_ms'] }} ms
+                        @else
+                            —
+                        @endif
+                    </div>
+                </div>
+                <div class="rounded-xl border border-border p-4">
+                    <div class="text-xs text-secondary-foreground mb-1">MinIO</div>
+                    <div class="font-semibold" data-backup-minio-status>
+                        @if($backups['minio']['reachable'] ?? false)
+                            Connecté
+                        @elseif($backups['minio']['configured'] ?? false)
+                            Injoignable
+                        @else
+                            Non configuré
+                        @endif
+                    </div>
+                    <div class="text-xs text-secondary-foreground mt-1 truncate" data-backup-bucket>{{ $backups['minio']['bucket'] ?? '—' }}</div>
+                </div>
+                <div class="rounded-xl border border-border p-4">
+                    <div class="text-xs text-secondary-foreground mb-1">Politique</div>
+                    <div class="font-semibold">{{ $backups['retention_days'] ?? 7 }} jours</div>
+                    <div class="text-xs text-secondary-foreground mt-1">Planifié à {{ $backups['schedule_time'] ?? '02:00' }}</div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-muted/40 text-secondary-foreground">
+                        <tr>
+                            <th class="text-left font-medium px-4 py-3">Date</th>
+                            <th class="text-left font-medium px-4 py-3">Fichier</th>
+                            <th class="text-left font-medium px-4 py-3">Taille</th>
+                            <th class="text-left font-medium px-4 py-3">Durée</th>
+                            <th class="text-left font-medium px-4 py-3">Déclencheur</th>
+                            <th class="text-right font-medium px-4 py-3">Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border" id="tech_backups_body">
+                        @forelse($backups['recent'] ?? [] as $row)
+                            <tr>
+                                <td class="px-4 py-3 whitespace-nowrap">{{ $row['created_at_human'] ?? '—' }}</td>
+                                <td class="px-4 py-3 font-mono text-xs">{{ $row['filename'] }}</td>
+                                <td class="px-4 py-3">{{ $row['size'] }}</td>
+                                <td class="px-4 py-3">{{ $row['duration_ms'] }} ms</td>
+                                <td class="px-4 py-3">{{ $row['trigger'] }}</td>
+                                <td class="px-4 py-3 text-right">
+                                    <span class="kt-badge kt-badge-sm {{ $row['status'] === 'success' ? 'kt-badge-success' : 'kt-badge-destructive' }}">
+                                        {{ $row['status'] === 'success' ? 'OK' : 'Échec' }}
+                                    </span>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="px-4 py-8 text-center text-secondary-foreground">Aucune sauvegarde enregistrée.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

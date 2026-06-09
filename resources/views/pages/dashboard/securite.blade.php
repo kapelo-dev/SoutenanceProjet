@@ -254,6 +254,7 @@
                                     @php
                                         $badge = match($tool['status']) {
                                             'actif' => 'kt-badge-success',
+                                            'inactif' => 'kt-badge-secondary',
                                             'recommandé' => 'kt-badge-warning',
                                             default => 'kt-badge-outline',
                                         };

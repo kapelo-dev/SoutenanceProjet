@@ -257,6 +257,25 @@
   background-color: inherit;
 }
 
+/* Formulaire entre header et footer : permettre le scroll du body */
+.kt-modal-content > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kt-modal-content > form .kt-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.kt-modal-content > form .kt-modal-footer {
+  flex-shrink: 0;
+}
+
 /* Éviter qu'un transform sur #content piège les modals en position fixed */
 main#content.animate-slide-up {
   transform: none !important;

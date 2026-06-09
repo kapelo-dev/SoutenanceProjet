@@ -244,7 +244,7 @@
      <!-- End Modal Nouveau/Modifier Rôle -->
 
 <script>
-let currentRoleId = null;
+window.currentRoleId = window.currentRoleId ?? null;
 
 function resetModal() {
     // Réinitialiser le formulaire
@@ -363,8 +363,11 @@ function saveRole() {
             // Réinitialiser le formulaire
             resetModal();
             
-            // Recharger la page pour afficher les changements
-            window.location.reload();
+            AppToast.reload(
+                data.message || (roleId ? 'Rôle modifié avec succès.' : 'Rôle créé avec succès.'),
+                'success'
+            );
+            return;
         } else {
             // Afficher les erreurs
             if (data.errors) {
@@ -373,7 +376,7 @@ function saveRole() {
                     document.getElementById('error_libelle').classList.remove('hidden');
                 }
             } else {
-                alert('Erreur: ' + (data.message || 'Une erreur est survenue'));
+                AppToast.error('Erreur : ' + (data.message || 'Une erreur est survenue'));
             }
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
@@ -381,7 +384,7 @@ function saveRole() {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Une erreur est survenue lors de ' + (roleId ? 'la modification' : 'la création') + ' du rôle.');
+        AppToast.error('Une erreur est survenue lors de ' + (roleId ? 'la modification' : 'la création') + ' du rôle.');
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
     });
@@ -401,14 +404,15 @@ function deleteRole(roleId, roleName) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            window.location.reload();
+            AppToast.reload(data.message || 'Rôle supprimé avec succès.', 'success');
+            return;
         } else {
-            alert('Erreur: ' + (data.message || 'Impossible de supprimer ce rôle.'));
+            AppToast.error('Erreur : ' + (data.message || 'Impossible de supprimer ce rôle.'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Une erreur est survenue lors de la suppression.');
+        AppToast.error('Une erreur est survenue lors de la suppression.');
     });
 }
 
@@ -429,14 +433,14 @@ Description: ${role.description || 'Aucune description'}
 Niveau: ${role.niveau}
 Utilisateurs: ${role.users_count || 0}
             `;
-            alert(details);
+            AppToast.info(details);
         } else {
-            alert('Erreur lors du chargement des détails.');
+            AppToast.error('Erreur lors du chargement des détails.');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Une erreur est survenue.');
+        AppToast.error('Une erreur est survenue.');
     });
 }
 
@@ -458,5 +462,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+window.initGestionRolesPage = function() {
+    if (window.MetronicCore?.initMenus) {
+        window.MetronicCore.initMenus();
+    }
+    if (window.MetronicCore?.initModals) {
+        window.MetronicCore.initModals();
+    }
+};
+
+if (document.querySelector('[data-role-id]')) {
+    window.initGestionRolesPage();
+}
 </script>
 @endsection

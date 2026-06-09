@@ -399,13 +399,13 @@ function editParametre(parametre) {
             if (!nomVal) {
                 e.preventDefault();
                 nom.focus();
-                alert('Veuillez saisir le nom du paramètre.');
+                AppToast.warning('Veuillez saisir le nom du paramètre.');
                 return;
             }
             if (!typeVal) {
                 e.preventDefault();
                 if (typeSelect) typeSelect.focus();
-                alert('Veuillez sélectionner un type (Fixe, Commission ou Mixte).');
+                AppToast.warning('Veuillez sélectionner un type (Fixe, Commission ou Mixte).');
                 return;
             }
         };

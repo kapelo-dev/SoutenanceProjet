@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Demander la raison de l'annulation
         const raison = prompt('Veuillez indiquer la raison de l\'annulation :');
         if (!raison || raison.trim() === '') {
-            alert('La raison de l\'annulation est obligatoire.');
+            AppToast.warning('La raison de l\'annulation est obligatoire.');
             return;
         }
 
@@ -174,18 +174,18 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert(data.message || 'Transaction annulée avec succès !');
+                AppToast.success(data.message || 'Transaction annulée avec succès.');
                 // Recharger la page pour afficher les soldes mis à jour
                 window.location.reload();
             } else {
-                alert(data.message || 'Erreur lors de l\'annulation de la transaction.');
+                AppToast.error(data.message || 'Erreur lors de l\'annulation de la transaction.');
                 btn.disabled = false;
                 btn.innerHTML = '<i class="ki-filled ki-cross-circle"></i> Annuler';
             }
         })
         .catch(error => {
             console.error('Erreur:', error);
-            alert('Une erreur est survenue lors de l\'annulation.');
+            AppToast.error('Une erreur est survenue lors de l\'annulation.');
             btn.disabled = false;
             btn.innerHTML = '<i class="ki-filled ki-cross-circle"></i> Annuler';
         });

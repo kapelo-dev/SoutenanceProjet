@@ -183,7 +183,6 @@ class AgentController extends Controller
                 'nom' => 'required|string|max:100',
                 'prenom' => 'required|string|max:100',
                 'telephone' => 'required|string|max:20|unique:agents,telephone',
-                'email' => 'required|email|max:255|unique:utilisateurs,email',
                 'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'espece_initiale' => 'nullable|numeric|min:0',
                 'kiosque_id' => 'nullable|exists:kiosques,id',
@@ -284,7 +283,7 @@ class AgentController extends Controller
             $utilisateur = Utilisateur::create([
                 'nom' => $request->nom,
                 'prenom' => $request->prenom,
-                'email' => $request->email,
+                'email' => null,
                 'telephone' => $request->telephone,
                 'mot_de_passe' => Hash::make($motDePasse),
                 'photo_profil' => $photoProfil,
@@ -389,8 +388,8 @@ class AgentController extends Controller
                 'message' => 'Agent créé avec succès' . ($kiosqueId ? ' et kiosque associé' : '') . '. Un utilisateur a été créé automatiquement.',
                 'agent' => $agent->load('kiosque', 'utilisateur'),
                 'utilisateur' => [
-                    'email' => $utilisateur->email,
-                    'mot_de_passe' => $motDePasse // À noter : ce mot de passe doit être communiqué à l'agent
+                    'code_agent' => $agent->code_agent,
+                    'mot_de_passe' => $motDePasse,
                 ]
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -850,7 +849,7 @@ class AgentController extends Controller
                 $agent->nom ?? '-',
                 $agent->prenom ?? '-',
                 $agent->telephone ?? '-',
-                ($agent->utilisateur && $agent->utilisateur->email) ? $agent->utilisateur->email : '-',
+                $agent->code_agent ?? '-',
                 ($agent->kiosque && $agent->kiosque->nom) ? $agent->kiosque->nom : 'Aucun kiosque',
                 ucfirst($agent->statut ?? 'inactif'),
                 number_format((float)($agent->montant_initial_total ?? 0), 0, ',', ' ') . ' XOF',

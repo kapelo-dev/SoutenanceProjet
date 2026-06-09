@@ -13,7 +13,7 @@ class ProfilController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $user->load('profils');
+        $user->load(['profils', 'agent']);
 
         return $this->ajaxView('pages.profil.index', compact('user'));
     }
@@ -25,10 +25,14 @@ class ProfilController extends Controller
     {
         $user = auth()->user();
 
+        $emailRules = $user->isAgent()
+            ? 'nullable|email|max:100|unique:utilisateurs,email,' . $user->id
+            : 'required|email|max:100|unique:utilisateurs,email,' . $user->id;
+
         $validated = $request->validate([
             'nom' => 'required|string|max:100',
             'prenom' => 'required|string|max:100',
-            'email' => 'required|email|max:100|unique:utilisateurs,email,' . $user->id,
+            'email' => $emailRules,
             'telephone' => 'nullable|string|max:20',
             'photo_profil' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ], [

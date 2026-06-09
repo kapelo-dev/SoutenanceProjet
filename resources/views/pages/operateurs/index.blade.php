@@ -398,7 +398,8 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    window.location.reload();
+                    AppToast.reload(data.message || 'Opérateur créé avec succès.', 'success');
+                    return;
                 } else {
                     // Afficher les erreurs
                     if (data.errors) {
@@ -416,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Erreur:', error);
-                alert('Une erreur est survenue lors de l\'enregistrement.');
+                AppToast.error('Une erreur est survenue lors de l\'enregistrement.');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             });

@@ -1,6 +1,31 @@
 #!/bin/bash
 set -e
 
+# Render Cron Job : php artisan schedule:run (sans Apache ni migrations)
+if [ "$1" = "php" ] && [ "$2" = "artisan" ]; then
+  cd /var/www/html
+  if [ -z "$APP_KEY" ] || ! echo "$APP_KEY" | grep -q '^base64:'; then
+    export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+  fi
+  exec "$@"
+fi
+
+# VPS scheduler (docker-compose.vps.yml)
+if [ "${RUN_MODE:-}" = "scheduler" ]; then
+  cd /var/www/html
+  if [ -z "$APP_KEY" ] || ! echo "$APP_KEY" | grep -q '^base64:'; then
+    export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+  fi
+  if [ -n "$DB_HOST" ] && [ "$DB_CONNECTION" = "mysql" ]; then
+    php docker/wait-for-db.php || exit 1
+  fi
+  echo "Scheduler actif (schedule:run toutes les 60 s)..."
+  while true; do
+    php artisan schedule:run --no-interaction
+    sleep 60
+  done
+fi
+
 # Render injecte PORT (ex: 10000)
 PORT="${PORT:-80}"
 if [ "$PORT" != "80" ]; then

@@ -1,0 +1,59 @@
+# VPS 2 — MinIO (stockage sauvegardes S3)
+#
+# 1) cp .env.minio.example .env.minio
+# 2) Éditer .env.minio (mots de passe forts)
+# 3) docker compose -f docker-compose.minio.yml --env-file .env.minio up -d
+#
+# Pare-feu : n'autoriser le port 9000 que depuis l'IP du VPS 1
+#   ufw allow from VPS1_IP to any port 9000
+#   ufw allow 9001/tcp   # console (restreindre à ton IP admin si possible)
+#
+# Console : http://VPS2_IP:9001
+# API S3  : http://VPS2_IP:9000  → MINIO_ENDPOINT sur le VPS 1
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: pdvconnect-minio
+    restart: unless-stopped
+    command: server /data --address ":9000" --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER requis}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD requis}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - minio
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: pdvconnect-minio-init
+    depends_on:
+      - minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET:-pdvconnect-backups}
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Attente MinIO...';
+      for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+        mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} 2>/dev/null && break;
+        sleep 2;
+      done;
+      mc mb local/$${MINIO_BUCKET} --ignore-existing;
+      echo Bucket $${MINIO_BUCKET} pret;
+      "
+    networks:
+      - minio
+    restart: "no"
+
+networks:
+  minio:
+    driver: bridge
+
+volumes:
+  minio_data:

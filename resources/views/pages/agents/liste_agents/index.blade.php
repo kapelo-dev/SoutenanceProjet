@@ -114,11 +114,9 @@
                                             <a class="leading-none font-medium text-sm text-mono hover:text-primary" href="javascript:void(0)" onclick="loadAgentDetails({{ $agent->id }})">
                                                 {{ $agent->nomComplet }}
                                             </a>
-                                            @if($agent->utilisateur)
                                             <span class="text-xs text-secondary-foreground font-normal">
-                                                {{ $agent->utilisateur->email }}
+                                                {{ $agent->code_agent ?? '—' }}
                                             </span>
-                                            @endif
                                         </div>
                                     </div>
                                 </td>
@@ -458,15 +456,6 @@
                         
                         <div class="flex flex-col gap-2">
                             <label class="kt-label">
-                                Email <span class="text-destructive">*</span>
-                            </label>
-                            <input class="kt-input" type="email" name="email" id="agent_email" placeholder="Ex: agent@example.com" required />
-                            <span class="text-xs text-secondary-foreground">Un utilisateur sera créé automatiquement avec cet email</span>
-                            <span class="text-xs text-destructive hidden" id="error_email"></span>
-                        </div>
-                        
-                        <div class="flex flex-col gap-2">
-                            <label class="kt-label">
                                 Photo de profil
                             </label>
                             <div class="flex items-center gap-5">
@@ -620,26 +609,42 @@
                 <!-- Onglet Montants Initiaux -->
                 <div id="tab_montants" class="kt-tab-content p-5 hidden">
                     <div class="flex flex-col gap-5">
-                        <div class="flex flex-col gap-2">
-                            <label class="kt-label">
-                                Espèce Initiale
-                            </label>
-                            <input class="kt-input" type="number" name="espece_initiale" id="agent_espece_initiale" placeholder="0" min="0" step="0.01" />
-                            <span class="text-xs text-secondary-foreground">Montant en espèces physiques</span>
+                        <div class="flex items-start gap-3 rounded-lg border border-border p-3">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
+                                <i class="ki-filled ki-dollar text-lg"></i>
+                            </div>
+                            <div class="flex min-w-0 flex-1 flex-col gap-2">
+                                <label class="kt-label" for="agent_espece_initiale">
+                                    Espèce initiale
+                                </label>
+                                <input class="kt-input" type="number" name="espece_initiale" id="agent_espece_initiale" placeholder="0" min="0" step="0.01" />
+                                <span class="text-xs text-secondary-foreground">Montant en espèces physiques</span>
+                            </div>
                         </div>
                         
-                        <!-- Montants virtuels par opérateur -->
                         <div class="flex flex-col gap-3 border-t border-border pt-4">
                             <label class="kt-label font-semibold">
-                                Montants Virtuels par Opérateur Mobile Money
+                                Montants virtuels par opérateur
                             </label>
-                            <span class="text-xs text-secondary-foreground mb-2">Définir le montant virtuel initial pour chaque opérateur</span>
+                            <span class="text-xs text-secondary-foreground">Définir le montant virtuel initial pour chaque opérateur</span>
                             @foreach($operateurs ?? [] as $operateur)
-                            <div class="flex flex-col gap-2">
-                                <label class="kt-label">
-                                    {{ $operateur->libelle }} ({{ $operateur->code }})
-                                </label>
-                                <input class="kt-input" type="number" name="montant_virtuel_{{ $operateur->id }}" id="montant_virtuel_{{ $operateur->id }}" placeholder="0" min="0" step="0.01" value="" />
+                            <div class="flex items-start gap-3 rounded-lg border border-border p-3">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
+                                    @if($operateur->logo)
+                                        <img src="{{ asset('storage/' . $operateur->logo) }}" alt="{{ $operateur->libelle }}" class="h-full w-full object-cover" />
+                                    @else
+                                        <span class="flex h-full w-full items-center justify-center text-sm font-semibold text-white" style="background-color: {{ $operateur->couleur ?? '#6b7280' }}">
+                                            {{ strtoupper(substr($operateur->libelle, 0, 1)) }}
+                                        </span>
+                                    @endif
+                                </div>
+                                <div class="flex min-w-0 flex-1 flex-col gap-2">
+                                    <label class="kt-label" for="montant_virtuel_{{ $operateur->id }}">
+                                        {{ $operateur->libelle }}
+                                        <span class="text-xs font-normal text-muted-foreground">({{ $operateur->code }})</span>
+                                    </label>
+                                    <input class="kt-input" type="number" name="montant_virtuel_{{ $operateur->id }}" id="montant_virtuel_{{ $operateur->id }}" placeholder="0" min="0" step="0.01" value="" />
+                                </div>
                             </div>
                             @endforeach
                         </div>
@@ -923,14 +928,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (file) {
                 // Vérifier la taille du fichier (max 2MB)
                 if (file.size > 2 * 1024 * 1024) {
-                    alert('Le fichier est trop volumineux. Taille maximale: 2MB');
+                    AppToast.warning('Le fichier est trop volumineux. Taille maximale : 2 Mo');
                     this.value = '';
                     return;
                 }
                 
                 // Vérifier le type de fichier
                 if (!file.type.match('image.*')) {
-                    alert('Veuillez sélectionner une image valide');
+                    AppToast.warning('Veuillez sélectionner une image valide');
                     this.value = '';
                     return;
                 }
@@ -960,10 +965,10 @@ function geolocaliser() {
                 updateCoordinates(lat, lng);
             }
         }, function(error) {
-            alert('Impossible d\'obtenir votre position. Veuillez sélectionner manuellement sur la carte.');
+            AppToast.warning('Impossible d\'obtenir votre position. Veuillez sélectionner manuellement sur la carte.');
         });
     } else {
-        alert('La géolocalisation n\'est pas supportée par votre navigateur.');
+        AppToast.warning('La géolocalisation n\'est pas supportée par votre navigateur.');
     }
 }
 
@@ -1029,20 +1034,6 @@ window.saveAgentWithKiosque = function saveAgentWithKiosque() {
     if (!data.telephone || data.telephone.trim() === '') {
         document.getElementById('error_telephone').textContent = 'Le téléphone est requis.';
         document.getElementById('error_telephone').classList.remove('hidden');
-        return;
-    }
-    
-    if (!data.email || data.email.trim() === '') {
-        document.getElementById('error_email').textContent = 'L\'email est requis pour créer l\'utilisateur.';
-        document.getElementById('error_email').classList.remove('hidden');
-        return;
-    }
-    
-    // Valider le format email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.email)) {
-        document.getElementById('error_email').textContent = 'Veuillez entrer un email valide.';
-        document.getElementById('error_email').classList.remove('hidden');
         return;
     }
     
@@ -1141,7 +1132,6 @@ window.saveAgentWithKiosque = function saveAgentWithKiosque() {
     finalFormData.append('nom', data.nom);
     finalFormData.append('prenom', data.prenom);
     finalFormData.append('telephone', data.telephone);
-    finalFormData.append('email', data.email);
     finalFormData.append('statut', data.statut);
     
     // Ajouter les montants initiaux si spécifiés
@@ -1222,18 +1212,15 @@ window.saveAgentWithKiosque = function saveAgentWithKiosque() {
             
             resetAgentModal();
             
-            // Afficher un message avec les informations de l'utilisateur créé
             if (data.utilisateur) {
-                const message = 'Agent créé avec succès!\n\n' +
-                    'Informations de connexion:\n' +
-                    'Email: ' + data.utilisateur.email + '\n' +
-                    'Mot de passe: ' + data.utilisateur.mot_de_passe + '\n\n' +
-                    'Veuillez noter ces informations et les communiquer à l\'agent.';
-                alert(message);
+                const message = 'Agent créé. Code agent : ' + data.utilisateur.code_agent +
+                    ' — Mot de passe : ' + data.utilisateur.mot_de_passe +
+                    '. Communiquez ces informations à l\'agent.';
+                AppToast.reload(message, 'success', { duration: 12000 });
+            } else {
+                AppToast.reload(data.message || 'Agent créé avec succès.', 'success');
             }
-            
-            // Recharger la page
-            window.location.reload();
+            return;
         } else {
             // Afficher les erreurs
             console.error('Erreurs de validation:', data.errors);
@@ -1261,12 +1248,12 @@ window.saveAgentWithKiosque = function saveAgentWithKiosque() {
                 // Afficher un message général si des erreurs existent
                 if (Object.keys(data.errors).length > 0) {
                     const errorMessages = Object.values(data.errors).flat().join('\n');
-                    alert('Erreurs de validation:\n\n' + errorMessages);
+                    AppToast.error('Erreurs de validation : ' + errorMessages);
                 }
             } else if (data.message) {
-                alert('Erreur: ' + data.message);
+                AppToast.error('Erreur : ' + data.message);
             } else {
-                alert('Une erreur est survenue lors de la création de l\'agent.');
+                AppToast.error('Une erreur est survenue lors de la création de l\'agent.');
             }
             
             submitBtn.disabled = false;
@@ -1279,7 +1266,7 @@ window.saveAgentWithKiosque = function saveAgentWithKiosque() {
         if (error.message) {
             errorMessage += '\n\n' + error.message;
         }
-        alert(errorMessage);
+        AppToast.error(errorMessage);
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
     });
@@ -1455,16 +1442,14 @@ window.loadAgentDetails = function(id) {
             statutEl.textContent = statutText;
             statutEl.className = `kt-badge kt-badge-${agent.statut === 'actif' ? 'success' : agent.statut === 'suspendu' ? 'danger' : agent.statut === 'en_attente' ? 'warning' : 'secondary'}`;
             
-            // Informations utilisateur
-            const email = (agent.utilisateur && agent.utilisateur.email) ? agent.utilisateur.email : '-';
-            const emailEl = document.getElementById('view_agent_email');
-            if (emailEl) {
-                emailEl.textContent = email;
+            const identifiant = agent.code_agent || '-';
+            const identifiantEl = document.getElementById('view_agent_identifiant');
+            if (identifiantEl) {
+                identifiantEl.textContent = identifiant;
             }
-            const emailLink = document.getElementById('view_agent_email_link');
-            if (emailLink) {
-                emailLink.textContent = email;
-                emailLink.href = email !== '-' ? `mailto:${email}` : '#';
+            const identifiantLink = document.getElementById('view_agent_identifiant_link');
+            if (identifiantLink) {
+                identifiantLink.textContent = identifiant;
             }
             
             // Photo de profil avec bordure verte - parfaitement ronde
@@ -1611,7 +1596,7 @@ window.loadAgentDetails = function(id) {
         if (error.message) {
             errorMessage += '\n\n' + error.message;
         }
-        alert(errorMessage);
+        AppToast.error(errorMessage);
     });
 }
 
@@ -1716,7 +1701,7 @@ window.loadAgentEdit = function(id) {
     })
     .catch(error => {
         console.error('Erreur:', error);
-        alert('Une erreur est survenue lors du chargement des données: ' + error.message);
+        AppToast.error('Une erreur est survenue lors du chargement des données : ' + error.message);
     });
 }
 
@@ -1788,96 +1773,9 @@ function initAgentsPageActions() {
     }
 }
 
-// Fonction pour initialiser les menus d'actions des agents
+// Menus trois points — délégués globalement via MetronicCore.initMenus()
 function initKTMenus() {
-    // Éviter de ré-attacher plusieurs fois les mêmes listeners
-    if (document._agentsMenusInited) {
-        return;
-    }
-    document._agentsMenusInited = true;
-
-    console.log('Initialisation des menus KTMenu (agents)...');
-
-    // Laisser Metronic initialiser les menus globaux si disponible
-    if (window.MetronicCore && typeof window.MetronicCore.initMenus === 'function') {
-        window.MetronicCore.initMenus();
-    }
-
-    // Fallback manuel pour gérer les clics sur les trois points
-    console.log('Ajout du fallback manuel pour les menus (agents)');
-
-    // Utiliser capture pour intercepter les clics avant les autres handlers
-    document.addEventListener('click', function(e) {
-        const menuToggle = e.target.closest('.kt-menu-toggle');
-        if (menuToggle) {
-            console.log('Clic sur menu toggle détecté');
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const menuItem = menuToggle.closest('.kt-menu-item');
-            const dropdown = menuItem ? menuItem.querySelector('.kt-menu-dropdown') : null;
-            
-            console.log('Dropdown trouvé:', dropdown ? 'oui' : 'non');
-            
-            if (dropdown) {
-                // Fermer tous les autres dropdowns
-                document.querySelectorAll('.kt-menu-dropdown').forEach(d => {
-                    if (d !== dropdown) {
-                        d.classList.remove('show');
-                        d.style.display = 'none';
-                        const r = d.closest('tr');
-                        if (r) r.classList.remove('agents-row-menu-open');
-                    }
-                });
-                
-                // Toggle le dropdown actuel
-                const isOpen = dropdown.classList.contains('show');
-                console.log('État actuel du dropdown:', isOpen ? 'ouvert' : 'fermé');
-                
-                if (isOpen) {
-                    dropdown.classList.remove('show');
-                    dropdown.style.display = 'none';
-                    const openRow = dropdown.closest('tr');
-                    if (openRow) openRow.classList.remove('agents-row-menu-open');
-                    console.log('Fermeture du dropdown');
-                } else {
-                    // Retirer la classe des autres lignes
-                    document.querySelectorAll('#agents_table tbody tr.agents-row-menu-open').forEach(function(r) {
-                        r.classList.remove('agents-row-menu-open');
-                    });
-                    // Mettre la ligne du menu ouvert au-dessus des autres (z-index) pour que Voir/Modifier soient cliquables
-                    const currentRow = menuToggle.closest('tr');
-                    if (currentRow) currentRow.classList.add('agents-row-menu-open');
-
-                    // Positionner le dropdown en fixed pour qu'il soit au-dessus de tout
-                    const rect = menuToggle.getBoundingClientRect();
-                    dropdown.style.position = 'fixed';
-                    dropdown.style.top = (rect.bottom + 5) + 'px'; // 5px sous le bouton
-                    dropdown.style.right = (window.innerWidth - rect.right) + 'px'; // Aligné à droite du bouton
-                    dropdown.style.zIndex = '99999';
-                    
-                    dropdown.classList.add('show');
-                    dropdown.style.display = 'block';
-                    console.log('Ouverture du dropdown à position:', dropdown.style.top, dropdown.style.right);
-                }
-            }
-            return false;
-        }
-        
-        // Fermer les dropdowns quand on clique ailleurs
-        if (!e.target.closest('.kt-menu')) {
-            const openDropdowns = document.querySelectorAll('.kt-menu-dropdown.show');
-            if (openDropdowns.length > 0) {
-                console.log('Fermeture de', openDropdowns.length, 'dropdown(s) ouverts');
-                openDropdowns.forEach(d => {
-                    d.classList.remove('show');
-                    d.style.display = 'none';
-                    const row = d.closest('tr');
-                    if (row) row.classList.remove('agents-row-menu-open');
-                });
-            }
-        }
-    }, true); // Utiliser capture phase
+    window.MetronicCore?.initMenus?.();
 }
 
 // Exposer une fonction d'initialisation globale pour la page Agents (utilisée par la navigation AJAX)
@@ -1967,8 +1865,8 @@ document.addEventListener('ajax-content-loaded', function() {
                                 <span class="text-secondary-foreground" id="view_agent_kiosque_nom">-</span>
                             </div>
                             <div class="flex gap-1 items-center">
-                                <i class="ki-filled ki-sms text-muted-foreground text-base"></i>
-                                <a class="text-secondary-foreground hover:text-primary" href="#" id="view_agent_email_link">-</a>
+                                <i class="ki-filled ki-user text-muted-foreground text-base"></i>
+                                <span class="text-secondary-foreground" id="view_agent_identifiant_link">-</span>
                             </div>
                         </div>
                     </div>
@@ -2023,10 +1921,8 @@ document.addEventListener('ajax-content-loaded', function() {
                                             <td class="text-sm text-mono pb-3.5" id="view_agent_telephone">-</td>
                                         </tr>
                                         <tr>
-                                            <td class="text-sm text-secondary-foreground pb-3.5 pe-3">Email:</td>
-                                            <td class="text-sm text-mono pb-3.5">
-                                                <a class="text-foreground hover:text-primary" href="#" id="view_agent_email">-</a>
-                                            </td>
+                                            <td class="text-sm text-secondary-foreground pb-3.5 pe-3">Identifiant connexion:</td>
+                                            <td class="text-sm text-mono pb-3.5" id="view_agent_identifiant">-</td>
                                         </tr>
                                         <tr>
                                             <td class="text-sm text-secondary-foreground pb-3.5 pe-3">Statut:</td>
@@ -2268,13 +2164,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const file = e.target.files[0];
             if (file) {
                 if (file.size > 2 * 1024 * 1024) {
-                    alert('Le fichier est trop volumineux. Taille maximale: 2MB');
+                    AppToast.warning('Le fichier est trop volumineux. Taille maximale : 2 Mo');
                     this.value = '';
                     return;
                 }
                 
                 if (!file.type.match('image.*')) {
-                    alert('Veuillez sélectionner une image valide');
+                    AppToast.warning('Veuillez sélectionner une image valide');
                     this.value = '';
                     return;
                 }
@@ -2332,7 +2228,8 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(data => {
                 if (data.success) {
-                    window.location.reload();
+                    AppToast.reload(data.message || 'Agent mis à jour avec succès.', 'success');
+                    return;
                 } else {
                     if (data.errors) {
                         Object.keys(data.errors).forEach(key => {
@@ -2349,7 +2246,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Erreur:', error);
-                alert('Une erreur est survenue lors de l\'enregistrement: ' + error.message);
+                AppToast.error('Une erreur est survenue lors de l\'enregistrement : ' + error.message);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             });

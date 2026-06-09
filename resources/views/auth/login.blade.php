@@ -107,32 +107,27 @@
                         </div>
                     @endif
 
-                    @if (session('status'))
-                        <div class="rounded-lg bg-green-50 border border-green-200 p-4">
-                            <div class="flex items-center gap-3">
-                                <i class="ki-filled ki-check-circle text-green-600 text-lg shrink-0"></i>
-                                <span class="text-sm text-green-700">{{ session('status') }}</span>
-                            </div>
-                        </div>
-                    @endif
-
-                    <!-- Email -->
+                    <!-- Identifiant -->
                     <div class="flex flex-col gap-2">
                         <label class="text-sm font-medium text-foreground">
-                            Adresse email
+                            Identifiant
                         </label>
-                        <div class="kt-input @error('email') kt-input-error @enderror">
-                            <i class="ki-filled ki-sms text-muted-foreground text-sm"></i>
+                        <div class="kt-input @error('identifiant') kt-input-error @enderror">
+                            <i class="ki-filled ki-user text-muted-foreground text-sm"></i>
                             <input
-                                name="email"
-                                type="email"
-                                placeholder="email@exemple.com"
-                                value="{{ old('email') }}"
+                                name="identifiant"
+                                type="text"
+                                placeholder="email@exemple.com ou AG0001"
+                                value="{{ old('identifiant', old('email')) }}"
                                 required
                                 autofocus
+                                autocomplete="username"
                             />
                         </div>
-                        @error('email')
+                        <span class="text-xs text-muted-foreground">
+                            Personnel : votre email · Agent : votre code agent
+                        </span>
+                        @error('identifiant')
                             <span class="text-xs text-destructive flex items-center gap-1">
                                 <i class="ki-filled ki-information-2 text-xs"></i>
                                 {{ $message }}
@@ -253,6 +248,8 @@
     </div>
     <!-- End of Page -->
     
+    @include('layouts.partials.flash-messages')
+
     <!-- Scripts -->
     <script src="{{ asset('assets/js/core.bundle.js') }}"></script>
     <script src="{{ asset('assets/vendors/ktui/ktui.min.js') }}"></script>

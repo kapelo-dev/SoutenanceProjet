@@ -7,21 +7,6 @@
         <h1 class="text-2xl font-bold text-mono">Gestion d'Entreprise</h1>
     </div>
 
-    <!-- Alerts -->
-    @if(session('success'))
-        <div class="kt-alert kt-alert-success mb-5">
-            <i class="ki-filled ki-check-circle"></i>
-            <span>{{ session('success') }}</span>
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="kt-alert kt-alert-danger mb-5">
-            <i class="ki-filled ki-information-2"></i>
-            <span>{{ session('error') }}</span>
-        </div>
-    @endif
-
     <!-- Tabs -->
     <div class="kt-card">
         

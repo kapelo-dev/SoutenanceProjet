@@ -16,13 +16,6 @@
             </a>
         </div>
 
-        @if(session('success'))
-            <div class="kt-alert kt-alert-success mb-5">
-                <i class="ki-filled ki-check-circle"></i>
-                <span>{{ session('success') }}</span>
-            </div>
-        @endif
-
         @if($errors->any())
             <div class="kt-alert kt-alert-danger mb-5">
                 <i class="ki-filled ki-information-2"></i>
@@ -90,10 +83,18 @@
                                 </div>
                             </div>
 
+                            @if($user->isAgent())
+                            <div class="flex flex-col gap-2">
+                                <label class="kt-label">Code agent</label>
+                                <input type="text" class="kt-input bg-muted/30" value="{{ $user->agent?->code_agent ?? '—' }}" readonly disabled />
+                                <span class="text-xs text-muted-foreground">Connexion avec ce code et votre mot de passe.</span>
+                            </div>
+                            @else
                             <div class="flex flex-col gap-2">
                                 <label class="kt-label" for="email">Adresse email <span class="text-destructive">*</span></label>
                                 <input type="email" name="email" id="email" class="kt-input" value="{{ old('email', $user->email) }}" required maxlength="100" />
                             </div>
+                            @endif
 
                             <div class="flex flex-col gap-2">
                                 <label class="kt-label" for="telephone">Téléphone</label>

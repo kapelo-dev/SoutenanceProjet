@@ -33,12 +33,14 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-        if ($this->app->environment('production')) {
-            URL::forceScheme('https');
+        $root = rtrim((string) config('app.url'), '/');
+        $isLocalHost = $root === ''
+            || str_contains($root, 'localhost')
+            || str_contains($root, '127.0.0.1');
 
-            if ($root = config('app.url')) {
-                URL::forceRootUrl(rtrim($root, '/'));
-            }
+        if ($this->app->environment('production') && ! $isLocalHost && $root !== '') {
+            URL::forceScheme('https');
+            URL::forceRootUrl($root);
         }
     }
 }

@@ -15,6 +15,10 @@ class CheckBlockedIp
 
     public function handle(Request $request, Closure $next): Response
     {
+        if (! config('security.ip_blocking_enabled', true)) {
+            return $next($request);
+        }
+
         $ip = $request->clientIp();
         $block = $this->ipBlockService->getActiveBlock($ip);
 

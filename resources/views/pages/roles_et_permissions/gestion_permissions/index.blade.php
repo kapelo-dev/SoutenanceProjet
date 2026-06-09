@@ -193,11 +193,11 @@ function saveAllPermissions(saveBtnEl) {
         if (data.success) {
             permissionsChanged = false;
             // Afficher un message de succès
-            alert('Permissions enregistrées avec succès !');
+            AppToast.success('Permissions enregistrées avec succès.');
             // Optionnel: recharger la page pour s'assurer de la synchronisation
             // window.location.reload();
         } else {
-            alert('Erreur: ' + (data.message || 'Une erreur est survenue lors de l\'enregistrement.'));
+            AppToast.error('Erreur : ' + (data.message || 'Une erreur est survenue lors de l\'enregistrement.'));
         }
         if (saveBtn) {
             saveBtn.disabled = false;
@@ -206,7 +206,7 @@ function saveAllPermissions(saveBtnEl) {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Une erreur est survenue lors de l\'enregistrement: ' + (error?.message || error));
+        AppToast.error('Une erreur est survenue lors de l\'enregistrement : ' + (error?.message || error));
         if (saveBtn) {
             saveBtn.disabled = false;
             saveBtn.innerHTML = originalText;

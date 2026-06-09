@@ -60,6 +60,19 @@ return [
             'report' => false,
         ],
 
+        'backups' => [
+            'driver' => 's3',
+            'key' => env('MINIO_ACCESS_KEY'),
+            'secret' => env('MINIO_SECRET_KEY'),
+            'region' => env('MINIO_REGION', 'us-east-1'),
+            'bucket' => env('MINIO_BUCKET', 'pdvconnect-backups'),
+            'url' => env('MINIO_URL'),
+            'endpoint' => env('MINIO_ENDPOINT'),
+            'use_path_style_endpoint' => filter_var(env('MINIO_USE_PATH_STYLE', true), FILTER_VALIDATE_BOOLEAN),
+            'throw' => true,
+            'report' => false,
+        ],
+
     ],
 
     /*
