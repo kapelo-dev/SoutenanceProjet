@@ -20,6 +20,7 @@ use App\Http\Controllers\PublicPagesController;
 use App\Http\Controllers\GestionEntrepriseController;
 use App\Http\Controllers\ConfigAppMobileController;
 use App\Http\Controllers\TechnicalDashboardController;
+use App\Support\UserHomeRedirect;
 
 /*
 |--------------------------------------------------------------------------
@@ -66,12 +67,7 @@ Route::get('/', function () {
             return redirect()->route('password.change');
         }
         
-        // Rediriger vers le dashboard approprié selon le type d'utilisateur
-        if (auth()->user()->isAgent()) {
-            return redirect()->route('agent.dashboard');
-        }
-        
-        return redirect()->route('dashboard');
+        return redirect()->to(UserHomeRedirect::urlFor(auth()->user()));
     }
     return redirect()->route('login');
 });

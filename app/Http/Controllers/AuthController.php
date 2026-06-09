@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Utilisateur;
 use App\Models\SystemLog;
 use App\Services\IpBlockService;
+use App\Support\UserHomeRedirect;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -21,7 +22,7 @@ class AuthController extends Controller
     {
         // Si l'utilisateur est déjà connecté, rediriger vers le dashboard
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            return redirect()->to(UserHomeRedirect::urlFor(Auth::user()));
         }
 
         return view('auth.login');
@@ -106,12 +107,7 @@ class AuthController extends Controller
         // Logger la connexion réussie
         SystemLog::logLogin($utilisateur, true);
 
-        // Rediriger vers le dashboard approprié selon le type d'utilisateur
-        if ($utilisateur->isAgent()) {
-            return redirect()->intended(route('agent.dashboard'));
-        }
-        
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended(UserHomeRedirect::urlFor($utilisateur));
     }
 
     /**
@@ -126,7 +122,7 @@ class AuthController extends Controller
 
         // Vérifier que c'est bien la première connexion
         if (!is_null(Auth::user()->dernier_connexion)) {
-            return redirect()->route('dashboard');
+            return redirect()->to(UserHomeRedirect::urlFor(Auth::user()));
         }
 
         return view('auth.change-password');
@@ -144,7 +140,7 @@ class AuthController extends Controller
 
         // Vérifier que c'est bien la première connexion
         if (!is_null(Auth::user()->dernier_connexion)) {
-            return redirect()->route('dashboard');
+            return redirect()->to(UserHomeRedirect::urlFor(Auth::user()));
         }
 
         $request->validate([
@@ -171,12 +167,9 @@ class AuthController extends Controller
         // Régénérer la session
         $request->session()->regenerate();
 
-        // Rediriger vers le dashboard approprié selon le type d'utilisateur
-        if ($utilisateur->isAgent()) {
-            return redirect()->route('agent.dashboard')->with('status', 'Votre mot de passe a été changé avec succès. Bienvenue !');
-        }
-
-        return redirect()->route('dashboard')->with('status', 'Votre mot de passe a été changé avec succès. Bienvenue !');
+        return redirect()
+            ->to(UserHomeRedirect::urlFor($utilisateur))
+            ->with('status', 'Votre mot de passe a été changé avec succès. Bienvenue !');
     }
 
     /**
