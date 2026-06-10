@@ -1,10 +1,10 @@
-# Blueprint Render — PDV CONNECT (zéro config manuelle après liaison du repo)
+# Blueprint Render — PDV CONNECT (100 % gratuit, sans carte bancaire)
 #
-# Une seule fois : Render Dashboard → New → Blueprint → connecter ce repo
-# Ensuite : chaque git push redéploie tout automatiquement.
+# Un seul service Web (plan free). Pas de MySQL/MinIO/Cron Render (plans payants).
+# Base MySQL : AlwaysData (gratuit) — mot de passe à saisir une fois au 1er déploiement.
 #
-# Note : fromService / generateValue interdits dans envVarGroups → sur chaque service.
-# Plans : MySQL + MinIO + Cron = starter | Web = free
+# New → Blueprint → connecter ce repo → saisir uniquement DB_PASSWORD (AlwaysData)
+# Ensuite : git push = redéploiement auto
 
 envVarGroups:
   - name: pdvconnect-core
@@ -16,17 +16,17 @@ envVarGroups:
       - key: DB_CONNECTION
         value: mysql
       - key: DB_HOST
-        value: pdvconnect-mysql
+        value: mysql-kapelo.alwaysdata.net
       - key: DB_PORT
         value: "3306"
       - key: DB_DATABASE
-        value: pdvconnect
+        value: kapelo_pdvconnect
       - key: DB_USERNAME
-        value: pdvconnect
+        value: kapelo
       - key: SESSION_DRIVER
-        value: database
+        value: file
       - key: CACHE_STORE
-        value: database
+        value: file
       - key: QUEUE_CONNECTION
         value: sync
       - key: LOG_CHANNEL
@@ -34,27 +34,7 @@ envVarGroups:
       - key: LOG_LEVEL
         value: error
       - key: BACKUP_ENABLED
-        value: "true"
-      - key: BACKUP_DISK
-        value: backups
-      - key: BACKUP_RETENTION_DAYS
-        value: "7"
-      - key: BACKUP_SCHEDULE_TIME
-        value: "02:00"
-      - key: BACKUP_MYSQLDUMP_PATH
-        value: mysqldump
-      - key: BACKUP_PREFIX
-        value: pdvconnect
-      - key: BACKUP_STALE_HOURS
-        value: "48"
-      - key: MINIO_ENDPOINT
-        value: http://pdvconnect-minio:9000
-      - key: MINIO_BUCKET
-        value: pdvconnect-backups
-      - key: MINIO_REGION
-        value: us-east-1
-      - key: MINIO_USE_PATH_STYLE
-        value: "true"
+        value: "false"
       - key: SECURITY_AUDIT_LOGGING_ENABLED
         value: "true"
       - key: SECURITY_IP_BLOCKING_ENABLED
@@ -67,47 +47,6 @@ envVarGroups:
         value: 10,1
 
 services:
-  - type: pserv
-    name: pdvconnect-mysql
-    runtime: docker
-    plan: starter
-    region: frankfurt
-    autoDeployTrigger: commit
-    dockerfilePath: ./docker/mysql/Dockerfile
-    dockerContext: .
-    envVars:
-      - key: MYSQL_DATABASE
-        value: pdvconnect
-      - key: MYSQL_USER
-        value: pdvconnect
-      - key: MYSQL_PASSWORD
-        generateValue: true
-      - key: MYSQL_ROOT_PASSWORD
-        generateValue: true
-    disk:
-      name: mysql-data
-      mountPath: /var/lib/mysql
-      sizeGB: 10
-
-  - type: pserv
-    name: pdvconnect-minio
-    runtime: image
-    plan: starter
-    region: frankfurt
-    autoDeployTrigger: commit
-    image:
-      url: docker.io/minio/minio:latest
-    dockerCommand: server /data --address :9000 --console-address :9001
-    envVars:
-      - key: MINIO_ROOT_USER
-        value: pdvconnect-minio
-      - key: MINIO_ROOT_PASSWORD
-        generateValue: true
-    disk:
-      name: minio-data
-      mountPath: /data
-      sizeGB: 1
-
   - type: web
     name: pdvconnect
     runtime: docker
@@ -122,52 +61,6 @@ services:
       - key: APP_KEY
         generateValue: true
       - key: DB_PASSWORD
-        fromService:
-          name: pdvconnect-mysql
-          type: pserv
-          envVarKey: MYSQL_PASSWORD
-      - key: MINIO_ACCESS_KEY
-        fromService:
-          name: pdvconnect-minio
-          type: pserv
-          envVarKey: MINIO_ROOT_USER
-      - key: MINIO_SECRET_KEY
-        fromService:
-          name: pdvconnect-minio
-          type: pserv
-          envVarKey: MINIO_ROOT_PASSWORD
+        sync: false
       - key: SMS_API_TOKEN
         generateValue: true
-
-  - type: cron
-    name: pdvconnect-scheduler
-    runtime: docker
-    plan: starter
-    region: frankfurt
-    autoDeployTrigger: commit
-    schedule: "* * * * *"
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-    dockerCommand: php artisan schedule:run
-    envVars:
-      - fromGroup: pdvconnect-core
-      - key: APP_KEY
-        fromService:
-          name: pdvconnect
-          type: web
-          envVarKey: APP_KEY
-      - key: DB_PASSWORD
-        fromService:
-          name: pdvconnect-mysql
-          type: pserv
-          envVarKey: MYSQL_PASSWORD
-      - key: MINIO_ACCESS_KEY
-        fromService:
-          name: pdvconnect-minio
-          type: pserv
-          envVarKey: MINIO_ROOT_USER
-      - key: MINIO_SECRET_KEY
-        fromService:
-          name: pdvconnect-minio
-          type: pserv
-          envVarKey: MINIO_ROOT_PASSWORD
