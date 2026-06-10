@@ -6,7 +6,7 @@
 2. Connecter le repo Git → Render lit `render.yaml`
 3. Valider la création des 4 services (aucune variable à saisir)
 
-Render génère automatiquement : `APP_KEY`, mots de passe MySQL, secret MinIO, `SMS_API_TOKEN`.
+Render génère automatiquement : `APP_KEY` (web), mots de passe MySQL, secret MinIO, `SMS_API_TOKEN`. Le cron réutilise la même `APP_KEY` via `fromService`.
 
 ## Ensuite : chaque `git push`
 

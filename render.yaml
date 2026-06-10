@@ -3,13 +3,12 @@
 # Une seule fois : Render Dashboard → New → Blueprint → connecter ce repo
 # Ensuite : chaque git push redéploie tout automatiquement.
 #
+# Note : fromService / generateValue interdits dans envVarGroups → sur chaque service.
 # Plans : MySQL + MinIO + Cron = starter | Web = free
 
 envVarGroups:
   - name: pdvconnect-core
     envVars:
-      - key: APP_KEY
-        generateValue: true
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
@@ -24,11 +23,6 @@ envVarGroups:
         value: pdvconnect
       - key: DB_USERNAME
         value: pdvconnect
-      - key: DB_PASSWORD
-        fromService:
-          name: pdvconnect-mysql
-          type: pserv
-          envVarKey: MYSQL_PASSWORD
       - key: SESSION_DRIVER
         value: database
       - key: CACHE_STORE
@@ -55,16 +49,6 @@ envVarGroups:
         value: "48"
       - key: MINIO_ENDPOINT
         value: http://pdvconnect-minio:9000
-      - key: MINIO_ACCESS_KEY
-        fromService:
-          name: pdvconnect-minio
-          type: pserv
-          envVarKey: MINIO_ROOT_USER
-      - key: MINIO_SECRET_KEY
-        fromService:
-          name: pdvconnect-minio
-          type: pserv
-          envVarKey: MINIO_ROOT_PASSWORD
       - key: MINIO_BUCKET
         value: pdvconnect-backups
       - key: MINIO_REGION
@@ -135,6 +119,23 @@ services:
     healthCheckPath: /up
     envVars:
       - fromGroup: pdvconnect-core
+      - key: APP_KEY
+        generateValue: true
+      - key: DB_PASSWORD
+        fromService:
+          name: pdvconnect-mysql
+          type: pserv
+          envVarKey: MYSQL_PASSWORD
+      - key: MINIO_ACCESS_KEY
+        fromService:
+          name: pdvconnect-minio
+          type: pserv
+          envVarKey: MINIO_ROOT_USER
+      - key: MINIO_SECRET_KEY
+        fromService:
+          name: pdvconnect-minio
+          type: pserv
+          envVarKey: MINIO_ROOT_PASSWORD
       - key: SMS_API_TOKEN
         generateValue: true
 
@@ -150,3 +151,23 @@ services:
     dockerCommand: php artisan schedule:run
     envVars:
       - fromGroup: pdvconnect-core
+      - key: APP_KEY
+        fromService:
+          name: pdvconnect
+          type: web
+          envVarKey: APP_KEY
+      - key: DB_PASSWORD
+        fromService:
+          name: pdvconnect-mysql
+          type: pserv
+          envVarKey: MYSQL_PASSWORD
+      - key: MINIO_ACCESS_KEY
+        fromService:
+          name: pdvconnect-minio
+          type: pserv
+          envVarKey: MINIO_ROOT_USER
+      - key: MINIO_SECRET_KEY
+        fromService:
+          name: pdvconnect-minio
+          type: pserv
+          envVarKey: MINIO_ROOT_PASSWORD
