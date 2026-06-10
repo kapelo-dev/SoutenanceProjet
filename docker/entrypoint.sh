@@ -1,21 +1,31 @@
 #!/bin/bash
 set -e
 
+# APP_KEY valide = base64: + 16 ou 32 octets décodés (AES-128/256)
+ensure_app_key() {
+  if ! php -r '
+$key = getenv("APP_KEY") ?: "";
+if (!str_starts_with($key, "base64:")) exit(1);
+$raw = base64_decode(substr($key, 7), true);
+if ($raw === false || !in_array(strlen($raw), [16, 32], true)) exit(1);
+exit(0);
+'; then
+    export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+    echo "APP_KEY généré pour cette instance."
+  fi
+}
+
 # Render Cron Job : php artisan schedule:run (sans Apache ni migrations)
 if [ "$1" = "php" ] && [ "$2" = "artisan" ]; then
   cd /var/www/html
-  if [ -z "$APP_KEY" ] || ! echo "$APP_KEY" | grep -q '^base64:'; then
-    export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
-  fi
+  ensure_app_key
   exec "$@"
 fi
 
 # VPS scheduler (docker-compose.vps.yml)
 if [ "${RUN_MODE:-}" = "scheduler" ]; then
   cd /var/www/html
-  if [ -z "$APP_KEY" ] || ! echo "$APP_KEY" | grep -q '^base64:'; then
-    export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
-  fi
+  ensure_app_key
   if [ -n "$DB_HOST" ] && [ "$DB_CONNECTION" = "mysql" ]; then
     php docker/wait-for-db.php || exit 1
   fi
@@ -56,10 +66,7 @@ if [ ! -f public/build/manifest.json ]; then
 fi
 
 # APP_KEY : ne pas utiliser key:generate (écrit .env, échoue souvent sur Render)
-if [ -z "$APP_KEY" ] || ! echo "$APP_KEY" | grep -q '^base64:'; then
-  export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
-  echo "APP_KEY généré pour cette instance."
-fi
+ensure_app_key
 
 DB_READY=true
 if [ -n "$DB_HOST" ] && [ "$DB_CONNECTION" = "mysql" ]; then
@@ -76,6 +83,15 @@ if [ "$DB_READY" = true ] && [ "$SKIP_MIGRATIONS" != "true" ]; then
   else
     echo "WARN: migrations échouées — vérifiez les logs ci-dessus."
     php artisan migrate:status 2>/dev/null || true
+  fi
+fi
+
+# Seed (profils, liens, admin…) — idempotent, sûr à relancer à chaque démarrage
+if [ "$DB_READY" = true ] && [ "$SKIP_SEEDING" != "true" ]; then
+  if php artisan db:seed --force --no-interaction; then
+    echo "Seed OK."
+  else
+    echo "WARN: seed échoué — lancez: php artisan db:seed --force"
   fi
 fi
 

@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Lien;
 use App\Models\Profil;
 use App\Models\Utilisateur;
+use App\Support\DefaultProfilPermissions;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -29,8 +29,9 @@ class DatabaseSeeder extends Seeder
         // Créer un utilisateur administrateur par défaut
         $this->createDefaultUser();
 
-        // Donner toutes les permissions au profil Super Admin (et donc à l'admin système)
-        $this->grantAllPermissionsToSuperAdmin();
+        // Permissions de référence (migration 2026_06_08_200000 — profils absents au moment du migrate)
+        DefaultProfilPermissions::apply();
+        $this->command->info('✅ Permissions de référence appliquées (tous profils).');
     }
 
     /**
@@ -70,30 +71,4 @@ class DatabaseSeeder extends Seeder
         }
     }
 
-    /**
-     * Accorder toutes les permissions au profil "Super Admin"
-     */
-    private function grantAllPermissionsToSuperAdmin(): void
-    {
-        $superAdmin = Profil::where('libelle', 'Super Admin')->first();
-        if (!$superAdmin) {
-            $this->command->warn('Profil "Super Admin" introuvable, permissions non seedées.');
-            return;
-        }
-
-        $liens = Lien::whereNull('deleted_at')->get(['id']);
-        if ($liens->isEmpty()) {
-            $this->command->warn('Aucun lien trouvé, permissions non seedées.');
-            return;
-        }
-
-        foreach ($liens as $lien) {
-            DB::table('profil_liens')->updateOrInsert(
-                ['profil_id' => $superAdmin->id, 'lien_id' => $lien->id],
-                ['deleted_at' => null, 'updated_at' => now(), 'created_at' => now()]
-            );
-        }
-
-        $this->command->info('✅ Toutes les permissions accordées au profil "Super Admin".');
-    }
 }

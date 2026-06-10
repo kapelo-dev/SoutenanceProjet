@@ -3,8 +3,9 @@
 # Prérequis : Docker + Docker Compose sur le VPS
 #
 # 1) cp .env.vps.example .env
-# 2) Éditer .env (APP_KEY, mots de passe, MINIO_* → IP du VPS 2)
+# 2) Éditer .env (mots de passe, MINIO_* → IP du VPS 2) — APP_KEY auto si vide
 # 3) docker compose -f docker-compose.vps.yml up -d --build
+#    → migrations + db:seed auto (admin@pdvconnect.com / password123)
 #
 # Logs : docker compose -f docker-compose.vps.yml logs -f app
 
@@ -60,6 +61,8 @@ services:
     volumes:
       - app_storage:/var/www/html/storage/app
       - app_logs:/var/www/html/storage/logs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - pdvconnect
 
@@ -87,6 +90,8 @@ services:
       DB_DATABASE: ${DB_DATABASE:-pdvconnect}
       DB_USERNAME: ${DB_USERNAME:-pdvconnect}
       DB_PASSWORD: ${DB_PASSWORD}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - pdvconnect
 

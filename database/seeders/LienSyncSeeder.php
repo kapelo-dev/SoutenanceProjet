@@ -35,7 +35,7 @@ class LienSyncSeeder extends Seeder
                     'visible' => true,
                 ]
             );
-            $this->grantToAdminProfils($lien->id);
+            $this->grantToAdminProfil($lien->id);
         }
 
         $children = [
@@ -53,24 +53,28 @@ class LienSyncSeeder extends Seeder
                 ]
             );
 
-            $this->grantToAdminProfils($lien->id);
+            $this->grantToAdminProfil($lien->id);
         }
 
         $this->command->info('✅ Liens synchronisés (Logs Système, etc.).');
     }
 
-    private function grantToAdminProfils(int $lienId): void
+    /** Super Admin : permissions via DefaultProfilPermissions uniquement. */
+    private function grantToAdminProfil(int $lienId): void
     {
-        $profilIds = DB::table('profils')
-            ->whereIn('libelle', ['Super Admin', 'Admin'])
+        $profilId = DB::table('profils')
+            ->where('libelle', 'Admin')
             ->whereNull('deleted_at')
-            ->pluck('id');
+            ->orderBy('id')
+            ->value('id');
 
-        foreach ($profilIds as $profilId) {
-            DB::table('profil_liens')->updateOrInsert(
-                ['profil_id' => $profilId, 'lien_id' => $lienId],
-                ['deleted_at' => null, 'updated_at' => now(), 'created_at' => now()]
-            );
+        if (! $profilId) {
+            return;
         }
+
+        DB::table('profil_liens')->updateOrInsert(
+            ['profil_id' => $profilId, 'lien_id' => $lienId],
+            ['deleted_at' => null, 'updated_at' => now(), 'created_at' => now()]
+        );
     }
 }

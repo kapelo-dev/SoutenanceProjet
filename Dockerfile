@@ -16,7 +16,7 @@ RUN npm run build \
     || (echo "Échec build Vite — manifest.json introuvable" && exit 1)
 
 # ========== Stage 2 : application Laravel ==========
-FROM php:8.3-apache
+FROM php:8.4-apache
 
 # Extensions PHP nécessaires pour Laravel
 RUN apt-get update && apt-get install -y --no-install-recommends \

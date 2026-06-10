@@ -41,9 +41,9 @@ class ProfilSeeder extends Seeder
         ];
 
         foreach ($profils as $profil) {
-            Profil::create($profil);
+            Profil::updateOrCreate(['libelle' => $profil['libelle']], $profil);
         }
 
-        $this->command->info('✅ Profils créés avec succès!');
+        $this->command->info('✅ Profils créés/mis à jour avec succès!');
     }
 }
