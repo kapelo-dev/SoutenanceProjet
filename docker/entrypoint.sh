@@ -3,6 +3,10 @@ set -e
 
 # APP_KEY valide = base64: + 16 ou 32 octets décodés (AES-128/256)
 ensure_app_key() {
+  # Render generateValue : souvent base64 brut sans préfixe « base64: »
+  if [ -n "${APP_KEY:-}" ] && ! echo "$APP_KEY" | grep -q '^base64:'; then
+    export APP_KEY="base64:${APP_KEY}"
+  fi
   if ! php -r '
 $key = getenv("APP_KEY") ?: "";
 if (!str_starts_with($key, "base64:")) exit(1);

@@ -1,6 +1,8 @@
 # Déployer MySQL sur Render et connecter l’app Laravel
 
-Sur Render, tu crées **deux services** : un pour MySQL (base de données), un pour Laravel (Web Service). Ensuite tu connectes l’app à la base avec les variables d’environnement.
+Le fichier **`render.yaml`** à la racine déploie déjà MySQL (`pdvconnect-mysql` via `docker/mysql/Dockerfile`) + Laravel + MinIO + Cron. Un Blueprint suffit.
+
+Ce guide décrit la configuration **manuelle** si tu crées les services un par un dans le dashboard.
 
 ---
 

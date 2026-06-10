@@ -1,14 +1,15 @@
-# Blueprint Render — PDV CONNECT
-# New → Blueprint → connecter ce repo
+# Blueprint Render — PDV CONNECT (zéro config manuelle après liaison du repo)
 #
-# À saisir manuellement à la création :
-#   DB_PASSWORD, APP_KEY, MINIO_ROOT_USER (service MinIO)
+# Une seule fois : Render Dashboard → New → Blueprint → connecter ce repo
+# Ensuite : chaque git push redéploie tout automatiquement.
 #
-# MinIO (pserv) et Cron : plan starter minimum (non disponibles en free).
+# Plans : MySQL + MinIO + Cron = starter | Web = free
 
 envVarGroups:
   - name: pdvconnect-core
     envVars:
+      - key: APP_KEY
+        generateValue: true
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
@@ -16,19 +17,22 @@ envVarGroups:
       - key: DB_CONNECTION
         value: mysql
       - key: DB_HOST
-        value: mysql-kapelo.alwaysdata.net
+        value: pdvconnect-mysql
       - key: DB_PORT
         value: "3306"
       - key: DB_DATABASE
-        value: kapelo_pdvconnect
+        value: pdvconnect
       - key: DB_USERNAME
-        value: kapelo
+        value: pdvconnect
       - key: DB_PASSWORD
-        sync: false
+        fromService:
+          name: pdvconnect-mysql
+          type: pserv
+          envVarKey: MYSQL_PASSWORD
       - key: SESSION_DRIVER
-        value: file
+        value: database
       - key: CACHE_STORE
-        value: file
+        value: database
       - key: QUEUE_CONNECTION
         value: sync
       - key: LOG_CHANNEL
@@ -79,18 +83,40 @@ envVarGroups:
         value: 10,1
 
 services:
-  # Stockage S3 compatible (réseau privé Render)
+  - type: pserv
+    name: pdvconnect-mysql
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    autoDeployTrigger: commit
+    dockerfilePath: ./docker/mysql/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: MYSQL_DATABASE
+        value: pdvconnect
+      - key: MYSQL_USER
+        value: pdvconnect
+      - key: MYSQL_PASSWORD
+        generateValue: true
+      - key: MYSQL_ROOT_PASSWORD
+        generateValue: true
+    disk:
+      name: mysql-data
+      mountPath: /var/lib/mysql
+      sizeGB: 10
+
   - type: pserv
     name: pdvconnect-minio
     runtime: image
     plan: starter
     region: frankfurt
+    autoDeployTrigger: commit
     image:
       url: docker.io/minio/minio:latest
     dockerCommand: server /data --address :9000 --console-address :9001
     envVars:
       - key: MINIO_ROOT_USER
-        sync: false
+        value: pdvconnect-minio
       - key: MINIO_ROOT_PASSWORD
         generateValue: true
     disk:
@@ -103,27 +129,24 @@ services:
     runtime: docker
     plan: free
     region: frankfurt
+    autoDeployTrigger: commit
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /up
     envVars:
       - fromGroup: pdvconnect-core
-      - key: APP_KEY
-        sync: false
       - key: SMS_API_TOKEN
         generateValue: true
 
-  # Laravel scheduler (backup quotidienne à 02:00 UTC)
   - type: cron
     name: pdvconnect-scheduler
     runtime: docker
     plan: starter
     region: frankfurt
+    autoDeployTrigger: commit
     schedule: "* * * * *"
     dockerfilePath: ./Dockerfile
     dockerContext: .
     dockerCommand: php artisan schedule:run
     envVars:
       - fromGroup: pdvconnect-core
-      - key: APP_KEY
-        sync: false
