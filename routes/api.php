@@ -74,6 +74,14 @@ Route::prefix('transactions')->group(function () {
         ->middleware('sms.api.token');
 });
 
+// Espace agent mobile (connexion + dashboard)
+Route::prefix('mobile/agent')->group(function () {
+    Route::post('/login', [\App\Http\Controllers\Api\MobileAgentController::class, 'login']);
+    Route::get('/dashboard', [\App\Http\Controllers\Api\MobileAgentController::class, 'dashboard']);
+    Route::post('/logout', [\App\Http\Controllers\Api\MobileAgentController::class, 'logout']);
+    Route::post('/transactions/{transaction}/annuler', [\App\Http\Controllers\Api\MobileAgentController::class, 'cancelTransaction']);
+});
+
 // Utilisateurs
 Route::prefix('utilisateurs')->group(function () {
     Route::get('/{utilisateur}/liens', [UtilisateurController::class, 'liensAccessibles']);

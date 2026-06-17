@@ -5,28 +5,23 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.pdvconnect.smsservice.PdvConnectApp
 import com.pdvconnect.smsservice.R
-import com.pdvconnect.smsservice.api.ApiClient
-import com.pdvconnect.smsservice.api.TransactionFromSmsRequest
+import com.pdvconnect.smsservice.sync.OfflineSyncRepository
 import com.pdvconnect.smsservice.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
- * Service optionnel : peut être démarré pour garder l'app "vivante" et améliorer
- * la fiabilité de réception des SMS. Envoie les transactions parsées vers l'API.
+ * Service en premier plan : améliore la fiabilité de réception des SMS.
+ * Les transactions sont stockées en file Room puis synchronisées vers l'API.
  */
 class SmsForwarderService : Service() {
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -44,7 +39,7 @@ class SmsForwarderService : Service() {
             this,
             0,
             Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         return NotificationCompat.Builder(this, PdvConnectApp.CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
@@ -60,45 +55,24 @@ class SmsForwarderService : Service() {
         private const val TAG = "PdvConnectSmsForwarder"
         private const val NOTIFICATION_ID = 1001
 
-        /**
-         * Envoie une transaction parsée vers l'API (appelé depuis SmsReceiver ou depuis le service).
-         */
         fun enqueueSend(
             context: Context,
             baseUrl: String,
             apiToken: String,
             parsed: SmsParser.ParsedTransaction,
-            sender: String
+            sender: String,
         ) {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
             scope.launch {
                 try {
-                    val api = ApiClient.create(baseUrl, apiToken)
-                    val request = TransactionFromSmsRequest(
-                        montant = parsed.montant,
-                        type = parsed.type,
-                        description = parsed.rawBody.take(500),
-                        clientNom = parsed.clientNom,
-                        clientTelephone = parsed.clientTelephone,
-                        reference = parsed.reference,
-                        operatorTxnId = sender.take(50),
-                        source = "sms",
-                        rawSms = parsed.rawBody.take(500),
-                        commission = parsed.commission,
-                        agentCode = parsed.agentCode,
-                        operatorCode = parsed.operatorName,
-                        virtualBalanceAfter = parsed.virtualBalanceAfter
+                    OfflineSyncRepository.get(context).enqueueSmsTransaction(
+                        parsed = parsed,
+                        sender = sender,
+                        baseUrl = baseUrl,
+                        apiToken = apiToken,
                     )
-                    val response = api.sendTransactionFromSms(request)
-                    withContext(Dispatchers.Main) {
-                        if (response.isSuccessful) {
-                            Log.d(TAG, "Transaction envoyée: ${response.body()?.transactionId}")
-                        } else {
-                            Log.e(TAG, "API error: ${response.code()} ${response.errorBody()?.string()}")
-                        }
-                    }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Envoi API failed", e)
+                    Log.e(TAG, "Erreur mise en file transaction", e)
                 }
             }
         }

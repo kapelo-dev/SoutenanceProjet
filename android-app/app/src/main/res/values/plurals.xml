@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="notif_pending_message">
+        <item quantity="one">%d transaction en attente d\'envoi (hors ligne)</item>
+        <item quantity="other">%d transactions en attente d\'envoi (hors ligne)</item>
+    </plurals>
+    <plurals name="notif_sync_ok_message">
+        <item quantity="one">%d opération synchronisée avec le serveur</item>
+        <item quantity="other">%d opérations synchronisées avec le serveur</item>
+    </plurals>
+</resources>

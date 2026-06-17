@@ -107,13 +107,15 @@
                                     <span class="text-sm text-secondary-foreground">{{ $t->date?->format('d/m/Y H:i') ?? '-' }}</span>
                                 </td>
                                 <td class="text-center">
-                                    @if($t->statut === 'valide')
+                                    @if($t->statut === 'valide' && \App\Http\Controllers\Api\MobileAgentController::canAgentCancel($t))
                                         <button class="kt-btn kt-btn-sm kt-btn-outline kt-btn-danger annuler-transaction" 
                                                 data-transaction-id="{{ $t->id }}"
                                                 data-transaction-ref="{{ $t->reference }}">
                                             <i class="ki-filled ki-cross-circle"></i>
                                             Annuler
                                         </button>
+                                    @elseif($t->statut === 'valide')
+                                        <span class="text-xs text-muted-foreground" title="Annulation possible sous 48 h">+ 48 h</span>
                                     @else
                                         <span class="text-xs text-muted-foreground">-</span>
                                     @endif

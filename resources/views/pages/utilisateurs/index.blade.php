@@ -339,11 +339,11 @@
        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div class="flex flex-col gap-2">
          <label class="kt-label" for="create_mot_de_passe">Mot de passe <span class="text-destructive">*</span></label>
-         <input type="password" name="mot_de_passe" id="create_mot_de_passe" class="kt-input" required minlength="8" placeholder="Min. 8 caractères">
+         <input type="password" name="mot_de_passe" id="create_mot_de_passe" class="kt-input" required minlength="8" value="changeMe" placeholder="changeMe">
         </div>
         <div class="flex flex-col gap-2">
          <label class="kt-label" for="create_mot_de_passe_confirmation">Confirmer le mot de passe <span class="text-destructive">*</span></label>
-         <input type="password" name="mot_de_passe_confirmation" id="create_mot_de_passe_confirmation" class="kt-input" required minlength="8" placeholder="Répéter le mot de passe">
+         <input type="password" name="mot_de_passe_confirmation" id="create_mot_de_passe_confirmation" class="kt-input" required minlength="8" value="changeMe" placeholder="changeMe">
         </div>
        </div>
        <div class="flex flex-col gap-2">

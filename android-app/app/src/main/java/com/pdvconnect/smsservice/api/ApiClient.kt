@@ -8,12 +8,21 @@ import java.util.concurrent.TimeUnit
 
 object ApiClient {
 
-    fun create(baseUrl: String, apiToken: String): TransactionApi {
-        val base = baseUrl.trimEnd('/')
-        val client = OkHttpClient.Builder()
+    fun baseOkHttpClient(): okhttp3.OkHttpClient {
+        return okhttp3.OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+            .apply {
+                val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+                addInterceptor(logging)
+            }
+            .build()
+    }
+
+    fun create(baseUrl: String, apiToken: String): TransactionApi {
+        val base = baseUrl.trimEnd('/')
+        val client = baseOkHttpClient().newBuilder()
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .addHeader("Authorization", "Bearer $apiToken")
@@ -21,10 +30,6 @@ object ApiClient {
                     .addHeader("X-Requested-With", "XMLHttpRequest")
                     .build()
                 chain.proceed(request)
-            }
-            .apply {
-                val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
-                addInterceptor(logging)
             }
             .build()
 

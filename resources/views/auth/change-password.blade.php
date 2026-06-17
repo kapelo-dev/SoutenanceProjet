@@ -4,64 +4,67 @@
     <base href="{{ url('/') }}">
     <title>Changer le mot de passe - PDV Connect</title>
     <meta charset="utf-8"/>
-    <meta content="follow, index" name="robots"/>
     <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport"/>
-    <meta content="Page de changement de mot de passe" name="description"/>
     <link href="{{ asset('assets/media/app/favicon.svg') }}" rel="icon" type="image/svg+xml" />
-<link href="{{ asset('assets/media/app/favicon.ico') }}" rel="shortcut icon"/>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="{{ asset('assets/vendors/apexcharts/apexcharts.css') }}" rel="stylesheet"/>
+    <link href="{{ asset('assets/media/app/favicon.ico') }}" rel="shortcut icon"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
     <link href="{{ asset('assets/vendors/keenicons/styles.bundle.css') }}" rel="stylesheet"/>
     <link href="{{ asset('assets/css/styles.css') }}" rel="stylesheet"/>
     @vite(['resources/css/app.css'])
 </head>
 <body class="antialiased flex h-full text-base text-foreground bg-background">
-    <!-- Theme Mode -->
     <script>
         const defaultThemeMode = 'light';
-        let themeMode;
-
-        if (document.documentElement) {
-            if (localStorage.getItem('kt-theme')) {
-                themeMode = localStorage.getItem('kt-theme');
-            } else if (document.documentElement.hasAttribute('data-kt-theme-mode')) {
-                themeMode = document.documentElement.getAttribute('data-kt-theme-mode');
-            } else {
-                themeMode = defaultThemeMode;
-            }
-
-            if (themeMode === 'system') {
-                themeMode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-
-            document.documentElement.classList.add(themeMode);
+        let themeMode = localStorage.getItem('kt-theme') || defaultThemeMode;
+        if (themeMode === 'system') {
+            themeMode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
+        document.documentElement.classList.add(themeMode);
     </script>
-    <!-- End of Theme Mode -->
-    
-    <!-- Page -->
+
     <style>
-        .branded-bg {
-            background-image: url('{{ asset('assets/media/images/2600x1600/1.png') }}');
+        .login-hero {
+            background: linear-gradient(145deg, #0f1f3d 0%, #1a3a6e 52%, #122847 100%);
+            position: relative;
+            overflow: hidden;
         }
-        .dark .branded-bg {
-            background-image: url('{{ asset('assets/media/images/2600x1600/1-dark.png') }}');
+        .login-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 85% 15%, rgba(245, 196, 0, 0.14) 0%, transparent 42%),
+                radial-gradient(circle at 10% 90%, rgba(255, 255, 255, 0.06) 0%, transparent 38%);
+            pointer-events: none;
+        }
+        .login-hero-logo {
+            background: rgba(255, 255, 255, 0.97);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+        }
+        .login-hero-accent {
+            background: linear-gradient(90deg, #f5c400 0%, rgba(245, 196, 0, 0.15) 100%);
         }
     </style>
-    
+
     <div class="grid lg:grid-cols-2 grow">
         <div class="flex justify-center items-center p-8 lg:p-10 order-2 lg:order-1">
-            <div class="kt-card max-w-[370px] w-full">
-                <form action="{{ route('password.change') }}" class="kt-card-content flex flex-col gap-5 p-10" id="reset_password_change_password_form" method="POST">
+            <div class="max-w-[420px] w-full">
+                <div class="mb-8 lg:hidden flex justify-center">
+                    <a href="{{ url('/') }}" class="login-hero-logo inline-flex rounded-xl px-5 py-3.5">
+                        <img src="{{ asset('assets/media/app/pdv-connect-logo.svg') }}" alt="PDV Connect" class="h-10 w-auto max-w-[220px] object-contain" />
+                    </a>
+                </div>
+
+                <form action="{{ route('password.change') }}" class="flex flex-col gap-6" method="POST">
                     @csrf
-                    
-                    <div class="text-center">
-                        <h3 class="text-lg font-medium text-mono">
+
+                    <div class="flex flex-col gap-2">
+                        <h3 class="text-2xl font-bold text-foreground leading-none" style="font-family: 'Geist Sans', system-ui, sans-serif;">
                             Changer le mot de passe
                         </h3>
-                        <span class="text-sm text-secondary-foreground">
-                            Entrez votre nouveau mot de passe
-                        </span>
+                        <p class="text-sm text-muted-foreground">
+                            Définissez un nouveau mot de passe pour accéder à PDV Connect.
+                        </p>
                     </div>
 
                     @if ($errors->any())
@@ -74,106 +77,60 @@
                         </div>
                     @endif
 
-                    @if (session('status'))
-                        <div class="kt-alert kt-alert-success">
-                            <div class="kt-alert-content">
-                                {{ session('status') }}
-                            </div>
-                        </div>
-                    @endif
-
-                    <div class="flex flex-col gap-1">
-                        <label class="kt-form-label text-mono">
-                            Nouveau mot de passe
-                        </label>
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-medium text-foreground">Nouveau mot de passe</label>
                         <label class="kt-input @error('password') kt-input-error @enderror" data-kt-toggle-password="true">
-                            <input 
-                                name="password" 
-                                placeholder="Entrez un nouveau mot de passe" 
-                                type="password" 
-                                value=""
-                                required
-                                minlength="8"
-                            />
-                            <div class="kt-btn kt-btn-sm kt-btn-ghost kt-btn-icon bg-transparent! -me-1.5" data-kt-toggle-password-trigger="true">
-                                <span class="kt-toggle-password-active:hidden">
-                                    <i class="ki-filled ki-eye text-muted-foreground"></i>
-                                </span>
-                                <span class="hidden kt-toggle-password-active:block">
-                                    <i class="ki-filled ki-eye-slash text-muted-foreground"></i>
-                                </span>
-                            </div>
+                            <i class="ki-filled ki-lock text-muted-foreground text-sm"></i>
+                            <input name="password" placeholder="Min. 8 caractères" type="password" required minlength="8" />
+                            <button class="kt-btn kt-btn-sm kt-btn-ghost kt-btn-icon bg-transparent! -me-1.5" data-kt-toggle-password-trigger="true" type="button">
+                                <span class="kt-toggle-password-active:hidden"><i class="ki-filled ki-eye text-muted-foreground"></i></span>
+                                <span class="hidden kt-toggle-password-active:block"><i class="ki-filled ki-eye-slash text-muted-foreground"></i></span>
+                            </button>
                         </label>
-                        @error('password')
-                            <span class="text-xs text-destructive">{{ $message }}</span>
-                        @enderror
+                        @error('password')<span class="text-xs text-destructive">{{ $message }}</span>@enderror
                     </div>
 
-                    <div class="flex flex-col gap-1">
-                        <label class="kt-form-label font-normal text-mono">
-                            Confirmer le nouveau mot de passe
-                        </label>
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-medium text-foreground">Confirmer le mot de passe</label>
                         <label class="kt-input @error('password_confirmation') kt-input-error @enderror" data-kt-toggle-password="true">
-                            <input 
-                                name="password_confirmation" 
-                                placeholder="Ré-entrez le nouveau mot de passe" 
-                                type="password" 
-                                value=""
-                                required
-                                minlength="8"
-                            />
-                            <div class="kt-btn kt-btn-sm kt-btn-ghost kt-btn-icon bg-transparent! -me-1.5" data-kt-toggle-password-trigger="true">
-                                <span class="kt-toggle-password-active:hidden">
-                                    <i class="ki-filled ki-eye text-muted-foreground"></i>
-                                </span>
-                                <span class="hidden kt-toggle-password-active:block">
-                                    <i class="ki-filled ki-eye-slash text-muted-foreground"></i>
-                                </span>
-                            </div>
+                            <i class="ki-filled ki-lock text-muted-foreground text-sm"></i>
+                            <input name="password_confirmation" placeholder="Répéter le mot de passe" type="password" required minlength="8" />
+                            <button class="kt-btn kt-btn-sm kt-btn-ghost kt-btn-icon bg-transparent! -me-1.5" data-kt-toggle-password-trigger="true" type="button">
+                                <span class="kt-toggle-password-active:hidden"><i class="ki-filled ki-eye text-muted-foreground"></i></span>
+                                <span class="hidden kt-toggle-password-active:block"><i class="ki-filled ki-eye-slash text-muted-foreground"></i></span>
+                            </button>
                         </label>
-                        @error('password_confirmation')
-                            <span class="text-xs text-destructive">{{ $message }}</span>
-                        @enderror
+                        @error('password_confirmation')<span class="text-xs text-destructive">{{ $message }}</span>@enderror
                     </div>
 
-                    <button class="kt-btn kt-btn-primary flex justify-center grow" type="submit">
-                        Soumettre
+                    <button class="kt-btn kt-btn-primary flex justify-center grow h-11 text-sm font-semibold" type="submit">
+                        Enregistrer et continuer
                     </button>
                 </form>
             </div>
         </div>
-        
-        <div class="lg:rounded-xl lg:border lg:border-border lg:m-5 order-1 lg:order-2 bg-top xxl:bg-center xl:bg-cover bg-no-repeat branded-bg">
-            <div class="flex flex-col p-8 lg:p-16 gap-4">
-                <a href="{{ url('/') }}">
-                    <img class="h-[28px] max-w-none" src="{{ asset('assets/media/app/mini-logo-v2.svg') }}" alt="PDV Connect"/>
+
+        <div class="order-1 lg:order-2 login-hero flex min-h-[280px] lg:min-h-full flex-col justify-start p-8 lg:p-12 xl:p-16">
+            <div class="relative z-10 flex w-full max-w-lg flex-col gap-8">
+                <a href="{{ url('/') }}" class="login-hero-logo inline-flex w-fit rounded-xl px-5 py-3.5 transition-transform hover:scale-[1.01]">
+                    <img src="{{ asset('assets/media/app/pdv-connect-logo.svg') }}" alt="PDV Connect" class="h-11 w-auto max-w-[240px] object-contain" />
                 </a>
-                <div class="flex flex-col gap-3">
-                    <h3 class="text-2xl font-semibold text-mono">
-                        Portail d'Accès Sécurisé
-                    </h3>
-                    <div class="text-base font-medium text-secondary-foreground">
-                        Une passerelle d'authentification robuste garantissant
-                        <br/>
-                        un accès
-                        <span class="text-mono font-semibold">
-                            sécurisé et efficace
-                        </span>
-                        à l'interface
-                        <br/>
-                        du tableau de bord PDV Connect.
-                    </div>
+                <div class="flex flex-col gap-4">
+                    <div class="login-hero-accent h-1 w-14 rounded-full"></div>
+                    <h1 class="text-3xl font-bold leading-tight text-white lg:text-[2.35rem] lg:leading-[1.15]" style="font-family: 'Geist Sans', system-ui, sans-serif;">
+                        Sécurisez votre<br/>
+                        <span class="text-[#f5c400]">accès agent</span>
+                    </h1>
+                    <p class="max-w-md text-base leading-relaxed text-white/65">
+                        Pour votre première connexion, choisissez un mot de passe personnel. Il protège l'accès à vos transactions et à votre espace PDV Connect.
+                    </p>
                 </div>
             </div>
         </div>
     </div>
-    <!-- End of Page -->
-    
-    <!-- Scripts -->
+
     <script src="{{ asset('assets/js/core.bundle.js') }}"></script>
     <script src="{{ asset('assets/vendors/ktui/ktui.min.js') }}"></script>
-    <script src="{{ asset('assets/vendors/apexcharts/apexcharts.min.js') }}"></script>
     @vite(['resources/js/app.js'])
-    <!-- End of Scripts -->
 </body>
 </html>

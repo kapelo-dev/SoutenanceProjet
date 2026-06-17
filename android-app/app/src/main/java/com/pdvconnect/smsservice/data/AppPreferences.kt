@@ -46,6 +46,14 @@ class AppPreferences(private val context: Context) {
         prefs[KEY_CONFIG_ACCESS_CODE]?.takeIf { it.isNotBlank() }
     }
 
+    val agentSessionToken: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[KEY_AGENT_TOKEN]?.takeIf { it.isNotBlank() }
+    }
+
+    val agentDashboardCache: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[KEY_AGENT_DASHBOARD_CACHE]
+    }
+
     suspend fun setConsent(accepted: Boolean) {
         context.dataStore.edit { it[KEY_CONSENT] = accepted }
     }
@@ -74,6 +82,20 @@ class AppPreferences(private val context: Context) {
         context.dataStore.edit {
             if (code.isNullOrBlank()) it.remove(KEY_CONFIG_ACCESS_CODE)
             else it[KEY_CONFIG_ACCESS_CODE] = code.trim()
+        }
+    }
+
+    suspend fun setAgentSessionToken(token: String?) {
+        context.dataStore.edit {
+            if (token.isNullOrBlank()) it.remove(KEY_AGENT_TOKEN)
+            else it[KEY_AGENT_TOKEN] = token.trim()
+        }
+    }
+
+    suspend fun setAgentDashboardCache(json: String?) {
+        context.dataStore.edit {
+            if (json.isNullOrBlank()) it.remove(KEY_AGENT_DASHBOARD_CACHE)
+            else it[KEY_AGENT_DASHBOARD_CACHE] = json
         }
     }
 
@@ -107,5 +129,7 @@ class AppPreferences(private val context: Context) {
         private val KEY_FILTER_LIST = stringPreferencesKey("filter_list")
         private val KEY_FILTER_NUMBER_LEGACY = stringPreferencesKey("filter_number")
         private val KEY_CONFIG_ACCESS_CODE = stringPreferencesKey("config_access_code")
+        private val KEY_AGENT_TOKEN = stringPreferencesKey("agent_session_token")
+        private val KEY_AGENT_DASHBOARD_CACHE = stringPreferencesKey("agent_dashboard_cache")
     }
 }

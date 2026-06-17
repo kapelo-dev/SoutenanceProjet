@@ -272,7 +272,7 @@ class AgentController extends Controller
             }
 
             // Créer l'utilisateur automatiquement
-            $motDePasse = Str::random(12); // Mot de passe généré aléatoirement
+            $motDePasse = 'changeMe';
             
             // Upload de la photo de profil si fournie
             $photoProfil = null;

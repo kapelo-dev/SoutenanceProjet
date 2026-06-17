@@ -302,6 +302,24 @@ class TransactionController extends Controller
             ], 400);
         }
 
+        $user = auth()->user();
+        if ($user?->isAgent()) {
+            $agent = $user->agent;
+            if (! $agent || $transaction->agent_id !== $agent->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vous ne pouvez annuler que vos propres transactions.',
+                ], 403);
+            }
+
+            if (! \App\Http\Controllers\Api\MobileAgentController::canAgentCancel($transaction)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Annulation impossible : la transaction date de plus de 48 heures.',
+                ], 422);
+            }
+        }
+
         $request->validate([
             'raison' => 'required|string|max:500',
         ]);

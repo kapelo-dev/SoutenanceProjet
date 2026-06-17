@@ -34,6 +34,7 @@ return [
 
         'transactions.*' => 'transactions.index',
         'utilisateurs.*' => 'utilisateurs.index',
+        'api.utilisateurs.*' => 'utilisateurs.index',
         'operateurs.*' => 'operateurs.index',
 
         'roles-et-permissions.gestion-roles*' => 'roles-et-permissions.gestion-roles',
@@ -70,6 +71,7 @@ return [
         'kiosques' => 'kiosques.index',
         'transactions' => 'transactions.index',
         'utilisateurs' => 'utilisateurs.index',
+        'api/utilisateurs' => 'utilisateurs.index',
         'operateurs' => 'operateurs.index',
         'roles-et-permissions/gestion-roles' => 'roles-et-permissions.gestion-roles',
         'roles-et-permissions/gestion-permissions' => 'roles-et-permissions.gestion-permissions',
