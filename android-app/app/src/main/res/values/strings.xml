@@ -32,6 +32,7 @@
     <string name="agent_api_url_required">Configurez d\'abord l\'URL de l\'API dans l\'onglet Service SMS.</string>
     <string name="notification_alerts_channel_name">Alertes PDV Connect</string>
     <string name="notification_alerts_channel_description">Transactions non envoyées et synchronisation</string>
+    <string name="notif_sms_skipped_title">SMS non transféré</string>
     <string name="notif_pending_title">Transaction non envoyée</string>
     <string name="notif_sync_ok_title">Synchronisation réussie</string>
     <string name="queue_pending_status">%1$d opération(s) en attente de synchronisation</string>

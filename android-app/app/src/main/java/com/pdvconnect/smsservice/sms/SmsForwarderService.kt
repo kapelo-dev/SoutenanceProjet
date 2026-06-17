@@ -6,20 +6,14 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.IBinder
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.pdvconnect.smsservice.PdvConnectApp
 import com.pdvconnect.smsservice.R
-import com.pdvconnect.smsservice.sync.OfflineSyncRepository
 import com.pdvconnect.smsservice.ui.MainActivity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 /**
- * Service en premier plan : améliore la fiabilité de réception des SMS.
- * Les transactions sont stockées en file Room puis synchronisées vers l'API.
+ * Service en premier plan : maintient l'app active pour la réception fiable des SMS.
+ * Le traitement des SMS est fait dans [SmsReceiver] + [OfflineSyncRepository].
  */
 class SmsForwarderService : Service() {
 
@@ -52,29 +46,6 @@ class SmsForwarderService : Service() {
     }
 
     companion object {
-        private const val TAG = "PdvConnectSmsForwarder"
         private const val NOTIFICATION_ID = 1001
-
-        fun enqueueSend(
-            context: Context,
-            baseUrl: String,
-            apiToken: String,
-            parsed: SmsParser.ParsedTransaction,
-            sender: String,
-        ) {
-            val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-            scope.launch {
-                try {
-                    OfflineSyncRepository.get(context).enqueueSmsTransaction(
-                        parsed = parsed,
-                        sender = sender,
-                        baseUrl = baseUrl,
-                        apiToken = apiToken,
-                    )
-                } catch (e: Exception) {
-                    Log.e(TAG, "Erreur mise en file transaction", e)
-                }
-            }
-        }
     }
 }

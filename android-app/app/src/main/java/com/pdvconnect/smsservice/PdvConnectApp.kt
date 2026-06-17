@@ -6,6 +6,11 @@ import android.app.NotificationManager
 import android.os.Build
 import com.pdvconnect.smsservice.sync.NetworkMonitor
 import com.pdvconnect.smsservice.sync.SyncScheduler
+import com.pdvconnect.smsservice.sms.ServiceStarter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class PdvConnectApp : Application() {
 
@@ -14,6 +19,9 @@ class PdvConnectApp : Application() {
         createNotificationChannels()
         NetworkMonitor.register(this)
         SyncScheduler.schedulePeriodic(this)
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            ServiceStarter.ensureRunningIfConfigured(this@PdvConnectApp)
+        }
     }
 
     private fun createNotificationChannels() {

@@ -27,6 +27,7 @@ import com.pdvconnect.smsservice.api.AgentTransaction
 import com.pdvconnect.smsservice.data.AgentDashboardCache
 import com.pdvconnect.smsservice.data.AppPreferences
 import com.pdvconnect.smsservice.databinding.ActivityMainBinding
+import com.pdvconnect.smsservice.sms.ServiceStarter
 import com.pdvconnect.smsservice.sms.SmsForwarderService
 import com.pdvconnect.smsservice.sync.OfflineSyncRepository
 import com.pdvconnect.smsservice.sync.SyncScheduler
@@ -472,11 +473,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startForegroundServiceIfNeeded() {
-        val intent = Intent(this, SmsForwarderService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
+        ServiceStarter.startForegroundService(this)
     }
 }

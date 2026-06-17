@@ -13,6 +13,7 @@ object NotificationHelper {
 
     private const val NOTIFICATION_PENDING_TX = 2001
     private const val NOTIFICATION_SYNC_OK = 2002
+    private const val NOTIFICATION_SMS_SKIPPED = 2003
 
     fun showPendingTransactions(context: Context, pendingCount: Int) {
         if (pendingCount <= 0) {
@@ -74,6 +75,20 @@ object NotificationHelper {
 
         context.getSystemService(NotificationManager::class.java)
             ?.notify(NOTIFICATION_SYNC_OK, notification)
+    }
+
+    fun showSmsSkipped(context: Context, reason: String) {
+        val notification = NotificationCompat.Builder(context, PdvConnectApp.CHANNEL_ALERTS_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(context.getString(R.string.notif_sms_skipped_title))
+            .setContentText(reason)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(reason))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+
+        context.getSystemService(NotificationManager::class.java)
+            ?.notify(NOTIFICATION_SMS_SKIPPED, notification)
     }
 
     fun cancel(context: Context, id: Int) {

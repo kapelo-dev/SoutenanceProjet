@@ -119,11 +119,11 @@ object SmsParser {
         return if (m.find()) m.group(1)?.trim()?.take(20) else null
     }
 
-    /** Réseau : "Nouveau solde FLOOZ" -> code FLOOZ, "solde Mix" -> code YAS (Mixx by yas) */
+    /** Réseau : "Nouveau solde FLOOZ" -> code FLOOZ, "solde mix/Mixx" -> code YAS (Mixx by yas) */
     private fun extractNetwork(text: String): String? {
-        // On renvoie directement le "code" utilisé en base pour faciliter le matching côté Laravel
-        if (Pattern.compile("(?:solde\\s+)?FLOOZ", Pattern.CASE_INSENSITIVE).matcher(text).find()) return "FLOOZ"
-        if (Pattern.compile("(?:solde\\s+)?Mixx?", Pattern.CASE_INSENSITIVE).matcher(text).find()) return "YAS"
+        val lower = text.lowercase()
+        if (lower.contains("flooz") || lower.contains("moov money")) return "FLOOZ"
+        if (lower.contains("mixx") || lower.contains("mix by") || Regex("\\bmix\\b").containsMatchIn(lower)) return "YAS"
         return null
     }
 
