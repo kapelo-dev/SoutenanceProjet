@@ -37,4 +37,24 @@ class PublicPagesController extends Controller
     {
         return view('public.license');
     }
+
+    /**
+     * Page publique de téléchargement de l'application mobile Android
+     */
+    public function mobileApp()
+    {
+        $apkPath = public_path('downloads/pdv-connect.apk');
+        $apkAvailable = is_file($apkPath);
+        $apkUrl = $apkAvailable ? asset('downloads/pdv-connect.apk') : null;
+        $apkSize = $apkAvailable ? (int) filesize($apkPath) : 0;
+        $apkUpdatedAt = $apkAvailable ? \Carbon\Carbon::createFromTimestamp(filemtime($apkPath)) : null;
+
+        return view('public.mobile-app', [
+            'apkAvailable' => $apkAvailable,
+            'apkUrl' => $apkUrl,
+            'apkSize' => $apkSize,
+            'apkUpdatedAt' => $apkUpdatedAt,
+            'appVersion' => config('app.mobile_apk_version', '1.0'),
+        ]);
+    }
 }

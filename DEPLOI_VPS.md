@@ -108,3 +108,45 @@ Puis recréer le conteneur app si `.env` a changé :
 ```bash
 docker compose -f docker-compose.vps.yml up -d app
 ```
+
+---
+
+## Application mobile Android (APK public)
+
+### URLs (remplacer par votre domaine ou IP)
+
+| Page | URL |
+|------|-----|
+| Installation (instructions + bouton) | `https://VOTRE_DOMAINE/app-mobile` |
+| Téléchargement direct APK | `https://VOTRE_DOMAINE/downloads/pdv-connect.apk` |
+
+Avec `APP_URL=http://IP_VPS:8088` :
+
+- `http://IP_VPS:8088/app-mobile`
+- `http://IP_VPS:8088/downloads/pdv-connect.apk`
+
+### Publier / mettre à jour l'APK sur le VPS
+
+```bash
+# 1) Générer l'APK (sur une machine avec Android SDK)
+cd android-app && ./build-apk.sh
+
+# 2) Copier vers public/downloads (fait automatiquement par build-apk.sh)
+#    ou manuellement :
+bash scripts/publish-mobile-apk.sh --force
+
+# 3) Sur le VPS : le volume Docker sert ./public/downloads — pas de rebuild nécessaire
+docker compose -f docker-compose.vps.yml up -d app
+```
+
+Le conteneur monte `./public/downloads` en lecture seule : une fois l'APK copié sur le VPS, il est immédiatement téléchargeable.
+
+### Pare-feu
+
+Le port HTTP de l'app (`APP_PORT`, souvent `80` ou `8088`) doit être ouvert :
+
+```bash
+sudo ufw allow 80/tcp
+# ou
+sudo ufw allow 8088/tcp
+```

@@ -1,0 +1,3 @@
+# Garder pdv-connect.apk versionné pour Render / Docker (page /app-mobile)
+*.apk
+!pdv-connect.apk

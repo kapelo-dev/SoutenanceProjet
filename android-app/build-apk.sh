@@ -39,9 +39,11 @@ echo "Génération de l'APK debug..."
 
 APK="app/build/outputs/apk/debug/app-debug.apk"
 if [ -f "$APK" ]; then
+  bash ../scripts/publish-mobile-apk.sh --force || true
   echo ""
-  echo "APK généré avec succès: $APK"
-  echo "Copiez ce fichier sur votre téléphone et installez-le."
+  echo "APK généré : $APK"
+  echo "Publié pour le web : ../public/downloads/pdv-connect.apk"
+  echo "Page d'installation : /app-mobile"
 else
   echo "Erreur: APK non trouvé à $APK"
   exit 1

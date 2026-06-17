@@ -34,8 +34,9 @@ phpunit.xml
 *.md
 docs
 
-# Android (hors Laravel)
+# Android (hors Laravel) — l'APK publié reste inclus pour /app-mobile
 android-app
+!public/downloads/pdv-connect.apk
 
 # Build frontend local (reconstruit dans l'image)
 public/build

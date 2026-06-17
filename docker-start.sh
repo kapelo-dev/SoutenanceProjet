@@ -124,6 +124,14 @@ if [[ "$(get_env DB_PASSWORD)" == change-me* ]]; then
 fi
 
 echo ""
+echo "=== Application mobile (APK) ==="
+if bash scripts/publish-mobile-apk.sh 2>/dev/null; then
+  :
+else
+  echo "→ APK non copié (générez-le : cd android-app && ./build-apk.sh)"
+fi
+
+echo ""
 echo "=== Démarrage Docker ==="
 docker compose -f "$COMPOSE_FILE" up -d --build
 
@@ -136,6 +144,8 @@ APP_URL="$(get_env APP_URL)"
 echo ""
 echo "PDV Connect est démarré."
 echo "  App    : ${APP_URL:-http://localhost:${APP_PORT:-80}}"
+echo "  Mobile : ${APP_URL:-http://localhost:${APP_PORT:-80}}/app-mobile"
+echo "  APK    : ${APP_URL:-http://localhost:${APP_PORT:-80}}/downloads/pdv-connect.apk"
 echo "  Login  : admin@pdvconnect.com / password123 (1ère connexion → changer le mot de passe)"
 echo "  Logs   : docker compose -f $COMPOSE_FILE logs -f app"
 if [[ "$(get_env BACKUP_ENABLED)" == "true" ]]; then

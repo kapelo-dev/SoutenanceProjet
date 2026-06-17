@@ -57,3 +57,37 @@ Au démarrage : migrations + seed → `admin@pdvconnect.com` / `password123`
 ## Changer la base MySQL
 
 Éditer dans `render.yaml` : `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, puis push.
+
+---
+
+## Application mobile Android (APK public)
+
+Render définit automatiquement `APP_URL` via `RENDER_EXTERNAL_URL`.
+
+| Page | URL |
+|------|-----|
+| Installation | `https://VOTRE-SERVICE.onrender.com/app-mobile` |
+| APK direct | `https://VOTRE-SERVICE.onrender.com/downloads/pdv-connect.apk` |
+
+### Inclure l'APK dans le déploiement Render
+
+L'APK doit être **dans le dépôt Git** au moment du build Docker :
+
+```bash
+cd android-app && ./build-apk.sh
+git add -f public/downloads/pdv-connect.apk
+git commit -m "Publish mobile APK for /app-mobile"
+git push
+```
+
+Render reconstruit l'image → l'APK est copié dans `public/downloads/pdv-connect.apk`.
+
+> **Important :** sans ce fichier dans Git, la page `/app-mobile` affichera « APK non disponible ».
+
+### Mettre à jour l'APK sur Render
+
+1. Rebuild : `cd android-app && ./build-apk.sh`
+2. `git add -f public/downloads/pdv-connect.apk`
+3. `git push` → redéploiement auto
+
+Optionnel : incrémenter `MOBILE_APK_VERSION` dans `render.yaml`.

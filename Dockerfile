@@ -63,6 +63,10 @@ RUN if [ ! -f public/assets/css/styles.css ]; then \
 
 RUN composer dump-autoload --optimize
 
+# Page publique /app-mobile — répertoire téléchargement APK
+RUN mkdir -p public/downloads \
+    && chown -R www-data:www-data public/downloads
+
 # Droits pour storage et bootstrap/cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache

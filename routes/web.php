@@ -42,6 +42,7 @@ Route::get('/documentation', [PublicPagesController::class, 'documentation'])->n
 Route::get('/faq', [PublicPagesController::class, 'faq'])->name('public.faq');
 Route::get('/support', [PublicPagesController::class, 'support'])->name('public.support');
 Route::get('/license', [PublicPagesController::class, 'license'])->name('public.license');
+Route::get('/app-mobile', [PublicPagesController::class, 'mobileApp'])->name('public.mobile-app');
 
 /*
 |--------------------------------------------------------------------------

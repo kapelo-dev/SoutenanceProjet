@@ -69,6 +69,14 @@ if [ ! -f public/build/manifest.json ]; then
   exit 1
 fi
 
+mkdir -p public/downloads
+if [ -f public/downloads/pdv-connect.apk ]; then
+  echo "APK mobile disponible : /downloads/pdv-connect.apk et /app-mobile"
+else
+  echo "WARN: public/downloads/pdv-connect.apk absent — exécutez scripts/publish-mobile-apk.sh avant le build Docker."
+fi
+chown -R www-data:www-data public/downloads 2>/dev/null || true
+
 # APP_KEY : ne pas utiliser key:generate (écrit .env, échoue souvent sur Render)
 ensure_app_key
 
