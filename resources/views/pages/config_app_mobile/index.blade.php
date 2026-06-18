@@ -119,7 +119,7 @@
                            value="{{ old('code_config', $config->code_config ?? '') }}"
                            placeholder="Ex: 1234">
                     <span class="text-xs text-muted-foreground">
-                        Code web : demandé à l'accès de l'onglet Service SMS dans l'app. Code local : défini une fois sur chaque téléphone (différent du code web).
+                        Code à saisir dans l'application mobile pour accéder à l'onglet Service SMS. La première fois, l'administrateur configure aussi l'URL et le token API.
                     </span>
                 </div>
 

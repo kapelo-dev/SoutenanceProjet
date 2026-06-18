@@ -31,12 +31,6 @@ class AppPreferences(private val context: Context) {
         prefs[KEY_API_TOKEN]?.takeIf { it.isNotBlank() }
     }
 
-    /** Code local (PIN) propre à ce téléphone — différent du code web. */
-    val localConfigPin: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[KEY_LOCAL_CONFIG_PIN]?.takeIf { it.isNotBlank() }
-    }
-
-    /** Liste des filtres SMS (numéros ou noms type FLOOZ), un par ligne. Vide = accepter tous. */
     val filterList: Flow<List<String>> = context.dataStore.data.map { prefs ->
         val listValue = prefs[KEY_FILTER_LIST].orEmpty()
         if (listValue.isNotBlank()) {
@@ -54,7 +48,9 @@ class AppPreferences(private val context: Context) {
         prefs[KEY_AGENT_DASHBOARD_CACHE]
     }
 
-    suspend fun hasLocalConfigPin(): Boolean = !localConfigPin.first().isNullOrBlank()
+    suspend fun isApiConfigured(): Boolean {
+        return !apiBaseUrl.first().isNullOrBlank() && !apiToken.first().isNullOrBlank()
+    }
 
     suspend fun setConsent(accepted: Boolean) {
         context.dataStore.edit { it[KEY_CONSENT] = accepted }
@@ -70,13 +66,6 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setApiToken(token: String) {
         context.dataStore.edit { it[KEY_API_TOKEN] = token }
-    }
-
-    suspend fun setLocalConfigPin(pin: String?) {
-        context.dataStore.edit {
-            if (pin.isNullOrBlank()) it.remove(KEY_LOCAL_CONFIG_PIN)
-            else it[KEY_LOCAL_CONFIG_PIN] = pin.trim()
-        }
     }
 
     suspend fun setFilterList(list: List<String>) {
@@ -125,7 +114,6 @@ class AppPreferences(private val context: Context) {
         private val KEY_SERVICE_ENABLED = booleanPreferencesKey("service_enabled")
         private val KEY_API_URL = stringPreferencesKey("api_base_url")
         private val KEY_API_TOKEN = stringPreferencesKey("api_token")
-        private val KEY_LOCAL_CONFIG_PIN = stringPreferencesKey("local_config_pin")
         private val KEY_FILTER_LIST = stringPreferencesKey("filter_list")
         private val KEY_FILTER_NUMBER_LEGACY = stringPreferencesKey("filter_number")
         private val KEY_AGENT_TOKEN = stringPreferencesKey("agent_session_token")

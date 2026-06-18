@@ -173,20 +173,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private suspend fun prepareConfigAccessOverlay() {
-        val hasLocalPin = prefs.hasLocalConfigPin()
-        val apiUrl = prefs.apiBaseUrl.first()
+        val configured = prefs.isApiConfigured()
 
-        binding.textCodeEntrySubtitle.text = if (hasLocalPin) {
+        binding.textCodeEntrySubtitle.text = if (configured) {
             getString(R.string.code_entry_subtitle)
         } else {
             getString(R.string.code_entry_setup_subtitle)
         }
-        binding.layoutLocalConfigConfirm.visibility = if (hasLocalPin) View.GONE else View.VISIBLE
-        binding.layoutCodeEntryUrl.visibility = if (apiUrl.isNullOrBlank()) View.VISIBLE else View.GONE
-        binding.editCodeEntryUrl.setText(apiUrl ?: "")
-        binding.editWebConfigCode.setText("")
-        binding.editLocalConfigCode.setText("")
-        binding.editLocalConfigConfirm.setText("")
+        binding.layoutCodeEntryUrl.visibility = if (configured) View.GONE else View.VISIBLE
+        binding.layoutCodeEntryToken.visibility = if (configured) View.GONE else View.VISIBLE
+        binding.editCodeEntryUrl.setText(prefs.apiBaseUrl.first() ?: "")
+        binding.editCodeEntryToken.setText(prefs.apiToken.first() ?: "")
+        binding.editConfigCode.setText("")
     }
 
     private fun setupCodeAccessOverlay() {
@@ -204,21 +202,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private suspend fun validateConfigAccess() {
+        val configured = prefs.isApiConfigured()
         val apiUrl = binding.editCodeEntryUrl.text?.toString()?.trim()
             .takeUnless { it.isNullOrBlank() }
             ?: prefs.apiBaseUrl.first()
+        val apiToken = binding.editCodeEntryToken.text?.toString()?.trim()
+            .takeUnless { it.isNullOrBlank() }
+            ?: prefs.apiToken.first()
+        val configCode = binding.editConfigCode.text?.toString()?.trim() ?: ""
 
         if (apiUrl.isNullOrBlank()) {
             Toast.makeText(this, R.string.api_url_required_for_verify, Toast.LENGTH_LONG).show()
             return
         }
 
-        val webCode = binding.editWebConfigCode.text?.toString()?.trim() ?: ""
-        val localCode = binding.editLocalConfigCode.text?.toString()?.trim() ?: ""
-        val localConfirm = binding.editLocalConfigConfirm.text?.toString()?.trim() ?: ""
+        if (!configured && apiToken.isNullOrBlank()) {
+            Toast.makeText(this, R.string.api_setup_required, Toast.LENGTH_LONG).show()
+            return
+        }
 
-        if (webCode.isBlank()) {
-            Toast.makeText(this, "Code web requis.", Toast.LENGTH_SHORT).show()
+        if (configCode.isBlank()) {
+            Toast.makeText(this, "Code d'accès requis.", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -228,42 +232,20 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-            val verify = MobileConfigApiClient.create(apiUrl).verifyConfigCode(VerifyConfigCodeRequest(webCode))
+            val verify = MobileConfigApiClient.create(apiUrl).verifyConfigCode(VerifyConfigCodeRequest(configCode))
             if (!verify.valid) {
-                Toast.makeText(this, verify.message ?: getString(R.string.code_web_invalid), Toast.LENGTH_LONG).show()
+                Toast.makeText(this, verify.message ?: getString(R.string.code_config_invalid), Toast.LENGTH_LONG).show()
                 return
             }
         } catch (_: Exception) {
-            Toast.makeText(this, R.string.code_web_invalid, Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.code_config_invalid, Toast.LENGTH_LONG).show()
             return
         }
 
-        val hasLocalPin = prefs.hasLocalConfigPin()
-        if (!hasLocalPin) {
-            if (localCode.isBlank()) {
-                Toast.makeText(this, "Définissez un code local.", Toast.LENGTH_SHORT).show()
-                return
-            }
-            if (localCode == webCode) {
-                Toast.makeText(this, R.string.local_pin_must_differ, Toast.LENGTH_LONG).show()
-                return
-            }
-            if (localCode != localConfirm) {
-                Toast.makeText(this, R.string.local_pin_mismatch, Toast.LENGTH_LONG).show()
-                return
-            }
-            prefs.setLocalConfigPin(localCode)
-            Toast.makeText(this, R.string.local_pin_saved, Toast.LENGTH_SHORT).show()
-        } else {
-            val storedLocal = prefs.localConfigPin.first()
-            if (localCode.isBlank() || localCode != storedLocal) {
-                Toast.makeText(this, R.string.code_local_invalid, Toast.LENGTH_LONG).show()
-                return
-            }
-        }
-
-        if (binding.layoutCodeEntryUrl.visibility == View.VISIBLE) {
+        if (!configured) {
             prefs.setApiBaseUrl(apiUrl)
+            prefs.setApiToken(apiToken!!)
+            Toast.makeText(this, "URL et token enregistrés.", Toast.LENGTH_SHORT).show()
         }
 
         smsConfigUnlockedThisSession = true
@@ -290,65 +272,11 @@ class MainActivity : AppCompatActivity() {
         binding.switchServiceEnabled.isChecked = prefs.serviceEnabled.first()
         binding.editApiUrl.setText(prefs.apiBaseUrl.first() ?: "")
         binding.editApiToken.setText(prefs.apiToken.first() ?: "")
-        binding.editLocalPinChange.setText("")
     }
 
     private fun setupListeners() {
         binding.buttonSave.setOnClickListener { saveAndMaybeStartService() }
         binding.buttonSyncNow.setOnClickListener { triggerManualSync() }
-        binding.buttonChangeLocalPin.setOnClickListener {
-            lifecycleScope.launch { changeLocalPin() }
-        }
-    }
-
-    private fun changeLocalPin() {
-        val newPin = binding.editLocalPinChange.text?.toString()?.trim() ?: ""
-        if (newPin.isBlank()) {
-            Toast.makeText(this, "Saisissez un nouveau code local.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        lifecycleScope.launch {
-            val apiUrl = prefs.apiBaseUrl.first()
-            if (apiUrl.isNullOrBlank()) {
-                Toast.makeText(this@MainActivity, R.string.agent_api_url_required, Toast.LENGTH_LONG).show()
-                return@launch
-            }
-
-            val webCodeInput = android.widget.EditText(this@MainActivity).apply {
-                hint = getString(R.string.code_web_hint)
-                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            }
-
-            AlertDialog.Builder(this@MainActivity)
-                .setTitle(R.string.local_pin_change_button)
-                .setMessage("Confirmez le code web pour modifier le code local.")
-                .setView(webCodeInput)
-                .setPositiveButton("Valider") { _, _ ->
-                    lifecycleScope.launch {
-                        val webCode = webCodeInput.text?.toString()?.trim() ?: ""
-                        try {
-                            val verify = MobileConfigApiClient.create(apiUrl)
-                                .verifyConfigCode(VerifyConfigCodeRequest(webCode))
-                            if (!verify.valid) {
-                                Toast.makeText(this@MainActivity, R.string.code_web_invalid, Toast.LENGTH_LONG).show()
-                                return@launch
-                            }
-                            if (newPin == webCode) {
-                                Toast.makeText(this@MainActivity, R.string.local_pin_must_differ, Toast.LENGTH_LONG).show()
-                                return@launch
-                            }
-                            prefs.setLocalConfigPin(newPin)
-                            binding.editLocalPinChange.setText("")
-                            Toast.makeText(this@MainActivity, R.string.local_pin_saved, Toast.LENGTH_SHORT).show()
-                        } catch (_: Exception) {
-                            Toast.makeText(this@MainActivity, R.string.code_web_invalid, Toast.LENGTH_LONG).show()
-                        }
-                    }
-                }
-                .setNegativeButton("Annuler", null)
-                .show()
-        }
     }
 
     private fun setupAgentListeners() {

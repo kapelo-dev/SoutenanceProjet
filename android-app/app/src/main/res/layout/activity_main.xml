@@ -70,44 +70,30 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_code_entry_token"
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:hint="@string/code_web_hint">
+                android:hint="@string/api_token_hint"
+                android:visibility="gone">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_web_config_code"
+                    android:id="@+id/edit_code_entry_token"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberPassword" />
+                    android:inputType="textPassword" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="@string/code_local_hint">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_local_config_code"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberPassword" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/layout_local_config_confirm"
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:hint="@string/code_local_confirm_hint"
-                android:visibility="gone">
+                android:hint="@string/code_config_hint">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_local_config_confirm"
+                    android:id="@+id/edit_config_code"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="numberPassword" />
@@ -172,28 +158,6 @@
                         android:layout_height="wrap_content"
                         android:inputType="textPassword" />
                 </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="@string/local_pin_change_hint">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/edit_local_pin_change"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="numberPassword" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <Button
-                    android:id="@+id/button_change_local_pin"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:text="@string/local_pin_change_button" />
 
                 <com.google.android.material.switchmaterial.SwitchMaterial
                     android:id="@+id/switchServiceEnabled"
