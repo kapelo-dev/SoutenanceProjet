@@ -23,6 +23,7 @@ class ValidateSmsApiToken
 
         $auth = $request->bearerToken();
         if ($auth !== $token) {
+            \Log::warning('[SMS-API] Token invalide', ['ip' => $request->ip()]);
             return response()->json(['success' => false, 'message' => 'Token invalide.'], 401);
         }
 

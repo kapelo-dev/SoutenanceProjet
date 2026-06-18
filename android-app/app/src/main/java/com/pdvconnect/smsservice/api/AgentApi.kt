@@ -37,9 +37,20 @@ data class AgentDashboard(
 data class AgentStats(
     @SerializedName("today_count") val todayCount: Int = 0,
     @SerializedName("today_total") val todayTotal: Double = 0.0,
+    @SerializedName("today_commission") val todayCommission: Double = 0.0,
     @SerializedName("month_count") val monthCount: Int = 0,
     @SerializedName("month_total") val monthTotal: Double = 0.0,
     @SerializedName("month_commission") val monthCommission: Double = 0.0,
+    @SerializedName("today_by_operateur") val todayByOperateur: List<OperateurStats>? = null,
+    @SerializedName("month_by_operateur") val monthByOperateur: List<OperateurStats>? = null,
+)
+
+data class OperateurStats(
+    val code: String?,
+    val libelle: String?,
+    val count: Int = 0,
+    val total: Double = 0.0,
+    val commission: Double = 0.0,
 )
 
 data class AgentTransaction(
@@ -50,6 +61,7 @@ data class AgentTransaction(
     val montant: Double = 0.0,
     val commission: Double = 0.0,
     val operateur: String?,
+    @SerializedName("operateur_code") val operateurCode: String? = null,
     val date: String?,
     @SerializedName("can_cancel") val canCancel: Boolean = false,
 )

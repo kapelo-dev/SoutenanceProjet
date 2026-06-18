@@ -124,6 +124,15 @@ class TransactionController extends Controller
      */
     public function storeFromSms(Request $request)
     {
+        \Log::info('[SMS-API] Appel reçu', [
+            'ip' => $request->ip(),
+            'montant' => $request->input('montant'),
+            'type' => $request->input('type'),
+            'reference' => $request->input('reference'),
+            'operator_code' => $request->input('operator_code'),
+            'agent_code' => $request->input('agent_code'),
+        ]);
+
         $validated = $request->validate([
             'montant' => 'required|numeric|min:0.01',
             'type' => 'required|in:depot,retrait,transfert,paiement',
@@ -168,6 +177,10 @@ class TransactionController extends Controller
         }
 
         if (!$agent || !$operateur) {
+            \Log::warning('[SMS-API] Agent ou opérateur introuvable', [
+                'agent_code' => $validated['agent_code'] ?? null,
+                'operator_code' => $validated['operator_code'] ?? null,
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Agent ou opérateur introuvable (vérifiez agent_code, operator_code ou config sms_api).',
@@ -199,6 +212,8 @@ class TransactionController extends Controller
             }
             DB::commit();
 
+            \Log::info('[SMS-API] Transaction créée', ['id' => $transaction->id, 'reference' => $transaction->reference]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Transaction enregistrée.',
@@ -213,6 +228,7 @@ class TransactionController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('[SMS-API] Erreur enregistrement', ['message' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de l\'enregistrement : ' . $e->getMessage(),
@@ -315,7 +331,7 @@ class TransactionController extends Controller
             if (! \App\Http\Controllers\Api\MobileAgentController::canAgentCancel($transaction)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Annulation impossible : la transaction date de plus de 48 heures.',
+                    'message' => 'Annulation impossible : la transaction date de plus de 24 heures.',
                 ], 422);
             }
         }

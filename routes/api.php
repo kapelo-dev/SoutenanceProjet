@@ -66,6 +66,11 @@ Route::get('/mobile/ping', function () {
     ]);
 });
 
+Route::prefix('mobile')->group(function () {
+    Route::post('/verify-config-code', [\App\Http\Controllers\Api\MobileConfigController::class, 'verifyConfigCode'])
+        ->middleware('throttle:20,1');
+});
+
 // Transactions
 Route::prefix('transactions')->group(function () {
     Route::get('/statistiques', [TransactionController::class, 'statistiques']);

@@ -115,7 +115,7 @@
                                             Annuler
                                         </button>
                                     @elseif($t->statut === 'valide')
-                                        <span class="text-xs text-muted-foreground" title="Annulation possible sous 48 h">+ 48 h</span>
+                                        <span class="text-xs text-muted-foreground" title="Annulation possible sous 24 h">+ 24 h</span>
                                     @else
                                         <span class="text-xs text-muted-foreground">-</span>
                                     @endif

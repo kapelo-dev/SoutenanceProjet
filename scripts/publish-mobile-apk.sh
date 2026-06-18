@@ -22,6 +22,7 @@ fi
 for src in "${SOURCES[@]}"; do
   if [[ -f "$src" ]]; then
     cp "$src" "$DEST"
+    touch "$DEST"
     echo "APK publié : $DEST ← $src ($(du -h "$DEST" | cut -f1))"
     exit 0
   fi

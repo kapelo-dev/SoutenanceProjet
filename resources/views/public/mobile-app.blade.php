@@ -62,8 +62,8 @@
                     <li>Téléchargez le fichier APK sur votre téléphone Android.</li>
                     <li>Ouvrez le fichier et autorisez l'installation depuis cette source si Android le demande.</li>
                     <li>Accordez les permissions SMS et notifications.</li>
-                    <li>Dans l'onglet <strong>Service SMS</strong>, saisissez l'URL de l'API et le token configurés dans PDV Connect.</li>
-                    <li>Dans l'onglet <strong>Espace agent</strong>, connectez-vous avec votre identifiant agent.</li>
+                    <li>Dans l'onglet <strong>Espace agent</strong>, connectez-vous avec votre <strong>code agent</strong> et mot de passe.</li>
+                    <li>L'onglet <strong>Service SMS</strong> (réservé admin) demande le code web et le code local du téléphone.</li>
                 </ol>
                 <a href="{{ route('login') }}" class="kt-btn kt-btn-outline justify-center mt-2">
                     Accéder au portail web

@@ -48,10 +48,13 @@ class PublicPagesController extends Controller
         $apkUrl = $apkAvailable ? asset('downloads/pdv-connect.apk') : null;
         $apkSize = $apkAvailable ? (int) filesize($apkPath) : 0;
         $apkUpdatedAt = $apkAvailable ? \Carbon\Carbon::createFromTimestamp(filemtime($apkPath)) : null;
+        $apkUrlWithVersion = $apkAvailable
+            ? asset('downloads/pdv-connect.apk').'?v='.$apkUpdatedAt->timestamp
+            : null;
 
         return view('public.mobile-app', [
             'apkAvailable' => $apkAvailable,
-            'apkUrl' => $apkUrl,
+            'apkUrl' => $apkUrlWithVersion,
             'apkSize' => $apkSize,
             'apkUpdatedAt' => $apkUpdatedAt,
             'appVersion' => config('app.mobile_apk_version', '1.0'),

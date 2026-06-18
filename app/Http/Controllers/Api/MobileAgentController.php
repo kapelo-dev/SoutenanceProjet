@@ -85,7 +85,7 @@ class MobileAgentController extends Controller
         if (! $this->canAgentCancel($transaction)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Annulation impossible : la transaction date de plus de 48 heures.',
+                'message' => 'Annulation impossible : la transaction date de plus de 24 heures.',
             ], 422);
         }
 
@@ -126,7 +126,7 @@ class MobileAgentController extends Controller
 
         $date = $transaction->date ?? $transaction->created_at;
 
-        return $date && $date->gte(now()->subHours(48));
+        return $date && $date->gte(now()->subHours(24));
     }
 
     private function resolveAgent(Request $request): ?Agent
@@ -179,30 +179,64 @@ class MobileAgentController extends Controller
         $monthQuery = (clone $baseQuery)->duMois()->valide();
 
         $transactions = (clone $baseQuery)
+            ->duMois()
             ->latest('date')
-            ->limit(50)
             ->get()
-            ->map(fn (Transaction $t) => [
-                'id' => $t->id,
-                'reference' => $t->reference,
-                'type' => $t->type,
-                'statut' => $t->statut,
-                'montant' => (float) $t->montant,
-                'commission' => (float) ($t->commission ?? 0),
-                'operateur' => $t->operateur?->libelle,
-                'date' => $t->date?->format('d/m/Y H:i'),
-                'can_cancel' => self::canAgentCancel($t),
-            ]);
+            ->map(fn (Transaction $t) => $this->formatTransactionRow($t));
 
         return [
             'stats' => [
                 'today_count' => $todayQuery->count(),
                 'today_total' => (float) $todayQuery->sum('montant'),
+                'today_commission' => (float) $todayQuery->sum('commission'),
                 'month_count' => $monthQuery->count(),
                 'month_total' => (float) $monthQuery->sum('montant'),
                 'month_commission' => (float) $monthQuery->sum('commission'),
+                'today_by_operateur' => $this->statsByOperateur((clone $baseQuery)->duJour()->valide()),
+                'month_by_operateur' => $this->statsByOperateur((clone $baseQuery)->duMois()->valide()),
             ],
             'transactions' => $transactions,
         ];
+    }
+
+    private function formatTransactionRow(Transaction $t): array
+    {
+        return [
+            'id' => $t->id,
+            'reference' => $t->reference,
+            'type' => $t->type,
+            'statut' => $t->statut,
+            'montant' => (float) $t->montant,
+            'commission' => (float) ($t->commission ?? 0),
+            'operateur' => $t->operateur?->libelle,
+            'operateur_code' => $t->operateur?->code,
+            'date' => $t->date?->format('d/m/Y H:i'),
+            'can_cancel' => self::canAgentCancel($t),
+        ];
+    }
+
+    /**
+     * @return list<array{code: string, libelle: string, count: int, total: float, commission: float}>
+     */
+    private function statsByOperateur($query): array
+    {
+        $definitions = [
+            'YAS' => 'Mixx by yas',
+            'FLOOZ' => 'Flooz MONEY',
+        ];
+
+        $rows = [];
+        foreach ($definitions as $code => $defaultLabel) {
+            $operateurQuery = (clone $query)->whereHas('operateur', fn ($q) => $q->where('code', $code));
+            $rows[] = [
+                'code' => $code,
+                'libelle' => $defaultLabel,
+                'count' => $operateurQuery->count(),
+                'total' => (float) $operateurQuery->sum('montant'),
+                'commission' => (float) $operateurQuery->sum('commission'),
+            ];
+        }
+
+        return $rows;
     }
 }

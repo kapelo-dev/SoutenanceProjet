@@ -5,6 +5,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.TypedValue
+import android.view.Gravity
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
@@ -15,6 +17,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.card.MaterialCardView
 import com.google.android.material.tabs.TabLayout
 import com.pdvconnect.smsservice.R
 import com.pdvconnect.smsservice.api.AgentApiClient
@@ -24,6 +27,9 @@ import com.pdvconnect.smsservice.api.AgentInfo
 import com.pdvconnect.smsservice.api.AgentLoginRequest
 import com.pdvconnect.smsservice.api.AgentLoginResponse
 import com.pdvconnect.smsservice.api.AgentTransaction
+import com.pdvconnect.smsservice.api.OperateurStats
+import com.pdvconnect.smsservice.api.MobileConfigApiClient
+import com.pdvconnect.smsservice.api.VerifyConfigCodeRequest
 import com.pdvconnect.smsservice.data.AgentDashboardCache
 import com.pdvconnect.smsservice.data.AppPreferences
 import com.pdvconnect.smsservice.databinding.ActivityMainBinding
@@ -45,7 +51,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dashboardCache: AgentDashboardCache
     private lateinit var syncRepository: OfflineSyncRepository
 
-    private var unlockedThisSession = false
+    private var smsConfigUnlockedThisSession = false
+    private var suppressTabCallback = false
     private var agentToken: String? = null
     private var currentAgent: AgentInfo? = null
     private var showingOfflineCache = false
@@ -68,27 +75,20 @@ class MainActivity : AppCompatActivity() {
 
         setupTabs()
         requestPermissionsIfNeeded()
+        setupCodeAccessOverlay()
+        setupListeners()
+        setupAgentListeners()
 
         lifecycleScope.launch {
             agentToken = prefs.agentSessionToken.first()
-            val code = prefs.configAccessCode.first()
-            if (!code.isNullOrBlank() && !unlockedThisSession) {
-                binding.codeEntryPanel.visibility = View.VISIBLE
-                binding.configPanel.visibility = View.GONE
-                binding.agentPanel.visibility = View.GONE
-                binding.mainTabs.visibility = View.GONE
-                setupCodeEntry()
-            } else {
-                binding.codeEntryPanel.visibility = View.GONE
-                binding.mainTabs.visibility = View.VISIBLE
-                showSmsTab()
-                loadSettingsSync()
-                setupListeners()
-                setupAgentListeners()
-                updateQueueStatus(syncRepository.pendingTotalCount())
-                if (!agentToken.isNullOrBlank()) {
-                    refreshAgentDashboard()
-                }
+            binding.mainTabs.visibility = View.VISIBLE
+            binding.codeEntryPanel.visibility = View.GONE
+            suppressTabCallback = true
+            binding.mainTabs.getTabAt(TAB_AGENT)?.select()
+            suppressTabCallback = false
+            showAgentTab()
+            if (!agentToken.isNullOrBlank()) {
+                refreshAgentDashboard()
             }
         }
     }
@@ -101,6 +101,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateQueueStatus(pendingCount: Int) {
+        if (!smsConfigUnlockedThisSession) return
         if (pendingCount > 0) {
             binding.textQueueStatus.visibility = View.VISIBLE
             binding.textQueueStatus.text = getString(R.string.queue_pending_status, pendingCount)
@@ -115,22 +116,162 @@ class MainActivity : AppCompatActivity() {
         binding.mainTabs.addTab(binding.mainTabs.newTab().setText(R.string.tab_agent))
         binding.mainTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
-                if (tab?.position == 1) showAgentTab() else showSmsTab()
+                if (suppressTabCallback) return
+                if (tab?.position == TAB_SMS) {
+                    requestSmsTabAccess()
+                } else {
+                    hideConfigAccessOverlay()
+                    showAgentTab()
+                }
             }
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {
+                if (tab?.position == TAB_SMS) requestSmsTabAccess()
+            }
         })
     }
 
+    private fun requestSmsTabAccess() {
+        if (smsConfigUnlockedThisSession) {
+            showSmsTab()
+            return
+        }
+        lifecycleScope.launch {
+            suppressTabCallback = true
+            binding.mainTabs.getTabAt(TAB_AGENT)?.select()
+            suppressTabCallback = false
+            prepareConfigAccessOverlay()
+            showConfigAccessOverlay()
+        }
+    }
+
     private fun showSmsTab() {
+        hideConfigAccessOverlay()
         binding.configPanel.visibility = View.VISIBLE
         binding.agentPanel.visibility = View.GONE
+        lifecycleScope.launch {
+            loadSettingsSync()
+            updateQueueStatus(syncRepository.pendingTotalCount())
+        }
     }
 
     private fun showAgentTab() {
+        hideConfigAccessOverlay()
         binding.configPanel.visibility = View.GONE
         binding.agentPanel.visibility = View.VISIBLE
         updateAgentUi()
+    }
+
+    private fun showConfigAccessOverlay() {
+        binding.codeEntryPanel.visibility = View.VISIBLE
+        binding.configPanel.visibility = View.GONE
+        binding.agentPanel.visibility = View.GONE
+    }
+
+    private fun hideConfigAccessOverlay() {
+        binding.codeEntryPanel.visibility = View.GONE
+    }
+
+    private suspend fun prepareConfigAccessOverlay() {
+        val hasLocalPin = prefs.hasLocalConfigPin()
+        val apiUrl = prefs.apiBaseUrl.first()
+
+        binding.textCodeEntrySubtitle.text = if (hasLocalPin) {
+            getString(R.string.code_entry_subtitle)
+        } else {
+            getString(R.string.code_entry_setup_subtitle)
+        }
+        binding.layoutLocalConfigConfirm.visibility = if (hasLocalPin) View.GONE else View.VISIBLE
+        binding.layoutCodeEntryUrl.visibility = if (apiUrl.isNullOrBlank()) View.VISIBLE else View.GONE
+        binding.editCodeEntryUrl.setText(apiUrl ?: "")
+        binding.editWebConfigCode.setText("")
+        binding.editLocalConfigCode.setText("")
+        binding.editLocalConfigConfirm.setText("")
+    }
+
+    private fun setupCodeAccessOverlay() {
+        binding.buttonCodeCancel.setOnClickListener {
+            hideConfigAccessOverlay()
+            suppressTabCallback = true
+            binding.mainTabs.getTabAt(TAB_AGENT)?.select()
+            suppressTabCallback = false
+            showAgentTab()
+        }
+
+        binding.buttonCodeAccess.setOnClickListener {
+            lifecycleScope.launch { validateConfigAccess() }
+        }
+    }
+
+    private suspend fun validateConfigAccess() {
+        val apiUrl = binding.editCodeEntryUrl.text?.toString()?.trim()
+            .takeUnless { it.isNullOrBlank() }
+            ?: prefs.apiBaseUrl.first()
+
+        if (apiUrl.isNullOrBlank()) {
+            Toast.makeText(this, R.string.api_url_required_for_verify, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val webCode = binding.editWebConfigCode.text?.toString()?.trim() ?: ""
+        val localCode = binding.editLocalConfigCode.text?.toString()?.trim() ?: ""
+        val localConfirm = binding.editLocalConfigConfirm.text?.toString()?.trim() ?: ""
+
+        if (webCode.isBlank()) {
+            Toast.makeText(this, "Code web requis.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!NetworkUtils.isOnline(this)) {
+            Toast.makeText(this, R.string.agent_login_offline, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        try {
+            val verify = MobileConfigApiClient.create(apiUrl).verifyConfigCode(VerifyConfigCodeRequest(webCode))
+            if (!verify.valid) {
+                Toast.makeText(this, verify.message ?: getString(R.string.code_web_invalid), Toast.LENGTH_LONG).show()
+                return
+            }
+        } catch (_: Exception) {
+            Toast.makeText(this, R.string.code_web_invalid, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val hasLocalPin = prefs.hasLocalConfigPin()
+        if (!hasLocalPin) {
+            if (localCode.isBlank()) {
+                Toast.makeText(this, "Définissez un code local.", Toast.LENGTH_SHORT).show()
+                return
+            }
+            if (localCode == webCode) {
+                Toast.makeText(this, R.string.local_pin_must_differ, Toast.LENGTH_LONG).show()
+                return
+            }
+            if (localCode != localConfirm) {
+                Toast.makeText(this, R.string.local_pin_mismatch, Toast.LENGTH_LONG).show()
+                return
+            }
+            prefs.setLocalConfigPin(localCode)
+            Toast.makeText(this, R.string.local_pin_saved, Toast.LENGTH_SHORT).show()
+        } else {
+            val storedLocal = prefs.localConfigPin.first()
+            if (localCode.isBlank() || localCode != storedLocal) {
+                Toast.makeText(this, R.string.code_local_invalid, Toast.LENGTH_LONG).show()
+                return
+            }
+        }
+
+        if (binding.layoutCodeEntryUrl.visibility == View.VISIBLE) {
+            prefs.setApiBaseUrl(apiUrl)
+        }
+
+        smsConfigUnlockedThisSession = true
+        hideConfigAccessOverlay()
+        suppressTabCallback = true
+        binding.mainTabs.getTabAt(TAB_SMS)?.select()
+        suppressTabCallback = false
+        showSmsTab()
     }
 
     private fun requestPermissionsIfNeeded() {
@@ -145,36 +286,69 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupCodeEntry() {
-        binding.buttonCodeAccess.setOnClickListener {
-            val entered = binding.editCodeEntry.text?.toString()?.trim() ?: ""
-            lifecycleScope.launch {
-                val savedCode = prefs.configAccessCode.first()
-                if (entered == savedCode) {
-                    unlockedThisSession = true
-                    binding.codeEntryPanel.visibility = View.GONE
-                    binding.mainTabs.visibility = View.VISIBLE
-                    showSmsTab()
-                    loadSettingsSync()
-                    setupListeners()
-                    setupAgentListeners()
-                } else {
-                    Toast.makeText(this@MainActivity, "Code incorrect.", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
     private suspend fun loadSettingsSync() {
         binding.switchServiceEnabled.isChecked = prefs.serviceEnabled.first()
         binding.editApiUrl.setText(prefs.apiBaseUrl.first() ?: "")
         binding.editApiToken.setText(prefs.apiToken.first() ?: "")
-        binding.editCodeConfig.setText(prefs.configAccessCode.first() ?: "")
+        binding.editLocalPinChange.setText("")
     }
 
     private fun setupListeners() {
         binding.buttonSave.setOnClickListener { saveAndMaybeStartService() }
         binding.buttonSyncNow.setOnClickListener { triggerManualSync() }
+        binding.buttonChangeLocalPin.setOnClickListener {
+            lifecycleScope.launch { changeLocalPin() }
+        }
+    }
+
+    private fun changeLocalPin() {
+        val newPin = binding.editLocalPinChange.text?.toString()?.trim() ?: ""
+        if (newPin.isBlank()) {
+            Toast.makeText(this, "Saisissez un nouveau code local.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        lifecycleScope.launch {
+            val apiUrl = prefs.apiBaseUrl.first()
+            if (apiUrl.isNullOrBlank()) {
+                Toast.makeText(this@MainActivity, R.string.agent_api_url_required, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+
+            val webCodeInput = android.widget.EditText(this@MainActivity).apply {
+                hint = getString(R.string.code_web_hint)
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            }
+
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle(R.string.local_pin_change_button)
+                .setMessage("Confirmez le code web pour modifier le code local.")
+                .setView(webCodeInput)
+                .setPositiveButton("Valider") { _, _ ->
+                    lifecycleScope.launch {
+                        val webCode = webCodeInput.text?.toString()?.trim() ?: ""
+                        try {
+                            val verify = MobileConfigApiClient.create(apiUrl)
+                                .verifyConfigCode(VerifyConfigCodeRequest(webCode))
+                            if (!verify.valid) {
+                                Toast.makeText(this@MainActivity, R.string.code_web_invalid, Toast.LENGTH_LONG).show()
+                                return@launch
+                            }
+                            if (newPin == webCode) {
+                                Toast.makeText(this@MainActivity, R.string.local_pin_must_differ, Toast.LENGTH_LONG).show()
+                                return@launch
+                            }
+                            prefs.setLocalConfigPin(newPin)
+                            binding.editLocalPinChange.setText("")
+                            Toast.makeText(this@MainActivity, R.string.local_pin_saved, Toast.LENGTH_SHORT).show()
+                        } catch (_: Exception) {
+                            Toast.makeText(this@MainActivity, R.string.code_web_invalid, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+                .setNegativeButton("Annuler", null)
+                .show()
+        }
     }
 
     private fun setupAgentListeners() {
@@ -207,7 +381,6 @@ class MainActivity : AppCompatActivity() {
     private fun saveAndMaybeStartService() {
         val apiUrl = binding.editApiUrl.text?.toString()?.trim() ?: ""
         val apiToken = binding.editApiToken.text?.toString()?.trim() ?: ""
-        val codeConfig = binding.editCodeConfig.text?.toString()?.trim()
         val serviceEnabled = binding.switchServiceEnabled.isChecked
 
         if (serviceEnabled && (apiUrl.isBlank() || apiToken.isBlank())) {
@@ -216,7 +389,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            prefs.saveAll(consent = true, serviceEnabled, apiUrl, apiToken, filterList = emptyList(), codeConfig)
+            prefs.saveAll(consent = true, serviceEnabled, apiUrl, apiToken, filterList = emptyList())
             if (serviceEnabled) {
                 startForegroundServiceIfNeeded()
                 Toast.makeText(this@MainActivity, "Paramètres enregistrés. Le transfert SMS est actif.", Toast.LENGTH_SHORT).show()
@@ -240,7 +413,6 @@ class MainActivity : AppCompatActivity() {
             val apiUrl = prefs.apiBaseUrl.first()
             if (apiUrl.isNullOrBlank()) {
                 Toast.makeText(this@MainActivity, R.string.agent_api_url_required, Toast.LENGTH_LONG).show()
-                binding.mainTabs.getTabAt(0)?.select()
                 return@launch
             }
 
@@ -248,7 +420,7 @@ class MainActivity : AppCompatActivity() {
             val password = binding.editAgentPassword.text?.toString() ?: ""
 
             if (identifiant.isBlank() || password.isBlank()) {
-                Toast.makeText(this@MainActivity, "Identifiant et mot de passe requis.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "Code agent et mot de passe requis.", Toast.LENGTH_SHORT).show()
                 return@launch
             }
 
@@ -363,20 +535,60 @@ class MainActivity : AppCompatActivity() {
 
         val stats = dashboard?.stats
         val fmt = NumberFormat.getNumberInstance(Locale.FRANCE)
-        binding.textAgentStats.text = buildString {
-            append("Aujourd'hui : ${fmt.format(stats?.todayTotal ?: 0.0)} F (${stats?.todayCount ?: 0} tx)\n")
-            append("Ce mois : ${fmt.format(stats?.monthTotal ?: 0.0)} F (${stats?.monthCount ?: 0} tx)\n")
-            append("Commission mois : ${fmt.format(stats?.monthCommission ?: 0.0)} F")
+
+        binding.agentTodayOperateurCards.removeAllViews()
+        binding.agentMonthOperateurCards.removeAllViews()
+        binding.agentTodaySummaryCards.removeAllViews()
+        binding.agentMonthSummaryCards.removeAllViews()
+
+        stats?.todayByOperateur.orEmpty().forEach { op ->
+            binding.agentTodayOperateurCards.addView(createOperateurCard(op, fmt))
         }
+        stats?.monthByOperateur.orEmpty().forEach { op ->
+            binding.agentMonthOperateurCards.addView(createOperateurCard(op, fmt))
+        }
+
+        binding.agentTodaySummaryCards.addView(
+            createSummaryCard(
+                getString(R.string.agent_stats_ca),
+                "${fmt.format(stats?.todayTotal ?: 0.0)} F",
+                getString(R.string.agent_stats_tx_count, stats?.todayCount ?: 0),
+                R.color.primary,
+            ),
+        )
+        binding.agentTodaySummaryCards.addView(
+            createSummaryCard(
+                getString(R.string.agent_stats_commission),
+                "${fmt.format(stats?.todayCommission ?: 0.0)} F",
+                getString(R.string.agent_stats_today_title),
+                R.color.flooz_blue,
+            ),
+        )
+
+        binding.agentMonthSummaryCards.addView(
+            createSummaryCard(
+                getString(R.string.agent_stats_ca),
+                "${fmt.format(stats?.monthTotal ?: 0.0)} F",
+                getString(R.string.agent_stats_tx_count, stats?.monthCount ?: 0),
+                R.color.primary,
+            ),
+        )
+        binding.agentMonthSummaryCards.addView(
+            createSummaryCard(
+                getString(R.string.agent_stats_commission),
+                "${fmt.format(stats?.monthCommission ?: 0.0)} F",
+                getString(R.string.agent_stats_month_title),
+                R.color.flooz_blue,
+            ),
+        )
 
         binding.agentTransactionsList.removeAllViews()
         val transactions = dashboard?.transactions.orEmpty()
         if (transactions.isEmpty()) {
-            val empty = TextView(this).apply {
-                text = "Aucune transaction."
+            binding.agentTransactionsList.addView(TextView(this).apply {
+                text = "Aucune transaction ce mois."
                 setPadding(0, 16, 0, 16)
-            }
-            binding.agentTransactionsList.addView(empty)
+            })
             return
         }
 
@@ -385,34 +597,158 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun createOperateurCard(op: OperateurStats, fmt: NumberFormat): MaterialCardView {
+        val accent = when (op.code?.uppercase()) {
+            "YAS" -> R.color.yas_brown
+            "FLOOZ" -> R.color.flooz_blue
+            else -> R.color.primary
+        }
+        val padding = dp(12)
+        val inner = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(padding, padding, padding, padding)
+        }
+        inner.addView(TextView(this).apply {
+            text = op.libelle ?: op.code ?: "Opérateur"
+            textSize = 14f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(ContextCompat.getColor(this@MainActivity, accent))
+        })
+        inner.addView(TextView(this).apply {
+            text = "${fmt.format(op.total)} F · ${getString(R.string.agent_stats_tx_count, op.count)}"
+            textSize = 15f
+            setPadding(0, dp(4), 0, 0)
+        })
+        inner.addView(TextView(this).apply {
+            text = "${getString(R.string.agent_stats_commission)} : ${fmt.format(op.commission)} F"
+            textSize = 13f
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_muted))
+            setPadding(0, dp(2), 0, 0)
+        })
+
+        return MaterialCardView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { bottomMargin = dp(8) }
+            radius = dp(12).toFloat()
+            cardElevation = dp(2).toFloat()
+            setCardBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.card_bg))
+            addView(inner)
+        }
+    }
+
+    private fun createSummaryCard(
+        label: String,
+        value: String,
+        subtitle: String,
+        accentColorRes: Int,
+    ): MaterialCardView {
+        val padding = dp(12)
+        val inner = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(padding, padding, padding, padding)
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        inner.addView(TextView(this).apply {
+            text = label
+            textSize = 12f
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_muted))
+        })
+        inner.addView(TextView(this).apply {
+            text = value
+            textSize = 16f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(ContextCompat.getColor(this@MainActivity, accentColorRes))
+            setPadding(0, dp(4), 0, 0)
+        })
+        inner.addView(TextView(this).apply {
+            text = subtitle
+            textSize = 11f
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_muted))
+            setPadding(0, dp(2), 0, 0)
+        })
+
+        return MaterialCardView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginEnd = dp(6)
+            }
+            radius = dp(12).toFloat()
+            cardElevation = dp(2).toFloat()
+            setCardBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.card_bg))
+            addView(inner)
+        }
+    }
+
+    private fun dp(value: Int): Int = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP,
+        value.toFloat(),
+        resources.displayMetrics,
+    ).toInt()
+
     private fun createTransactionRow(tx: AgentTransaction, offline: Boolean): View {
         val fmt = NumberFormat.getNumberInstance(Locale.FRANCE)
-        val container = LinearLayout(this).apply {
+        val padding = dp(12)
+        val inner = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 0, 24)
+            setPadding(padding, padding, padding, padding)
         }
 
-        val title = TextView(this).apply {
-            text = "${tx.reference ?: "—"} · ${tx.type ?: ""} · ${fmt.format(tx.montant)} F"
-            textSize = 15f
+        val accent = when (tx.operateurCode?.uppercase()) {
+            "YAS" -> R.color.yas_brown
+            "FLOOZ" -> R.color.flooz_blue
+            else -> R.color.primary
         }
-        val subtitle = TextView(this).apply {
-            text = "${tx.operateur ?: "N/A"} · ${tx.date ?: ""} · ${tx.statut ?: ""} · Commission ${fmt.format(tx.commission)} F"
+
+        inner.addView(TextView(this).apply {
+            text = tx.reference ?: "—"
+            textSize = 14f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        })
+        inner.addView(TextView(this).apply {
+            text = buildString {
+                append((tx.type ?: "").replaceFirstChar { it.uppercase() })
+                append(" · ")
+                append(fmt.format(tx.montant))
+                append(" F")
+            }
+            textSize = 16f
+            setTextColor(ContextCompat.getColor(this@MainActivity, accent))
+            setPadding(0, dp(4), 0, 0)
+        })
+        inner.addView(TextView(this).apply {
+            text = "${tx.operateur ?: "N/A"} · ${tx.date ?: ""} · ${tx.statut ?: ""}"
             textSize = 13f
-            alpha = 0.8f
-        }
-        container.addView(title)
-        container.addView(subtitle)
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_muted))
+            setPadding(0, dp(2), 0, 0)
+        })
+        inner.addView(TextView(this).apply {
+            text = "${getString(R.string.agent_stats_commission)} : ${fmt.format(tx.commission)} F"
+            textSize = 13f
+            setPadding(0, dp(2), 0, 0)
+        })
 
         if (tx.canCancel && !offline) {
-            val cancelBtn = Button(this).apply {
+            inner.addView(Button(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
                 text = getString(R.string.agent_cancel)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { topMargin = dp(8) }
                 setOnClickListener { confirmCancelTransaction(tx) }
-            }
-            container.addView(cancelBtn)
+            })
         }
 
-        return container
+        return MaterialCardView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { bottomMargin = dp(10) }
+            radius = dp(10).toFloat()
+            cardElevation = dp(1).toFloat()
+            setCardBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.white))
+            addView(inner)
+        }
     }
 
     private fun confirmCancelTransaction(tx: AgentTransaction) {
@@ -421,7 +757,7 @@ class MainActivity : AppCompatActivity() {
         }
         AlertDialog.Builder(this)
             .setTitle("Annuler ${tx.reference}")
-            .setMessage("Transaction de moins de 48 h. Confirmer l'annulation ?")
+            .setMessage(getString(R.string.agent_cancel_dialog_message))
             .setView(input)
             .setPositiveButton("Annuler la transaction") { _, _ ->
                 val raison = input.text?.toString()?.trim().orEmpty()
@@ -474,5 +810,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun startForegroundServiceIfNeeded() {
         ServiceStarter.startForegroundService(this)
+    }
+
+    companion object {
+        private const val TAB_SMS = 0
+        private const val TAB_AGENT = 1
     }
 }
