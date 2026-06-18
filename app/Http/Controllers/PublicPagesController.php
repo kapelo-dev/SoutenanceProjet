@@ -58,6 +58,7 @@ class PublicPagesController extends Controller
             'apkSize' => $apkSize,
             'apkUpdatedAt' => $apkUpdatedAt,
             'appVersion' => config('app.mobile_apk_version', '1.0'),
+            'appVersionCode' => (int) config('app.mobile_apk_version_code', 1),
         ]);
     }
 }

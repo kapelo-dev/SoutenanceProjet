@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <plurals name="notif_pending_message">
-        <item quantity="one">%d transaction en attente d\'envoi (hors ligne)</item>
-        <item quantity="other">%d transactions en attente d\'envoi (hors ligne)</item>
+        <item quantity="one">%d transaction en attente d\'envoi au serveur</item>
+        <item quantity="other">%d transactions en attente d\'envoi au serveur</item>
+    </plurals>
+    <plurals name="notif_pending_offline_message">
+        <item quantity="one">%d transaction en file — pas de réseau Wi‑Fi / mobile</item>
+        <item quantity="other">%d transactions en file — pas de réseau Wi‑Fi / mobile</item>
     </plurals>
     <plurals name="notif_sync_ok_message">
         <item quantity="one">%d opération synchronisée avec le serveur</item>

@@ -69,7 +69,7 @@ class OfflineSyncRepository(private val context: Context) {
             syncAll()
         } else {
             val pending = txDao.pendingCount()
-            NotificationHelper.showPendingTransactions(context, pending)
+            NotificationHelper.showPendingTransactions(context, pending, offline = true)
             SyncScheduler.scheduleImmediate(context)
         }
 
@@ -98,6 +98,7 @@ class OfflineSyncRepository(private val context: Context) {
             NotificationHelper.showPendingTransactions(
                 context,
                 txDao.pendingCount() + actionDao.pendingCount(),
+                offline = true,
             )
             SyncScheduler.scheduleImmediate(context)
         }
@@ -108,13 +109,14 @@ class OfflineSyncRepository(private val context: Context) {
     suspend fun syncAll(): SyncResult = withContext(Dispatchers.IO) {
         if (!NetworkUtils.isOnline(context)) {
             val pending = txDao.pendingCount() + actionDao.pendingCount()
-            NotificationHelper.showPendingTransactions(context, pending)
+            NotificationHelper.showPendingTransactions(context, pending, offline = true)
             return@withContext SyncResult(stillPending = pending, networkError = true)
         }
 
         var txSynced = 0
         var actionSynced = 0
         var hadNetworkError = false
+        var lastApiError: String? = null
 
         for (item in txDao.getPending()) {
             txDao.update(item.copy(status = PendingTransactionEntity.STATUS_SYNCING))
@@ -142,6 +144,7 @@ class OfflineSyncRepository(private val context: Context) {
                     Log.d(TAG, "Transaction #${item.id} synchronisée")
                 } else {
                     val error = response.errorBody()?.string()?.take(200) ?: "HTTP ${response.code()}"
+                    lastApiError = error
                     txDao.update(
                         item.copy(
                             status = PendingTransactionEntity.STATUS_FAILED,
@@ -227,7 +230,12 @@ class OfflineSyncRepository(private val context: Context) {
         val stillPending = txDao.pendingCount() + actionDao.pendingCount()
 
         if (stillPending > 0) {
-            NotificationHelper.showPendingTransactions(context, stillPending)
+            if (hadNetworkError) {
+                NotificationHelper.showPendingTransactions(context, stillPending, offline = true)
+            } else {
+                NotificationHelper.showPendingTransactions(context, stillPending, offline = false)
+                lastApiError?.let { NotificationHelper.showSyncError(context, it) }
+            }
         } else {
             NotificationHelper.cancel(context, 2001)
         }

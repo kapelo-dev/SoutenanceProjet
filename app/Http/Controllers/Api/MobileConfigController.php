@@ -35,4 +35,31 @@ class MobileConfigController extends Controller
             'message' => $valid ? 'Code valide.' : 'Code incorrect.',
         ]);
     }
+
+    /**
+     * Version de l'APK publiée — l'app compare versionCode locale et bloque si obsolète.
+     */
+    public function appVersion(): JsonResponse
+    {
+        $apkPath = public_path('downloads/pdv-connect.apk');
+        $apkAvailable = is_file($apkPath);
+        $updatedAt = $apkAvailable ? filemtime($apkPath) : null;
+
+        $versionCode = (int) config('app.mobile_apk_version_code', 1);
+        $minVersionCode = (int) config('app.mobile_apk_min_version_code', $versionCode);
+
+        $apkUrl = $apkAvailable
+            ? asset('downloads/pdv-connect.apk').($updatedAt ? '?v='.$updatedAt : '')
+            : null;
+
+        return response()->json([
+            'version_code' => $versionCode,
+            'version_name' => (string) config('app.mobile_apk_version', '1.0'),
+            'min_version_code' => $minVersionCode,
+            'apk_available' => $apkAvailable,
+            'download_page_url' => route('public.mobile-app'),
+            'apk_url' => $apkUrl,
+            'updated_at' => $updatedAt ? date('c', $updatedAt) : null,
+        ]);
+    }
 }

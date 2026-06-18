@@ -60,6 +60,8 @@ return [
     |--------------------------------------------------------------------------
     */
     'mobile_apk_version' => env('MOBILE_APK_VERSION', '1.0'),
+    'mobile_apk_version_code' => (int) env('MOBILE_APK_VERSION_CODE', 1),
+    'mobile_apk_min_version_code' => (int) env('MOBILE_APK_MIN_VERSION_CODE', env('MOBILE_APK_VERSION_CODE', 1)),
 
     /*
     |--------------------------------------------------------------------------

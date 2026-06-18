@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 DEST="public/downloads/pdv-connect.apk"
+GRADLE_FILE="android-app/app/build.gradle.kts"
 mkdir -p public/downloads
 
 SOURCES=(
@@ -24,6 +25,17 @@ for src in "${SOURCES[@]}"; do
     cp "$src" "$DEST"
     touch "$DEST"
     echo "APK publié : $DEST ← $src ($(du -h "$DEST" | cut -f1))"
+    if [[ -f "$GRADLE_FILE" ]]; then
+      VC=$(grep -E 'versionCode\s*=' "$GRADLE_FILE" | head -1 | grep -oE '[0-9]+' || true)
+      VN=$(grep -E 'versionName\s*=' "$GRADLE_FILE" | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
+      if [[ -n "$VC" ]]; then
+        echo ""
+        echo "→ Mettez à jour le serveur (Render / .env) :"
+        echo "   MOBILE_APK_VERSION_CODE=$VC"
+        echo "   MOBILE_APK_MIN_VERSION_CODE=$VC"
+        [[ -n "$VN" ]] && echo "   MOBILE_APK_VERSION=$VN"
+      fi
+    fi
     exit 0
   fi
 done

@@ -20,6 +20,11 @@
     <string name="code_config_invalid">Code incorrect ou serveur inaccessible.</string>
     <string name="api_setup_required">URL et token API requis pour la première configuration.</string>
     <string name="api_url_required_for_verify">Saisissez l\'URL de l\'API.</string>
+    <string name="update_required_title">Mise à jour obligatoire</string>
+    <string name="update_required_message">Une nouvelle version de PDV Connect est disponible. Installez-la pour continuer.</string>
+    <string name="update_download_button">Télécharger la mise à jour</string>
+    <string name="update_retry_button">Vérifier à nouveau</string>
+    <string name="update_version_info">Version installée : %1$s (%2$d) — requise : %3$s (%4$d)</string>
     <string name="save">Enregistrer</string>
     <string name="notification_channel_name">Transfert SMS</string>
     <string name="notification_channel_description">Notifications du service de transfert des SMS de transaction.</string>
@@ -44,6 +49,7 @@
     <string name="notification_alerts_channel_description">Transactions non envoyées et synchronisation</string>
     <string name="notif_sms_skipped_title">SMS non transféré</string>
     <string name="notif_pending_title">Transaction non envoyée</string>
+    <string name="notif_sync_error_title">Échec d\'envoi au serveur</string>
     <string name="notif_sync_ok_title">Synchronisation réussie</string>
     <string name="queue_pending_status">%1$d opération(s) en attente de synchronisation</string>
     <string name="queue_empty_status">File d\'attente vide — toutes les transactions sont synchronisées</string>

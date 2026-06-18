@@ -27,7 +27,11 @@ object NetworkMonitor {
 
             override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
                 if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                    caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                    (
+                        caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                            caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                        )
                 ) {
                     SyncScheduler.scheduleImmediate(appContext)
                 }

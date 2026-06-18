@@ -37,6 +37,7 @@ import com.pdvconnect.smsservice.sms.ServiceStarter
 import com.pdvconnect.smsservice.sms.SmsForwarderService
 import com.pdvconnect.smsservice.sync.OfflineSyncRepository
 import com.pdvconnect.smsservice.sync.SyncScheduler
+import com.pdvconnect.smsservice.util.AppUpdateChecker
 import com.pdvconnect.smsservice.util.NetworkUtils
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -56,6 +57,7 @@ class MainActivity : AppCompatActivity() {
     private var agentToken: String? = null
     private var currentAgent: AgentInfo? = null
     private var showingOfflineCache = false
+    private var pendingUpdateResult: AppUpdateChecker.Result? = null
 
     private val requestPermissions = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -78,26 +80,98 @@ class MainActivity : AppCompatActivity() {
         setupCodeAccessOverlay()
         setupListeners()
         setupAgentListeners()
+        setupUpdatePanel()
 
         lifecycleScope.launch {
-            agentToken = prefs.agentSessionToken.first()
-            binding.mainTabs.visibility = View.VISIBLE
-            binding.codeEntryPanel.visibility = View.GONE
-            suppressTabCallback = true
-            binding.mainTabs.getTabAt(TAB_AGENT)?.select()
-            suppressTabCallback = false
-            showAgentTab()
-            if (!agentToken.isNullOrBlank()) {
-                refreshAgentDashboard()
-            }
+            if (checkForAppUpdate()) return@launch
+            initializeMainUi()
+        }
+    }
+
+    private suspend fun initializeMainUi() {
+        agentToken = prefs.agentSessionToken.first()
+        binding.mainTabs.visibility = View.VISIBLE
+        binding.codeEntryPanel.visibility = View.GONE
+        suppressTabCallback = true
+        binding.mainTabs.getTabAt(TAB_AGENT)?.select()
+        suppressTabCallback = false
+        showAgentTab()
+        if (!agentToken.isNullOrBlank()) {
+            refreshAgentDashboard()
         }
     }
 
     override fun onResume() {
         super.onResume()
         lifecycleScope.launch {
+            if (binding.updateRequiredPanel.visibility == View.VISIBLE) {
+                if (!checkForAppUpdate()) {
+                    hideUpdateRequired()
+                    initializeMainUi()
+                }
+                return@launch
+            }
+            checkForAppUpdate()
             updateQueueStatus(syncRepository.pendingTotalCount())
         }
+    }
+
+    private fun setupUpdatePanel() {
+        binding.buttonDownloadUpdate.setOnClickListener {
+            pendingUpdateResult?.let { AppUpdateChecker.openDownload(this, it) }
+        }
+        binding.buttonRetryUpdateCheck.setOnClickListener {
+            lifecycleScope.launch { checkForAppUpdate() }
+        }
+    }
+
+    /**
+     * @return true si l'écran de mise à jour bloque l'app
+     */
+    private suspend fun checkForAppUpdate(): Boolean {
+        val apiUrl = prefs.apiBaseUrl.first()
+        if (apiUrl.isNullOrBlank()) {
+            hideUpdateRequired()
+            return false
+        }
+        if (!NetworkUtils.isOnline(this)) {
+            return binding.updateRequiredPanel.visibility == View.VISIBLE
+        }
+
+        return try {
+            val result = AppUpdateChecker.check(apiUrl)
+            if (result.updateRequired) {
+                showUpdateRequired(result)
+                true
+            } else {
+                hideUpdateRequired()
+                false
+            }
+        } catch (_: Exception) {
+            return binding.updateRequiredPanel.visibility == View.VISIBLE
+        }
+    }
+
+    private fun showUpdateRequired(result: AppUpdateChecker.Result) {
+        pendingUpdateResult = result
+        binding.updateRequiredPanel.visibility = View.VISIBLE
+        binding.mainTabs.visibility = View.GONE
+        binding.codeEntryPanel.visibility = View.GONE
+        binding.configPanel.visibility = View.GONE
+        binding.agentPanel.visibility = View.GONE
+        binding.textUpdateMessage.text = getString(
+            R.string.update_version_info,
+            result.currentVersionName,
+            result.currentVersionCode,
+            result.serverVersionName ?: "?",
+            result.serverVersionCode,
+        )
+    }
+
+    private fun hideUpdateRequired() {
+        binding.updateRequiredPanel.visibility = View.GONE
+        pendingUpdateResult = null
+        binding.mainTabs.visibility = View.VISIBLE
     }
 
     private fun updateQueueStatus(pendingCount: Int) {

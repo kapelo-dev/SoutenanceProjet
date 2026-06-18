@@ -15,11 +15,14 @@ object NotificationHelper {
     private const val NOTIFICATION_SYNC_OK = 2002
     private const val NOTIFICATION_SMS_SKIPPED = 2003
 
-    fun showPendingTransactions(context: Context, pendingCount: Int) {
+    fun showPendingTransactions(context: Context, pendingCount: Int, offline: Boolean = false) {
         if (pendingCount <= 0) {
             cancel(context, NOTIFICATION_PENDING_TX)
             return
         }
+
+        val pluralRes = if (offline) R.plurals.notif_pending_offline_message else R.plurals.notif_pending_message
+        val message = context.resources.getQuantityString(pluralRes, pendingCount, pendingCount)
 
         val open = PendingIntent.getActivity(
             context,
@@ -31,24 +34,24 @@ object NotificationHelper {
         val notification = NotificationCompat.Builder(context, PdvConnectApp.CHANNEL_ALERTS_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(context.getString(R.string.notif_pending_title))
-            .setContentText(
-                context.resources.getQuantityString(
-                    R.plurals.notif_pending_message,
-                    pendingCount,
-                    pendingCount,
-                ),
-            )
-            .setStyle(
-                NotificationCompat.BigTextStyle().bigText(
-                    context.resources.getQuantityString(
-                        R.plurals.notif_pending_message,
-                        pendingCount,
-                        pendingCount,
-                    ),
-                ),
-            )
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(open)
+            .setAutoCancel(true)
+            .build()
+
+        context.getSystemService(NotificationManager::class.java)
+            ?.notify(NOTIFICATION_PENDING_TX, notification)
+    }
+
+    fun showSyncError(context: Context, detail: String) {
+        val notification = NotificationCompat.Builder(context, PdvConnectApp.CHANNEL_ALERTS_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle(context.getString(R.string.notif_sync_error_title))
+            .setContentText(detail.take(120))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(detail.take(300)))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()
 
