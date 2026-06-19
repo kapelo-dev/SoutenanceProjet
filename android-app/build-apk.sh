@@ -34,10 +34,13 @@ if [ -z "$ANDROID_HOME" ] && [ -z "$ANDROID_SDK_ROOT" ]; then
   exit 1
 fi
 
-echo "Génération de l'APK debug..."
-./gradlew assembleDebug "$@"
+echo "Génération de l'APK release..."
+./gradlew assembleRelease "$@"
 
-APK="app/build/outputs/apk/debug/app-debug.apk"
+APK="app/build/outputs/apk/release/app-release-unsigned.apk"
+if [ ! -f "$APK" ]; then
+  APK="app/build/outputs/apk/release/app-release.apk"
+fi
 if [ -f "$APK" ]; then
   bash ../scripts/publish-mobile-apk.sh --force || true
   echo ""

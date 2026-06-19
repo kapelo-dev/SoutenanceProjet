@@ -6,14 +6,39 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 DEST="public/downloads/pdv-connect.apk"
-GRADLE_FILE="android-app/app/build.gradle.kts"
+VERSION_JSON="public/downloads/pdv-connect.version.json"
 mkdir -p public/downloads
 
+# Release en priorité — le debug peut rester obsolète après un bump de version.
 SOURCES=(
-  "android-app/app/build/outputs/apk/debug/app-debug.apk"
   "android-app/app/build/outputs/apk/release/app-release.apk"
   "android-app/app/build/outputs/apk/release/app-release-unsigned.apk"
+  "android-app/app/build/outputs/apk/debug/app-debug.apk"
 )
+
+read_apk_version() {
+  local apk_path="$1"
+  local meta_dir meta_file
+  meta_dir="$(dirname "$apk_path")"
+  meta_file="$meta_dir/output-metadata.json"
+
+  if [[ -f "$meta_file" ]]; then
+  python3 - "$meta_file" <<'PY'
+import json, sys
+data = json.load(open(sys.argv[1]))
+el = data.get("elements", [{}])[0]
+print(f"{el.get('versionCode', '')}\n{el.get('versionName', '')}")
+PY
+    return
+  fi
+
+  if command -v aapt >/dev/null 2>&1; then
+    aapt dump badging "$apk_path" | awk -F"'" '/versionCode=/{vc=$2} /versionName=/{vn=$2} END{print vc; print vn}'
+    return
+  fi
+
+  echo ""
+}
 
 if [[ -f "$DEST" && "${1:-}" != "--force" ]]; then
   echo "APK déjà présent : $DEST ($(du -h "$DEST" | cut -f1))"
@@ -22,28 +47,32 @@ fi
 
 for src in "${SOURCES[@]}"; do
   if [[ -f "$src" ]]; then
+    mapfile -t VERSION_INFO < <(read_apk_version "$src")
+    VC="${VERSION_INFO[0]:-}"
+    VN="${VERSION_INFO[1]:-}"
+
+    if [[ -z "$VC" ]]; then
+      echo "Impossible de lire versionCode depuis $src" >&2
+      continue
+    fi
+
     cp "$src" "$DEST"
     touch "$DEST"
-    echo "APK publié : $DEST ← $src ($(du -h "$DEST" | cut -f1))"
-    if [[ -f "$GRADLE_FILE" ]]; then
-      VC=$(grep -E 'versionCode\s*=' "$GRADLE_FILE" | head -1 | grep -oE '[0-9]+' || true)
-      VN=$(grep -E 'versionName\s*=' "$GRADLE_FILE" | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
-      if [[ -n "$VC" ]]; then
-        cat > public/downloads/pdv-connect.version.json <<EOF
+    cat > "$VERSION_JSON" <<EOF
 {"version_code":$VC,"version_name":"${VN:-$VC}"}
 EOF
-        echo "Version sidecar : public/downloads/pdv-connect.version.json (code=$VC)"
-        echo ""
-        echo "→ Mettez à jour le serveur (Render / .env) :"
-        echo "   MOBILE_APK_VERSION_CODE=$VC"
-        echo "   MOBILE_APK_MIN_VERSION_CODE=$VC"
-        [[ -n "$VN" ]] && echo "   MOBILE_APK_VERSION=$VN"
-      fi
-    fi
+
+    echo "APK publié : $DEST ← $src ($(du -h "$DEST" | cut -f1))"
+    echo "Version : $VN (code $VC) → $VERSION_JSON"
+    echo ""
+    echo "→ Mettez à jour le serveur (Render / .env) :"
+    echo "   MOBILE_APK_VERSION_CODE=$VC"
+    echo "   MOBILE_APK_MIN_VERSION_CODE=$VC"
+    [[ -n "$VN" ]] && echo "   MOBILE_APK_VERSION=$VN"
     exit 0
   fi
 done
 
 echo "Aucun APK trouvé. Générez-le d'abord :" >&2
-echo "  cd android-app && ./build-apk.sh" >&2
+echo "  cd android-app && ./gradlew assembleRelease" >&2
 exit 1

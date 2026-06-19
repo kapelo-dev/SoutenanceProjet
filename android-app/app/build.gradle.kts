@@ -18,6 +18,8 @@ android {
 
     buildTypes {
         release {
+            // Même clé que debug : permet de remplacer l'APK debug déjà installé chez les agents.
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
