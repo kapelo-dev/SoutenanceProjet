@@ -79,8 +79,19 @@ object SmsParser {
         )
     }
 
-    /** Montant principal : priorité à "Montant: X FCFA" pour ne pas prendre la commission. */
+    /** Montant principal : priorité aux libellés d'opération, pas au solde ni à la commission. */
     private fun extractMainAmount(text: String): Double? {
+        val operationPattern = Pattern.compile(
+            "(?:retrait|depot|dépôt|depôt)\\s+de\\s+([\\d\\s.,]+)\\s*FCFA",
+            Pattern.CASE_INSENSITIVE,
+        )
+        val opM = operationPattern.matcher(text)
+        if (opM.find()) {
+            val raw = opM.group(1)?.replace(" ", "")?.replace(",", ".")?.trim() ?: return null
+            val value = raw.toDoubleOrNull()
+            if (value != null && value > 0) return value
+        }
+
         val montantExplicit = Pattern.compile("montant\\s*:?\\s*([\\d\\s.,]+)\\s*FCFA", Pattern.CASE_INSENSITIVE)
         val m = montantExplicit.matcher(text)
         if (m.find()) {
@@ -88,17 +99,21 @@ object SmsParser {
             val value = raw.toDoubleOrNull()
             if (value != null && value > 0) return value
         }
+
         val otherAmounts = mutableListOf<Double>()
         for (pattern in AMOUNT_PATTERNS) {
             if (pattern.pattern().contains("montant", ignoreCase = true)) continue
             val matcher = pattern.matcher(text)
             while (matcher.find()) {
+                val contextStart = maxOf(0, matcher.start() - 40)
+                val context = text.substring(contextStart, matcher.start()).lowercase()
+                if (context.contains("commission") || context.contains("commision") || context.contains("solde")) continue
                 val raw = matcher.group(1)?.replace(" ", "")?.replace(",", ".")?.trim() ?: continue
                 val value = raw.toDoubleOrNull()
                 if (value != null && value > 0) otherAmounts.add(value)
             }
         }
-        return otherAmounts.maxOrNull()
+        return otherAmounts.minOrNull()
     }
 
     /** Commission : "Commission Net : 24,32 FCFA", "Commision: 21 FCFA" (typo Mix) */

@@ -55,9 +55,8 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
-    |--------------------------------------------------------------------------
-    | APK mobile (page /app-mobile)
-    |--------------------------------------------------------------------------
+    | Version APK : préférer public/downloads/pdv-connect.version.json (voir MobileApkVersion).
+    | Variables .env optionnelles — secours si le fichier JSON est absent.
     */
     'mobile_apk_version' => env('MOBILE_APK_VERSION', '1.0'),
     'mobile_apk_version_code' => (int) env('MOBILE_APK_VERSION_CODE', 1),

@@ -63,12 +63,12 @@ for src in "${SOURCES[@]}"; do
 EOF
 
     echo "APK publié : $DEST ← $src ($(du -h "$DEST" | cut -f1))"
-    echo "Version : $VN (code $VC) → $VERSION_JSON"
-    echo ""
-    echo "→ Mettez à jour le serveur (Render / .env) :"
-    echo "   MOBILE_APK_VERSION_CODE=$VC"
-    echo "   MOBILE_APK_MIN_VERSION_CODE=$VC"
-    [[ -n "$VN" ]] && echo "   MOBILE_APK_VERSION=$VN"
+        echo "Version : $VN (code $VC) → $VERSION_JSON"
+        echo ""
+        echo "→ Commit + push pour déployer sur Render (version auto, sans MAJ .env) :"
+        echo "   git add public/downloads/pdv-connect.apk public/downloads/pdv-connect.version.json"
+        echo "   git commit -m \"chore(mobile): APK v${VN:-$VC}\""
+        echo "   git push"
     exit 0
   fi
 done

@@ -52,13 +52,15 @@ class PublicPagesController extends Controller
             ? asset('downloads/pdv-connect.apk').'?v='.$apkUpdatedAt->timestamp
             : null;
 
+        $apkVersion = \App\Support\MobileApkVersion::resolve();
+
         return view('public.mobile-app', [
             'apkAvailable' => $apkAvailable,
             'apkUrl' => $apkUrlWithVersion,
             'apkSize' => $apkSize,
             'apkUpdatedAt' => $apkUpdatedAt,
-            'appVersion' => config('app.mobile_apk_version', '1.0'),
-            'appVersionCode' => (int) config('app.mobile_apk_version_code', 1),
+            'appVersion' => $apkVersion['version_name'],
+            'appVersionCode' => $apkVersion['version_code'],
         ]);
     }
 }
