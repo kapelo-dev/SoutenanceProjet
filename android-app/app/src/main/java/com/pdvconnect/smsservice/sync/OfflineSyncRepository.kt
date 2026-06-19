@@ -2,6 +2,7 @@ package com.pdvconnect.smsservice.sync
 
 import android.content.Context
 import android.util.Log
+import com.google.gson.JsonParser
 import com.pdvconnect.smsservice.api.AgentApiClient
 import com.pdvconnect.smsservice.api.AgentCancelRequest
 import com.pdvconnect.smsservice.api.ApiClient
@@ -30,6 +31,13 @@ class OfflineSyncRepository(private val context: Context) {
         val actionsSynced: Int = 0,
         val stillPending: Int = 0,
         val networkError: Boolean = false,
+        val lastError: String? = null,
+    )
+
+    data class EnqueueResult(
+        val queueId: Long,
+        val syncResult: SyncResult? = null,
+        val skippedReason: String? = null,
     )
 
     suspend fun enqueueSmsTransaction(
@@ -37,11 +45,20 @@ class OfflineSyncRepository(private val context: Context) {
         sender: String,
         baseUrl: String,
         apiToken: String,
-    ): Long = withContext(Dispatchers.IO) {
+    ): EnqueueResult = withContext(Dispatchers.IO) {
         parsed.reference?.let { ref ->
-            if (txDao.findByReference(ref) != null) {
-                Log.d(TAG, "Transaction déjà en file (réf. $ref)")
-                return@withContext -1L
+            val existing = txDao.findByReference(ref)
+            if (existing != null) {
+                Log.d(TAG, "Réf. $ref déjà en file (#${existing.id}, ${existing.status})")
+                if (existing.status == PendingTransactionEntity.STATUS_SYNCING) {
+                    txDao.update(existing.copy(status = PendingTransactionEntity.STATUS_PENDING))
+                }
+                val syncResult = if (NetworkUtils.isOnline(context)) syncAll() else null
+                return@withContext EnqueueResult(
+                    queueId = existing.id,
+                    syncResult = syncResult,
+                    skippedReason = "Réf. $ref — nouvelle tentative d'envoi",
+                )
             }
         }
 
@@ -66,15 +83,16 @@ class OfflineSyncRepository(private val context: Context) {
         val id = txDao.insert(entity)
         Log.d(TAG, "Transaction mise en file locale #$id")
 
-        if (NetworkUtils.isOnline(context)) {
+        val syncResult = if (NetworkUtils.isOnline(context)) {
             syncAll()
         } else {
             val pending = txDao.pendingCount()
             NotificationHelper.showPendingTransactions(context, pending, offline = true)
             SyncScheduler.scheduleImmediate(context)
+            null
         }
 
-        id
+        EnqueueResult(queueId = id, syncResult = syncResult)
     }
 
     suspend fun enqueueCancelTransaction(
@@ -108,6 +126,8 @@ class OfflineSyncRepository(private val context: Context) {
     }
 
     suspend fun syncAll(): SyncResult = withContext(Dispatchers.IO) {
+        txDao.resetSyncingToPending()
+
         if (!NetworkUtils.isOnline(context)) {
             val pending = txDao.pendingCount() + actionDao.pendingCount()
             NotificationHelper.showPendingTransactions(context, pending, offline = true)
@@ -124,6 +144,7 @@ class OfflineSyncRepository(private val context: Context) {
             try {
                 val api = ApiClient.create(item.apiBaseUrl, item.apiToken)
                 val agentContext = AgentContextProvider.resolve(context, item.agentCode)
+
                 val request = TransactionFromSmsRequest(
                     montant = item.montant,
                     type = item.type,
@@ -147,7 +168,7 @@ class OfflineSyncRepository(private val context: Context) {
                     txSynced++
                     Log.d(TAG, "Transaction #${item.id} synchronisée")
                 } else {
-                    val error = response.errorBody()?.string()?.take(200) ?: "HTTP ${response.code()}"
+                    val error = parseApiError(response.errorBody()?.string(), response.code())
                     lastApiError = error
                     txDao.update(
                         item.copy(
@@ -168,11 +189,12 @@ class OfflineSyncRepository(private val context: Context) {
                 )
                 break
             } catch (e: Exception) {
+                lastApiError = e.message ?: "Erreur inconnue"
                 txDao.update(
                     item.copy(
                         status = PendingTransactionEntity.STATUS_FAILED,
                         attemptCount = item.attemptCount + 1,
-                        lastError = e.message,
+                        lastError = lastApiError,
                     ),
                 )
             }
@@ -253,7 +275,23 @@ class OfflineSyncRepository(private val context: Context) {
             actionsSynced = actionSynced,
             stillPending = stillPending,
             networkError = hadNetworkError,
+            lastError = lastApiError,
         )
+    }
+
+    private fun parseApiError(body: String?, httpCode: Int): String {
+        if (!body.isNullOrBlank()) {
+            try {
+                val json = JsonParser.parseString(body)
+                if (json.isJsonObject) {
+                    val msg = json.asJsonObject.get("message")?.asString
+                    if (!msg.isNullOrBlank()) return msg.take(300)
+                }
+            } catch (_: Exception) {
+            }
+            return body.take(200)
+        }
+        return "HTTP $httpCode"
     }
 
     fun observePendingTransactionCount() = txDao.observePendingCount()

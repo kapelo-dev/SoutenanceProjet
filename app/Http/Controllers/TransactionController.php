@@ -192,8 +192,31 @@ class TransactionController extends Controller
             ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Agent ou opérateur introuvable (vérifiez le téléphone agent/SIM, agent_code, operator_code ou config sms_api).',
+                'message' => 'Agent ou opérateur introuvable (connectez-vous dans Espace agent ou vérifiez le téléphone agent en base).',
             ], 422);
+        }
+
+        if (!empty($validated['reference'])) {
+            $existing = Transaction::where('reference', $validated['reference'])->first();
+            if ($existing) {
+                \Log::info('[SMS-API] Transaction déjà existante (réf. duplicate)', [
+                    'reference' => $validated['reference'],
+                    'id' => $existing->id,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Transaction déjà enregistrée.',
+                    'transaction_id' => $existing->id,
+                    'transaction' => [
+                        'id' => $existing->id,
+                        'reference' => $existing->reference,
+                        'montant' => (float) $existing->montant,
+                        'type' => $existing->type,
+                        'statut' => $existing->statut,
+                    ],
+                ], 200);
+            }
         }
 
         $data = [

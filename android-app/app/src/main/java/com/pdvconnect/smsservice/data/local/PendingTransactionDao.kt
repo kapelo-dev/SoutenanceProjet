@@ -20,20 +20,28 @@ interface PendingTransactionDao {
 
     @Query(
         """
+        UPDATE pending_transactions SET status = 'pending'
+        WHERE status = 'syncing'
+        """
+    )
+    suspend fun resetSyncingToPending()
+
+    @Query(
+        """
         SELECT * FROM pending_transactions
-        WHERE status IN ('pending', 'failed')
+        WHERE status IN ('pending', 'failed', 'syncing')
         ORDER BY createdAt ASC
         """
     )
     suspend fun getPending(): List<PendingTransactionEntity>
 
-    @Query("SELECT COUNT(*) FROM pending_transactions WHERE status IN ('pending', 'failed')")
+    @Query("SELECT COUNT(*) FROM pending_transactions WHERE status IN ('pending', 'failed', 'syncing')")
     fun observePendingCount(): Flow<Int>
 
     @Query(
         """
         SELECT COUNT(*) FROM pending_transactions
-        WHERE status IN ('pending', 'failed')
+        WHERE status IN ('pending', 'failed', 'syncing')
         """
     )
     suspend fun pendingCount(): Int

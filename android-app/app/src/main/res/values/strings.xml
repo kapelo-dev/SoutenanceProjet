@@ -48,6 +48,9 @@
     <string name="notification_alerts_channel_name">Alertes PDV Connect</string>
     <string name="notification_alerts_channel_description">Transactions non envoyées et synchronisation</string>
     <string name="notif_sms_skipped_title">SMS non transféré</string>
+    <string name="notif_sms_ok_title">Transaction enregistrée</string>
+    <string name="notif_sms_ok_message">Réf. %1$s envoyée au serveur.</string>
+    <string name="notif_sms_failed_generic">Échec d\'envoi au serveur.</string>
     <string name="notif_pending_title">Transaction non envoyée</string>
     <string name="notif_sync_error_title">Échec d\'envoi au serveur</string>
     <string name="notif_sync_ok_title">Synchronisation réussie</string>

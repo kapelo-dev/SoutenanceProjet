@@ -23,7 +23,6 @@ class SmsReceiver : BroadcastReceiver() {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
 
         val appContext = context.applicationContext
-        // goAsync() : sans cela Android peut tuer le processus avant la fin du traitement.
         val pendingResult = goAsync()
 
         scope.launch {
@@ -31,6 +30,7 @@ class SmsReceiver : BroadcastReceiver() {
                 processIncomingSms(appContext, intent)
             } catch (e: Exception) {
                 Log.e(TAG, "Erreur traitement SMS", e)
+                NotificationHelper.showSyncError(appContext, "Erreur SMS : ${e.message?.take(120)}")
             } finally {
                 pendingResult.finish()
             }
@@ -47,14 +47,13 @@ class SmsReceiver : BroadcastReceiver() {
 
         if (!consent || !serviceEnabled || apiUrl.isNullOrBlank() || apiToken.isNullOrBlank()) {
             Log.w(TAG, "Service désactivé ou non configuré — SMS ignoré")
-            NotificationHelper.showSmsSkipped(context, "Service SMS inactif ou URL/token manquant")
+            NotificationHelper.showSmsSkipped(context, "Service SMS inactif — ouvrez Service SMS et enregistrez les paramètres.")
             return
         }
 
         ServiceStarter.startForegroundService(context)
 
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return
-        var processed = 0
 
         for (sms in messages) {
             val sender = sms.originatingAddress ?: ""
@@ -83,30 +82,54 @@ class SmsReceiver : BroadcastReceiver() {
             val parsed = SmsParser.parse(body, sender)
             if (parsed == null) {
                 Log.w(TAG, "SMS non reconnu comme transaction: ${body.take(80)}")
-                NotificationHelper.showSmsSkipped(context, "SMS reçu mais format non reconnu")
+                NotificationHelper.showSmsSkipped(context, "SMS reçu mais format non reconnu.")
                 continue
             }
             if (!parsed.isValid()) {
                 Log.w(TAG, "SMS parsé invalide: montant=${parsed.montant}, type=${parsed.type}")
+                NotificationHelper.showSmsSkipped(context, "SMS reçu mais montant/type invalide.")
                 continue
             }
 
             withContext(Dispatchers.IO) {
-                val id = OfflineSyncRepository.get(context).enqueueSmsTransaction(
+                val result = OfflineSyncRepository.get(context).enqueueSmsTransaction(
                     parsed = parsed,
                     sender = sender,
                     baseUrl = apiUrl,
                     apiToken = apiToken,
                 )
-                if (id > 0) {
-                    processed++
-                    Log.i(TAG, "Transaction mise en file #$id (ref=${parsed.reference})")
-                }
-            }
-        }
 
-        if (processed > 0) {
-            Log.i(TAG, "$processed transaction(s) traitée(s)")
+                result.skippedReason?.let {
+                    NotificationHelper.showSmsSkipped(context, it)
+                }
+
+                val sync = result.syncResult
+                when {
+                    sync == null -> {
+                        NotificationHelper.showPendingTransactions(
+                            context,
+                            OfflineSyncRepository.get(context).pendingTotalCount(),
+                            offline = true,
+                        )
+                    }
+                    sync.transactionsSynced > 0 -> {
+                        NotificationHelper.showSmsProcessed(context, parsed.reference, success = true)
+                    }
+                    sync.lastError != null -> {
+                        NotificationHelper.showSmsProcessed(
+                            context,
+                            parsed.reference,
+                            success = false,
+                            detail = sync.lastError,
+                        )
+                    }
+                    sync.stillPending > 0 -> {
+                        NotificationHelper.showPendingTransactions(context, sync.stillPending, offline = sync.networkError)
+                    }
+                }
+
+                Log.i(TAG, "SMS traité ref=${parsed.reference} queue=${result.queueId} sync=$sync")
+            }
         }
     }
 
