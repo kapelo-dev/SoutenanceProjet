@@ -11,6 +11,7 @@ import com.pdvconnect.smsservice.data.local.AppDatabase
 import com.pdvconnect.smsservice.data.local.PendingAgentActionEntity
 import com.pdvconnect.smsservice.data.local.PendingTransactionEntity
 import com.pdvconnect.smsservice.sms.SmsParser
+import com.pdvconnect.smsservice.util.AgentContextProvider
 import com.pdvconnect.smsservice.util.NetworkUtils
 import com.pdvconnect.smsservice.util.NotificationHelper
 import kotlinx.coroutines.Dispatchers
@@ -122,6 +123,7 @@ class OfflineSyncRepository(private val context: Context) {
             txDao.update(item.copy(status = PendingTransactionEntity.STATUS_SYNCING))
             try {
                 val api = ApiClient.create(item.apiBaseUrl, item.apiToken)
+                val agentContext = AgentContextProvider.resolve(context, item.agentCode)
                 val request = TransactionFromSmsRequest(
                     montant = item.montant,
                     type = item.type,
@@ -133,7 +135,9 @@ class OfflineSyncRepository(private val context: Context) {
                     source = "sms",
                     rawSms = item.rawSms,
                     commission = item.commission,
-                    agentCode = item.agentCode,
+                    agentId = agentContext.agentId,
+                    agentCode = agentContext.agentCode,
+                    agentTelephone = agentContext.agentTelephone,
                     operatorCode = item.operatorCode,
                     virtualBalanceAfter = item.virtualBalanceAfter,
                 )

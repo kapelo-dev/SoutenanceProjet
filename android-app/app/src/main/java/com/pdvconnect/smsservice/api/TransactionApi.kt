@@ -20,7 +20,9 @@ data class TransactionFromSmsRequest(
     @SerializedName("source") val source: String = "sms",
     @SerializedName("raw_sms") val rawSms: String? = null,
     @SerializedName("commission") val commission: Double? = null,
+    @SerializedName("agent_id") val agentId: Long? = null,
     @SerializedName("agent_code") val agentCode: String? = null,
+    @SerializedName("agent_telephone") val agentTelephone: String? = null,
     @SerializedName("operator_code") val operatorCode: String? = null,
     @SerializedName("virtual_balance_after") val virtualBalanceAfter: Double? = null
 )

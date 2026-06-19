@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Transaction;
 use App\Models\Agent;
+use App\Models\Transaction;
+use App\Support\AgentPhoneResolver;
 use App\Models\Operateur;
 use App\Models\Solde;
 use App\Traits\Exportable;
@@ -131,6 +132,8 @@ class TransactionController extends Controller
             'reference' => $request->input('reference'),
             'operator_code' => $request->input('operator_code'),
             'agent_code' => $request->input('agent_code'),
+            'agent_telephone' => $request->input('agent_telephone'),
+            'agent_id' => $request->input('agent_id'),
         ]);
 
         $validated = $request->validate([
@@ -145,6 +148,7 @@ class TransactionController extends Controller
             'raw_sms' => 'nullable|string|max:1000',
             'agent_id' => 'nullable|exists:agents,id',
             'agent_code' => 'nullable|string|max:50',
+            'agent_telephone' => 'nullable|string|max:20',
             'operateur_id' => 'nullable|exists:operateurs,id',
             'operator_code' => 'nullable|string|max:50',
             'commission' => 'nullable|numeric|min:0',
@@ -157,6 +161,9 @@ class TransactionController extends Controller
         }
         if (!$agent && !empty($validated['agent_code'])) {
             $agent = Agent::where('code_agent', $validated['agent_code'])->first();
+        }
+        if (!$agent && !empty($validated['agent_telephone'])) {
+            $agent = AgentPhoneResolver::resolve($validated['agent_telephone']);
         }
         if (!$agent) {
             $agent = Agent::find(config('sms_api.default_agent_id'));
@@ -178,12 +185,14 @@ class TransactionController extends Controller
 
         if (!$agent || !$operateur) {
             \Log::warning('[SMS-API] Agent ou opérateur introuvable', [
+                'agent_id' => $validated['agent_id'] ?? null,
                 'agent_code' => $validated['agent_code'] ?? null,
+                'agent_telephone' => $validated['agent_telephone'] ?? null,
                 'operator_code' => $validated['operator_code'] ?? null,
             ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Agent ou opérateur introuvable (vérifiez agent_code, operator_code ou config sms_api).',
+                'message' => 'Agent ou opérateur introuvable (vérifiez le téléphone agent/SIM, agent_code, operator_code ou config sms_api).',
             ], 422);
         }
 

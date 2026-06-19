@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -46,6 +47,18 @@ class AppPreferences(private val context: Context) {
 
     val agentDashboardCache: Flow<String?> = context.dataStore.data.map { prefs ->
         prefs[KEY_AGENT_DASHBOARD_CACHE]
+    }
+
+    val boundAgentId: Flow<Long?> = context.dataStore.data.map { prefs ->
+        prefs[KEY_BOUND_AGENT_ID]
+    }
+
+    val boundAgentCode: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[KEY_BOUND_AGENT_CODE]?.takeIf { it.isNotBlank() }
+    }
+
+    val boundAgentTelephone: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[KEY_BOUND_AGENT_PHONE]?.takeIf { it.isNotBlank() }
     }
 
     suspend fun isApiConfigured(): Boolean {
@@ -90,6 +103,23 @@ class AppPreferences(private val context: Context) {
         }
     }
 
+    suspend fun setBoundAgent(id: Long?, code: String?, telephone: String?) {
+        context.dataStore.edit { prefs ->
+            if (id == null || id <= 0L) prefs.remove(KEY_BOUND_AGENT_ID)
+            else prefs[KEY_BOUND_AGENT_ID] = id
+
+            if (code.isNullOrBlank()) prefs.remove(KEY_BOUND_AGENT_CODE)
+            else prefs[KEY_BOUND_AGENT_CODE] = code.trim()
+
+            if (telephone.isNullOrBlank()) prefs.remove(KEY_BOUND_AGENT_PHONE)
+            else prefs[KEY_BOUND_AGENT_PHONE] = telephone.trim()
+        }
+    }
+
+    suspend fun clearBoundAgent() {
+        setBoundAgent(null, null, null)
+    }
+
     suspend fun saveAll(
         consent: Boolean,
         serviceEnabled: Boolean,
@@ -118,5 +148,8 @@ class AppPreferences(private val context: Context) {
         private val KEY_FILTER_NUMBER_LEGACY = stringPreferencesKey("filter_number")
         private val KEY_AGENT_TOKEN = stringPreferencesKey("agent_session_token")
         private val KEY_AGENT_DASHBOARD_CACHE = stringPreferencesKey("agent_dashboard_cache")
+        private val KEY_BOUND_AGENT_ID = longPreferencesKey("bound_agent_id")
+        private val KEY_BOUND_AGENT_CODE = stringPreferencesKey("bound_agent_code")
+        private val KEY_BOUND_AGENT_PHONE = stringPreferencesKey("bound_agent_phone")
     }
 }

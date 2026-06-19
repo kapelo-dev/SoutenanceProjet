@@ -101,9 +101,9 @@ object SmsParser {
         return otherAmounts.maxOrNull()
     }
 
-    /** Commission : "Commission Net : 24,32 FCFA" ou "commission : 21 FCFA" */
+    /** Commission : "Commission Net : 24,32 FCFA", "Commision: 21 FCFA" (typo Mix) */
     private fun extractCommission(text: String): Double? {
-        val p = Pattern.compile("commission\\s+(?:net\\s*)?:?\\s*([\\d\\s.,]+)\\s*FCFA", Pattern.CASE_INSENSITIVE)
+        val p = Pattern.compile("commis(?:sion|ion)\\s*(?:net\\s*)?:?\\s*([\\d\\s.,]+)\\s*FCFA", Pattern.CASE_INSENSITIVE)
         val m = p.matcher(text)
         if (m.find()) {
             val raw = m.group(1)?.replace(" ", "")?.replace(",", ".")?.trim() ?: return null

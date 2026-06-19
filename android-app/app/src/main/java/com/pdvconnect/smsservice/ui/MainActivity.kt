@@ -90,6 +90,7 @@ class MainActivity : AppCompatActivity() {
 
     private suspend fun initializeMainUi() {
         agentToken = prefs.agentSessionToken.first()
+        ensureBoundAgentFromCache()
         binding.mainTabs.visibility = View.VISIBLE
         binding.codeEntryPanel.visibility = View.GONE
         suppressTabCallback = true
@@ -331,14 +332,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestPermissionsIfNeeded() {
+        val needed = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+                needed.add(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions.launch(arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS))
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
+            needed.add(Manifest.permission.RECEIVE_SMS)
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
+            needed.add(Manifest.permission.READ_SMS)
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+            needed.add(Manifest.permission.READ_PHONE_STATE)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_NUMBERS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            needed.add(Manifest.permission.READ_PHONE_NUMBERS)
+        }
+        if (needed.isNotEmpty()) {
+            requestPermissions.launch(needed.toTypedArray())
         }
     }
 
@@ -433,6 +448,9 @@ class MainActivity : AppCompatActivity() {
                     agentToken = response.token
                     currentAgent = response.agent
                     prefs.setAgentSessionToken(response.token)
+                    response.agent?.let { agent ->
+                        prefs.setBoundAgent(agent.id, agent.codeAgent, agent.telephone)
+                    }
                     dashboardCache.save(response)
                     showingOfflineCache = false
                     renderDashboard(response.dashboard, response.agent, offline = false)
@@ -465,6 +483,9 @@ class MainActivity : AppCompatActivity() {
                 val response = api.dashboard("Bearer $token")
                 if (response.success) {
                     currentAgent = response.agent ?: currentAgent
+                    currentAgent?.let { agent ->
+                        prefs.setBoundAgent(agent.id, agent.codeAgent, agent.telephone)
+                    }
                     dashboardCache.save(
                         AgentLoginResponse(
                             success = true,
@@ -514,10 +535,18 @@ class MainActivity : AppCompatActivity() {
             currentAgent = null
             showingOfflineCache = false
             prefs.setAgentSessionToken(null)
+            prefs.clearBoundAgent()
             dashboardCache.clear()
             binding.editAgentPassword.setText("")
             binding.textAgentOfflineBanner.visibility = View.GONE
             updateAgentUi()
+        }
+    }
+
+    private suspend fun ensureBoundAgentFromCache() {
+        if (prefs.boundAgentId.first() != null) return
+        dashboardCache.load()?.agent?.let { agent ->
+            prefs.setBoundAgent(agent.id, agent.codeAgent, agent.telephone)
         }
     }
 
