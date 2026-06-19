@@ -19,9 +19,12 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.tabs.TabLayout
+import com.google.android.material.textfield.TextInputEditText
 import com.pdvconnect.smsservice.R
 import com.pdvconnect.smsservice.api.AgentApiClient
+import com.pdvconnect.smsservice.api.AgentBalances
 import com.pdvconnect.smsservice.api.AgentCancelRequest
+import com.pdvconnect.smsservice.api.AgentChangePasswordRequest
 import com.pdvconnect.smsservice.api.AgentDashboard
 import com.pdvconnect.smsservice.api.AgentInfo
 import com.pdvconnect.smsservice.api.AgentLoginRequest
@@ -58,6 +61,7 @@ class MainActivity : AppCompatActivity() {
     private var currentAgent: AgentInfo? = null
     private var showingOfflineCache = false
     private var pendingUpdateResult: AppUpdateChecker.Result? = null
+    private var configAccessDialog: AlertDialog? = null
 
     private val requestPermissions = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -77,7 +81,6 @@ class MainActivity : AppCompatActivity() {
 
         setupTabs()
         requestPermissionsIfNeeded()
-        setupCodeAccessOverlay()
         setupListeners()
         setupAgentListeners()
         setupUpdatePanel()
@@ -196,7 +199,6 @@ class MainActivity : AppCompatActivity() {
                 if (tab?.position == TAB_SMS) {
                     requestSmsTabAccess()
                 } else {
-                    hideConfigAccessOverlay()
                     showAgentTab()
                 }
             }
@@ -216,13 +218,15 @@ class MainActivity : AppCompatActivity() {
             suppressTabCallback = true
             binding.mainTabs.getTabAt(TAB_AGENT)?.select()
             suppressTabCallback = false
-            prepareConfigAccessOverlay()
-            showConfigAccessOverlay()
+            if (prefs.isApiConfigured()) {
+                showConfigCodeDialog()
+            } else {
+                showFirstSetupDialog()
+            }
         }
     }
 
     private fun showSmsTab() {
-        hideConfigAccessOverlay()
         binding.configPanel.visibility = View.VISIBLE
         binding.agentPanel.visibility = View.GONE
         lifecycleScope.launch {
@@ -232,104 +236,128 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAgentTab() {
-        hideConfigAccessOverlay()
         binding.configPanel.visibility = View.GONE
         binding.agentPanel.visibility = View.VISIBLE
         updateAgentUi()
     }
 
-    private fun showConfigAccessOverlay() {
-        binding.codeEntryPanel.visibility = View.VISIBLE
-        binding.configPanel.visibility = View.GONE
-        binding.agentPanel.visibility = View.GONE
-    }
+    private fun showConfigCodeDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_sms_config_code, null)
+        val editCode = view.findViewById<TextInputEditText>(R.id.edit_dialog_config_code)
 
-    private fun hideConfigAccessOverlay() {
-        binding.codeEntryPanel.visibility = View.GONE
-    }
+        configAccessDialog?.dismiss()
+        configAccessDialog = AlertDialog.Builder(this)
+            .setTitle(R.string.dialog_sms_config_title)
+            .setView(view)
+            .setPositiveButton(R.string.code_access_button, null)
+            .setNegativeButton(R.string.code_access_cancel, null)
+            .create()
 
-    private suspend fun prepareConfigAccessOverlay() {
-        val configured = prefs.isApiConfigured()
-
-        binding.textCodeEntrySubtitle.text = if (configured) {
-            getString(R.string.code_entry_subtitle)
-        } else {
-            getString(R.string.code_entry_setup_subtitle)
-        }
-        binding.layoutCodeEntryUrl.visibility = if (configured) View.GONE else View.VISIBLE
-        binding.layoutCodeEntryToken.visibility = if (configured) View.GONE else View.VISIBLE
-        binding.editCodeEntryUrl.setText(prefs.apiBaseUrl.first() ?: "")
-        binding.editCodeEntryToken.setText(prefs.apiToken.first() ?: "")
-        binding.editConfigCode.setText("")
-    }
-
-    private fun setupCodeAccessOverlay() {
-        binding.buttonCodeCancel.setOnClickListener {
-            hideConfigAccessOverlay()
-            suppressTabCallback = true
-            binding.mainTabs.getTabAt(TAB_AGENT)?.select()
-            suppressTabCallback = false
-            showAgentTab()
-        }
-
-        binding.buttonCodeAccess.setOnClickListener {
-            lifecycleScope.launch { validateConfigAccess() }
-        }
-    }
-
-    private suspend fun validateConfigAccess() {
-        val configured = prefs.isApiConfigured()
-        val apiUrl = binding.editCodeEntryUrl.text?.toString()?.trim()
-            .takeUnless { it.isNullOrBlank() }
-            ?: prefs.apiBaseUrl.first()
-        val apiToken = binding.editCodeEntryToken.text?.toString()?.trim()
-            .takeUnless { it.isNullOrBlank() }
-            ?: prefs.apiToken.first()
-        val configCode = binding.editConfigCode.text?.toString()?.trim() ?: ""
-
-        if (apiUrl.isNullOrBlank()) {
-            Toast.makeText(this, R.string.api_url_required_for_verify, Toast.LENGTH_LONG).show()
-            return
-        }
-
-        if (!configured && apiToken.isNullOrBlank()) {
-            Toast.makeText(this, R.string.api_setup_required, Toast.LENGTH_LONG).show()
-            return
-        }
-
-        if (configCode.isBlank()) {
-            Toast.makeText(this, "Code d'accès requis.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        if (!NetworkUtils.isOnline(this)) {
-            Toast.makeText(this, R.string.agent_login_offline, Toast.LENGTH_LONG).show()
-            return
-        }
-
-        try {
-            val verify = MobileConfigApiClient.create(apiUrl).verifyConfigCode(VerifyConfigCodeRequest(configCode))
-            if (!verify.valid) {
-                Toast.makeText(this, verify.message ?: getString(R.string.code_config_invalid), Toast.LENGTH_LONG).show()
-                return
+        configAccessDialog?.setOnShowListener {
+            configAccessDialog?.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
+                lifecycleScope.launch {
+                    val ok = validateConfigAccess(
+                        apiUrl = prefs.apiBaseUrl.first(),
+                        apiToken = prefs.apiToken.first(),
+                        configCode = editCode.text?.toString()?.trim().orEmpty(),
+                        configured = true,
+                    )
+                    if (ok) {
+                        configAccessDialog?.dismiss()
+                        unlockSmsTab()
+                    }
+                }
             }
-        } catch (_: Exception) {
-            Toast.makeText(this, R.string.code_config_invalid, Toast.LENGTH_LONG).show()
-            return
         }
+        configAccessDialog?.show()
+    }
 
-        if (!configured) {
-            prefs.setApiBaseUrl(apiUrl)
-            prefs.setApiToken(apiToken!!)
-            Toast.makeText(this, "URL et token enregistrés.", Toast.LENGTH_SHORT).show()
+    private suspend fun showFirstSetupDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_sms_first_setup, null)
+        val editUrl = view.findViewById<TextInputEditText>(R.id.edit_dialog_setup_url)
+        val editToken = view.findViewById<TextInputEditText>(R.id.edit_dialog_setup_token)
+        val editCode = view.findViewById<TextInputEditText>(R.id.edit_dialog_setup_code)
+        editUrl.setText(prefs.apiBaseUrl.first() ?: "")
+        editToken.setText(prefs.apiToken.first() ?: "")
+
+        configAccessDialog?.dismiss()
+        configAccessDialog = AlertDialog.Builder(this)
+            .setTitle(R.string.dialog_first_setup_title)
+            .setView(view)
+            .setPositiveButton(R.string.code_access_button, null)
+            .setNegativeButton(R.string.code_access_cancel, null)
+            .create()
+
+        configAccessDialog?.setOnShowListener {
+            configAccessDialog?.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
+                lifecycleScope.launch {
+                    val ok = validateConfigAccess(
+                        apiUrl = editUrl.text?.toString()?.trim(),
+                        apiToken = editToken.text?.toString()?.trim(),
+                        configCode = editCode.text?.toString()?.trim().orEmpty(),
+                        configured = false,
+                    )
+                    if (ok) {
+                        configAccessDialog?.dismiss()
+                        unlockSmsTab()
+                    }
+                }
+            }
         }
+        configAccessDialog?.show()
+    }
 
+    private fun unlockSmsTab() {
         smsConfigUnlockedThisSession = true
-        hideConfigAccessOverlay()
         suppressTabCallback = true
         binding.mainTabs.getTabAt(TAB_SMS)?.select()
         suppressTabCallback = false
         showSmsTab()
+    }
+
+    private suspend fun validateConfigAccess(
+        apiUrl: String?,
+        apiToken: String?,
+        configCode: String,
+        configured: Boolean,
+    ): Boolean {
+        if (apiUrl.isNullOrBlank()) {
+            Toast.makeText(this, R.string.api_url_required_for_verify, Toast.LENGTH_LONG).show()
+            return false
+        }
+
+        if (!configured && apiToken.isNullOrBlank()) {
+            Toast.makeText(this, R.string.api_setup_required, Toast.LENGTH_LONG).show()
+            return false
+        }
+
+        if (configCode.isBlank()) {
+            Toast.makeText(this, "Code d'accès requis.", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        if (!NetworkUtils.isOnline(this)) {
+            Toast.makeText(this, R.string.agent_login_offline, Toast.LENGTH_LONG).show()
+            return false
+        }
+
+        return try {
+            val verify = MobileConfigApiClient.create(apiUrl).verifyConfigCode(VerifyConfigCodeRequest(configCode))
+            if (!verify.valid) {
+                Toast.makeText(this, verify.message ?: getString(R.string.code_config_invalid), Toast.LENGTH_LONG).show()
+                false
+            } else {
+                if (!configured) {
+                    prefs.setApiBaseUrl(apiUrl)
+                    prefs.setApiToken(apiToken!!)
+                    Toast.makeText(this, "URL et token enregistrés.", Toast.LENGTH_SHORT).show()
+                }
+                true
+            }
+        } catch (_: Exception) {
+            Toast.makeText(this, R.string.code_config_invalid, Toast.LENGTH_LONG).show()
+            false
+        }
     }
 
     private fun requestPermissionsIfNeeded() {
@@ -372,6 +400,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupAgentListeners() {
         binding.buttonAgentLogin.setOnClickListener { performAgentLogin() }
         binding.buttonAgentRefresh.setOnClickListener { refreshAgentDashboard() }
+        binding.buttonAgentChangePassword.setOnClickListener { showChangePasswordDialog() }
         binding.buttonAgentLogout.setOnClickListener { performAgentLogout() }
     }
 
@@ -565,8 +594,10 @@ class MainActivity : AppCompatActivity() {
             binding.textAgentWelcome.text = "Bonjour ${it.prenom ?: ""} ${it.nom ?: ""}".trim()
         }
 
-        val stats = dashboard?.stats
         val fmt = NumberFormat.getNumberInstance(Locale.FRANCE)
+        renderBalances(dashboard?.balances, fmt)
+
+        val stats = dashboard?.stats
 
         binding.agentTodayOperateurCards.removeAllViews()
         binding.agentMonthOperateurCards.removeAllViews()
@@ -627,6 +658,130 @@ class MainActivity : AppCompatActivity() {
         transactions.forEach { tx ->
             binding.agentTransactionsList.addView(createTransactionRow(tx, offline))
         }
+    }
+
+    private fun renderBalances(balances: AgentBalances?, fmt: NumberFormat) {
+        binding.agentBalanceCards.removeAllViews()
+        if (balances == null) return
+
+        binding.agentBalanceCards.addView(
+            createBalanceCard(getString(R.string.agent_balance_espece), balances.espece, fmt, R.color.primary),
+        )
+        balances.virtuels.orEmpty().forEach { virtuel ->
+            val accent = when (virtuel.code?.uppercase()) {
+                "YAS" -> R.color.yas_brown
+                "FLOOZ" -> R.color.flooz_blue
+                else -> R.color.primary
+            }
+            val label = getString(
+                R.string.agent_balance_virtuel,
+                virtuel.libelle ?: virtuel.code ?: "Opérateur",
+            )
+            binding.agentBalanceCards.addView(createBalanceCard(label, virtuel.montant, fmt, accent))
+        }
+    }
+
+    private fun createBalanceCard(title: String, amount: Double, fmt: NumberFormat, accentColor: Int): MaterialCardView {
+        val padding = dp(12)
+        val inner = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(padding, padding, padding, padding)
+        }
+        inner.addView(TextView(this).apply {
+            text = title
+            textSize = 13f
+            setTextColor(ContextCompat.getColor(this@MainActivity, accentColor))
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        })
+        inner.addView(TextView(this).apply {
+            text = "${fmt.format(amount)} F"
+            textSize = 20f
+            setPadding(0, dp(4), 0, 0)
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        })
+
+        return MaterialCardView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { bottomMargin = dp(8) }
+            radius = dp(12).toFloat()
+            cardElevation = dp(2).toFloat()
+            setCardBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.card_bg))
+            addView(inner)
+        }
+    }
+
+    private fun showChangePasswordDialog() {
+        val token = agentToken
+        if (token.isNullOrBlank()) {
+            Toast.makeText(this, "Connectez-vous d'abord.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val view = layoutInflater.inflate(R.layout.dialog_change_password, null)
+        val editCurrent = view.findViewById<TextInputEditText>(R.id.edit_current_password)
+        val editNew = view.findViewById<TextInputEditText>(R.id.edit_new_password)
+        val editConfirm = view.findViewById<TextInputEditText>(R.id.edit_confirm_password)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.dialog_change_password_title)
+            .setView(view)
+            .setPositiveButton(R.string.save, null)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val current = editCurrent.text?.toString().orEmpty()
+                val newPass = editNew.text?.toString().orEmpty()
+                val confirm = editConfirm.text?.toString().orEmpty()
+
+                if (current.isBlank() || newPass.isBlank()) {
+                    Toast.makeText(this, "Tous les champs sont requis.", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                if (newPass.length < 8) {
+                    Toast.makeText(this, "Minimum 8 caractères.", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                if (newPass != confirm) {
+                    Toast.makeText(this, R.string.agent_password_mismatch, Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                lifecycleScope.launch {
+                    if (!NetworkUtils.isOnline(this@MainActivity)) {
+                        Toast.makeText(this@MainActivity, R.string.agent_login_offline, Toast.LENGTH_LONG).show()
+                        return@launch
+                    }
+                    val apiUrl = prefs.apiBaseUrl.first()
+                    if (apiUrl.isNullOrBlank()) {
+                        Toast.makeText(this@MainActivity, R.string.agent_api_url_required, Toast.LENGTH_LONG).show()
+                        return@launch
+                    }
+                    try {
+                        val response = AgentApiClient.create(apiUrl).changePassword(
+                            "Bearer $token",
+                            AgentChangePasswordRequest(current, newPass, confirm),
+                        )
+                        if (response.success) {
+                            dialog.dismiss()
+                            Toast.makeText(this@MainActivity, R.string.agent_password_changed, Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(
+                                this@MainActivity,
+                                response.message ?: "Échec du changement.",
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(this@MainActivity, "Erreur : ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+        dialog.show()
     }
 
     private fun createOperateurCard(op: OperateurStats, fmt: NumberFormat): MaterialCardView {

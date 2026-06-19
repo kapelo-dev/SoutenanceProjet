@@ -85,6 +85,7 @@ Route::prefix('mobile/agent')->group(function () {
     Route::post('/login', [\App\Http\Controllers\Api\MobileAgentController::class, 'login']);
     Route::get('/dashboard', [\App\Http\Controllers\Api\MobileAgentController::class, 'dashboard']);
     Route::post('/logout', [\App\Http\Controllers\Api\MobileAgentController::class, 'logout']);
+    Route::post('/change-password', [\App\Http\Controllers\Api\MobileAgentController::class, 'changePassword']);
     Route::post('/transactions/{transaction}/annuler', [\App\Http\Controllers\Api\MobileAgentController::class, 'cancelTransaction']);
 });
 

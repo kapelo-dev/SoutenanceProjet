@@ -113,6 +113,38 @@ class MobileAgentController extends Controller
         return response()->json(['success' => true, 'message' => 'Déconnexion réussie.']);
     }
 
+    public function changePassword(Request $request)
+    {
+        $agent = $this->resolveAgent($request);
+
+        if (! $agent) {
+            return response()->json(['success' => false, 'message' => 'Session expirée.'], 401);
+        }
+
+        $request->validate([
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $utilisateur = $agent->utilisateur;
+
+        if (! $utilisateur) {
+            return response()->json(['success' => false, 'message' => 'Compte utilisateur introuvable.'], 422);
+        }
+
+        if (! Hash::check($request->current_password, $utilisateur->mot_de_passe)) {
+            return response()->json(['success' => false, 'message' => 'Mot de passe actuel incorrect.'], 422);
+        }
+
+        $utilisateur->mot_de_passe = Hash::make($request->password);
+        $utilisateur->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Mot de passe modifié avec succès.',
+        ]);
+    }
+
     public static function cacheKey(string $token): string
     {
         return 'mobile_agent:'.$token;
@@ -185,6 +217,7 @@ class MobileAgentController extends Controller
             ->map(fn (Transaction $t) => $this->formatTransactionRow($t));
 
         return [
+            'balances' => $this->buildBalances($agent),
             'stats' => [
                 'today_count' => $todayQuery->count(),
                 'today_total' => (float) $todayQuery->sum('montant'),
@@ -196,6 +229,30 @@ class MobileAgentController extends Controller
                 'month_by_operateur' => $this->statsByOperateur((clone $baseQuery)->duMois()->valide()),
             ],
             'transactions' => $transactions,
+        ];
+    }
+
+    private function buildBalances(Agent $agent): array
+    {
+        $soldes = $agent->soldesActuels(['operateur']);
+        $espece = 0.0;
+        $virtuels = [];
+
+        foreach ($soldes as $solde) {
+            if ($solde->type === 'espece') {
+                $espece = (float) $solde->montant;
+            } elseif ($solde->type === 'virtuel' && $solde->operateur) {
+                $virtuels[] = [
+                    'code' => $solde->operateur->code,
+                    'libelle' => $solde->operateur->libelle,
+                    'montant' => (float) $solde->montant,
+                ];
+            }
+        }
+
+        return [
+            'espece' => $espece,
+            'virtuels' => $virtuels,
         ];
     }
 

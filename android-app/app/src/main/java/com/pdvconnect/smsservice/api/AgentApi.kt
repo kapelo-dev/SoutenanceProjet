@@ -12,6 +12,12 @@ data class AgentLoginRequest(
     val password: String,
 )
 
+data class AgentChangePasswordRequest(
+    @SerializedName("current_password") val currentPassword: String,
+    val password: String,
+    @SerializedName("password_confirmation") val passwordConfirmation: String,
+)
+
 data class AgentLoginResponse(
     val success: Boolean,
     val message: String? = null,
@@ -30,8 +36,20 @@ data class AgentInfo(
 )
 
 data class AgentDashboard(
+    val balances: AgentBalances? = null,
     val stats: AgentStats?,
     val transactions: List<AgentTransaction>?,
+)
+
+data class AgentBalances(
+    val espece: Double = 0.0,
+    val virtuels: List<AgentVirtuelBalance>? = null,
+)
+
+data class AgentVirtuelBalance(
+    val code: String?,
+    val libelle: String?,
+    val montant: Double = 0.0,
 )
 
 data class AgentStats(
@@ -86,6 +104,12 @@ interface AgentApi {
 
     @POST("api/mobile/agent/logout")
     suspend fun logout(@Header("Authorization") authorization: String): AgentLoginResponse
+
+    @POST("api/mobile/agent/change-password")
+    suspend fun changePassword(
+        @Header("Authorization") authorization: String,
+        @Body body: AgentChangePasswordRequest,
+    ): AgentLoginResponse
 }
 
 object AgentApiClient {

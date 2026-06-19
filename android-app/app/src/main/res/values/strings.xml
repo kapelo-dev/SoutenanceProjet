@@ -57,4 +57,16 @@
     <string name="agent_offline_banner">Mode hors-ligne — données affichées depuis le cache local</string>
     <string name="agent_cancel_queued">Annulation enregistrée — sera envoyée au retour du réseau</string>
     <string name="agent_login_offline">Connexion impossible sans internet</string>
+    <string name="agent_balances_title">Mes soldes</string>
+    <string name="agent_balance_espece">Espèce (caisse)</string>
+    <string name="agent_balance_virtuel">Virtuel %1$s</string>
+    <string name="agent_change_password">Modifier le mot de passe</string>
+    <string name="agent_current_password_hint">Mot de passe actuel</string>
+    <string name="agent_new_password_hint">Nouveau mot de passe (min. 8 car.)</string>
+    <string name="agent_confirm_password_hint">Confirmer le mot de passe</string>
+    <string name="agent_password_changed">Mot de passe modifié.</string>
+    <string name="agent_password_mismatch">Les mots de passe ne correspondent pas.</string>
+    <string name="dialog_sms_config_title">Accès configuration SMS</string>
+    <string name="dialog_first_setup_title">Configuration Service SMS</string>
+    <string name="dialog_change_password_title">Modifier le mot de passe</string>
 </resources>
