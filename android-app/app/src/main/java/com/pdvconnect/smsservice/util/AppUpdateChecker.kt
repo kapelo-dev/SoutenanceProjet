@@ -20,8 +20,9 @@ object AppUpdateChecker {
         val response = MobileConfigApiClient.create(baseUrl).appVersion()
         val current = BuildConfig.VERSION_CODE
         val minRequired = response.minVersionCode.coerceAtLeast(1)
-        val latest = response.versionCode.coerceAtLeast(minRequired)
-        val updateRequired = current < minRequired || current < latest
+        val latest = response.versionCode.coerceAtLeast(1)
+        // Blocage uniquement si en dessous du minimum obligatoire (pas à chaque version « latest »).
+        val updateRequired = current < minRequired
 
         val downloadUrl = when {
             !response.downloadPageUrl.isNullOrBlank() -> response.downloadPageUrl

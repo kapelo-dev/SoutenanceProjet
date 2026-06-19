@@ -136,7 +136,7 @@ class MainActivity : AppCompatActivity() {
             return false
         }
         if (!NetworkUtils.isOnline(this)) {
-            return binding.updateRequiredPanel.visibility == View.VISIBLE
+            return false
         }
 
         return try {
@@ -149,7 +149,8 @@ class MainActivity : AppCompatActivity() {
                 false
             }
         } catch (_: Exception) {
-            return binding.updateRequiredPanel.visibility == View.VISIBLE
+            hideUpdateRequired()
+            false
         }
     }
 

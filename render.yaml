@@ -46,11 +46,11 @@ envVarGroups:
       - key: SECURITY_LOGIN_RATE_LIMIT
         value: 10,1
       - key: MOBILE_APK_VERSION
-        value: "1.2"
+        value: "1.3"
       - key: MOBILE_APK_VERSION_CODE
-        value: "3"
+        value: "4"
       - key: MOBILE_APK_MIN_VERSION_CODE
-        value: "3"
+        value: "4"
 
 services:
   - type: web

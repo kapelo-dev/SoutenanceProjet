@@ -29,6 +29,10 @@ for src in "${SOURCES[@]}"; do
       VC=$(grep -E 'versionCode\s*=' "$GRADLE_FILE" | head -1 | grep -oE '[0-9]+' || true)
       VN=$(grep -E 'versionName\s*=' "$GRADLE_FILE" | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
       if [[ -n "$VC" ]]; then
+        cat > public/downloads/pdv-connect.version.json <<EOF
+{"version_code":$VC,"version_name":"${VN:-$VC}"}
+EOF
+        echo "Version sidecar : public/downloads/pdv-connect.version.json (code=$VC)"
         echo ""
         echo "→ Mettez à jour le serveur (Render / .env) :"
         echo "   MOBILE_APK_VERSION_CODE=$VC"
