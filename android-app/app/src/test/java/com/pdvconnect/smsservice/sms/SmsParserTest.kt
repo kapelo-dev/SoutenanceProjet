@@ -63,6 +63,18 @@ class SmsParserTest {
     }
 
     @Test
+    fun parseDepotWithCommissionAndRef() {
+        val sms = "Dépôt de 1 000 FCFA effectue pour 90828645(H Latevi DJODJI), le 17-06-26 23:38. Commission: 14 FCFA. Nouveau solde Mixx : 208 856 FCFA (commission incluse). Ref: 17881049384."
+        val p = SmsParser.parse(sms)
+        assertNotNull(p)
+        assertEquals(1000.0, p!!.montant, 0.01)
+        assertEquals("depot", p.type)
+        assertEquals("17881049384", p.reference)
+        assertEquals(14.0, p.commission!!, 0.01)
+        assertEquals("90828645", p.clientTelephone)
+    }
+
+    @Test
     fun parseNullWhenNoAmount() {
         assertNull(SmsParser.parse("Bonjour, votre solde a été mis à jour."))
     }

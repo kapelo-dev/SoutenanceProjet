@@ -178,7 +178,10 @@ class OfflineSyncRepository(private val context: Context) {
         var hadNetworkError = false
         var lastApiError: String? = null
 
-        for (item in txDao.getPending()) {
+        for (rawItem in txDao.getPending()) {
+            // Répare les entrées mises en file par une ancienne version (réf./commission manquantes)
+            // en re-parsant le SMS brut avec le parser courant.
+            val item = healPendingItem(rawItem)
             txDao.update(item.copy(status = PendingTransactionEntity.STATUS_SYNCING))
             try {
                 val api = ApiClient.create(item.apiBaseUrl, item.apiToken)
@@ -324,6 +327,28 @@ class OfflineSyncRepository(private val context: Context) {
             networkError = hadNetworkError,
             lastError = lastApiError,
         )
+    }
+
+    /** Récupère réf./commission/catégorie depuis le SMS brut si l'entrée a été créée par une ancienne version. */
+    private suspend fun healPendingItem(item: PendingTransactionEntity): PendingTransactionEntity {
+        if (!item.reference.isNullOrBlank() && item.commission != null) return item
+        val raw = item.rawSms ?: return item
+        val parsed = SmsParser.parse(raw, item.sender) ?: return item
+
+        val healed = item.copy(
+            reference = item.reference?.takeIf { it.isNotBlank() } ?: parsed.reference,
+            commission = item.commission ?: parsed.commission,
+            clientTelephone = item.clientTelephone ?: parsed.clientTelephone,
+            clientNom = item.clientNom ?: parsed.clientNom,
+            transactionCategory = parsed.transactionCategory,
+            sourceAgentCode = item.sourceAgentCode ?: parsed.sourceAgentCode,
+            sourceAgentName = item.sourceAgentName ?: parsed.sourceAgentName,
+        )
+        if (healed != item) {
+            txDao.update(healed)
+            Log.d(TAG, "Entrée #${item.id} réparée (réf=${healed.reference})")
+        }
+        return healed
     }
 
     private fun parseApiError(body: String?, httpCode: Int): String {
