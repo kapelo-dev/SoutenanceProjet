@@ -58,8 +58,11 @@ for src in "${SOURCES[@]}"; do
 
     cp "$src" "$DEST"
     touch "$DEST"
+    # min_version_code = version_code par défaut : force la MAJ de toute version antérieure.
+    # Override possible : ./publish-mobile-apk.sh --force <min_version_code>
+    MIN_VC="${2:-$VC}"
     cat > "$VERSION_JSON" <<EOF
-{"version_code":$VC,"version_name":"${VN:-$VC}"}
+{"version_code":$VC,"version_name":"${VN:-$VC}","min_version_code":$MIN_VC}
 EOF
 
     echo "APK publié : $DEST ← $src ($(du -h "$DEST" | cut -f1))"

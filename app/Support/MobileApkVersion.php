@@ -15,14 +15,13 @@ class MobileApkVersion
 
         if ($fromFile !== null) {
             $versionCode = $fromFile['version_code'];
-            $minOverride = env('MOBILE_APK_MIN_VERSION_CODE');
 
             return [
                 'version_code' => $versionCode,
                 'version_name' => $fromFile['version_name'],
-                'min_version_code' => ($minOverride !== null && $minOverride !== '')
-                    ? min((int) $minOverride, $versionCode)
-                    : $versionCode,
+                // version.json fait foi (généré au build). On ne consulte plus l'env Render
+                // pour éviter qu'un MOBILE_APK_MIN_VERSION_CODE obsolète désactive la MAJ obligatoire.
+                'min_version_code' => min($fromFile['min_version_code'], $versionCode),
                 'apk_available' => is_file($apkPath),
                 'updated_at' => is_file($apkPath) ? filemtime($apkPath) : null,
             ];
@@ -56,6 +55,9 @@ class MobileApkVersion
         return [
             'version_code' => $versionCode,
             'version_name' => (string) ($data['version_name'] ?? $versionCode),
+            'min_version_code' => isset($data['min_version_code'])
+                ? (int) $data['min_version_code']
+                : $versionCode,
         ];
     }
 }
