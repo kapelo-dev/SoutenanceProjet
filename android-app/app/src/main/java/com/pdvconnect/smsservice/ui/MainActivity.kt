@@ -60,6 +60,7 @@ class MainActivity : AppCompatActivity() {
     private var agentToken: String? = null
     private var currentAgent: AgentInfo? = null
     private var showingOfflineCache = false
+    private var showingServerUnreachable = false
     private var pendingUpdateResult: AppUpdateChecker.Result? = null
     private var configAccessDialog: AlertDialog? = null
 
@@ -406,10 +407,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun triggerManualSync() {
         lifecycleScope.launch {
-            if (!NetworkUtils.isOnline(this@MainActivity)) {
-                Toast.makeText(this@MainActivity, "Pas de connexion internet.", Toast.LENGTH_SHORT).show()
-                return@launch
-            }
             binding.buttonSyncNow.isEnabled = false
             val result = syncRepository.syncAll()
             binding.buttonSyncNow.isEnabled = true
@@ -417,11 +414,15 @@ class MainActivity : AppCompatActivity() {
             if (result.transactionsSynced + result.actionsSynced > 0) {
                 refreshAgentDashboard()
             }
-            Toast.makeText(
-                this@MainActivity,
-                if (result.stillPending == 0) "Synchronisation terminée." else "${result.stillPending} opération(s) restante(s).",
-                Toast.LENGTH_SHORT,
-            ).show()
+            val message = when {
+                result.stillPending == 0 -> "Synchronisation terminée."
+                result.networkError && !NetworkUtils.isOnline(this@MainActivity) ->
+                    "Pas de réseau — ${result.stillPending} opération(s) en attente."
+                result.networkError ->
+                    "Serveur inaccessible — ${result.stillPending} opération(s) en attente."
+                else -> "${result.stillPending} opération(s) restante(s)."
+            }
+            Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -504,7 +505,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (!NetworkUtils.isOnline(this@MainActivity)) {
-                loadCachedDashboard()
+                loadCachedDashboard(serverUnreachable = false)
                 return@launch
             }
 
@@ -524,6 +525,7 @@ class MainActivity : AppCompatActivity() {
                         ),
                     )
                     showingOfflineCache = false
+                    showingServerUnreachable = false
                     renderDashboard(response.dashboard, currentAgent, offline = false)
                 } else {
                     prefs.setAgentSessionToken(null)
@@ -532,22 +534,33 @@ class MainActivity : AppCompatActivity() {
                     updateAgentUi()
                 }
             } catch (e: IOException) {
-                loadCachedDashboard()
+                loadCachedDashboard(serverUnreachable = true)
             } catch (_: Exception) {
-                loadCachedDashboard()
+                loadCachedDashboard(serverUnreachable = true)
             }
         }
     }
 
-    private suspend fun loadCachedDashboard() {
+    private suspend fun loadCachedDashboard(serverUnreachable: Boolean) {
         val cached = dashboardCache.load()
+        val trulyOffline = !NetworkUtils.isOnline(this)
         if (cached != null) {
             currentAgent = cached.agent ?: currentAgent
-            showingOfflineCache = true
-            renderDashboard(cached.dashboard, currentAgent, offline = true)
+            showingOfflineCache = trulyOffline
+            showingServerUnreachable = serverUnreachable && !trulyOffline
+            renderDashboard(
+                cached.dashboard,
+                currentAgent,
+                offline = trulyOffline,
+                serverUnreachable = showingServerUnreachable,
+            )
         } else {
             binding.textAgentOfflineBanner.visibility = View.VISIBLE
-            binding.textAgentOfflineBanner.text = getString(R.string.agent_login_offline)
+            binding.textAgentOfflineBanner.text = if (trulyOffline) {
+                getString(R.string.agent_login_offline)
+            } else {
+                getString(R.string.agent_server_unreachable_banner)
+            }
         }
     }
 
@@ -564,6 +577,7 @@ class MainActivity : AppCompatActivity() {
             agentToken = null
             currentAgent = null
             showingOfflineCache = false
+            showingServerUnreachable = false
             prefs.setAgentSessionToken(null)
             prefs.clearBoundAgent()
             dashboardCache.clear()
@@ -586,9 +600,22 @@ class MainActivity : AppCompatActivity() {
         binding.agentDashboardSection.visibility = if (loggedIn) View.VISIBLE else View.GONE
     }
 
-    private fun renderDashboard(dashboard: AgentDashboard?, agent: AgentInfo?, offline: Boolean) {
+    private fun renderDashboard(
+        dashboard: AgentDashboard?,
+        agent: AgentInfo?,
+        offline: Boolean,
+        serverUnreachable: Boolean = false,
+    ) {
         updateAgentUi()
-        binding.textAgentOfflineBanner.visibility = if (offline) View.VISIBLE else View.GONE
+        val showBanner = offline || serverUnreachable
+        binding.textAgentOfflineBanner.visibility = if (showBanner) View.VISIBLE else View.GONE
+        binding.textAgentOfflineBanner.text = when {
+            serverUnreachable -> getString(R.string.agent_server_unreachable_banner)
+            offline -> getString(R.string.agent_offline_banner)
+            else -> ""
+        }
+
+        val readOnly = offline || serverUnreachable
 
         agent?.let {
             binding.textAgentWelcome.text = "Bonjour ${it.prenom ?: ""} ${it.nom ?: ""}".trim()
@@ -656,7 +683,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         transactions.forEach { tx ->
-            binding.agentTransactionsList.addView(createTransactionRow(tx, offline))
+            binding.agentTransactionsList.addView(createTransactionRow(tx, readOnly))
         }
     }
 

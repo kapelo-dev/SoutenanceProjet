@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Agent;
 use App\Models\Transaction;
+use App\Models\TypeOperation;
 use App\Support\AgentPhoneResolver;
 use App\Models\Operateur;
 use App\Models\Solde;
@@ -153,6 +154,9 @@ class TransactionController extends Controller
             'operator_code' => 'nullable|string|max:50',
             'commission' => 'nullable|numeric|min:0',
             'virtual_balance_after' => 'nullable|numeric|min:0',
+            'transaction_category' => 'nullable|in:commercial,apport_virtuel',
+            'source_agent_code' => 'nullable|string|max:50',
+            'source_agent_name' => 'nullable|string|max:100',
         ]);
 
         $agent = null;
@@ -219,18 +223,33 @@ class TransactionController extends Controller
             }
         }
 
+        $category = $validated['transaction_category'] ?? 'commercial';
+        $description = $validated['description'] ?? ($validated['raw_sms'] ?? null);
+
+        if ($category === 'apport_virtuel') {
+            $srcCode = $validated['source_agent_code'] ?? '?';
+            $srcName = $validated['source_agent_name'] ?? '';
+            $description = trim("Apport virtuel Mix — agent source {$srcCode} ({$srcName})");
+        }
+
+        $typeOperationId = null;
+        if ($category === 'apport_virtuel') {
+            $typeOperationId = TypeOperation::where('code', 'apport_virtuel')->value('id');
+        }
+
         $data = [
             'montant' => $validated['montant'],
             'type' => $validated['type'],
             'operateur_id' => $operateur->id,
             'agent_id' => $agent->id,
             'statut' => 'valide',
-            'description' => $validated['description'] ?? ($validated['raw_sms'] ?? null),
+            'description' => $description,
             'client_nom' => $validated['client_nom'] ?? null,
             'client_telephone' => $validated['client_telephone'] ?? null,
             'operator_txn_id' => $validated['operator_txn_id'] ?? null,
             'commission' => $validated['commission'] ?? null,
             'virtual_balance_after' => $validated['virtual_balance_after'] ?? null,
+            'type_operation_id' => $typeOperationId,
         ];
         if (!empty($validated['reference'])) {
             $data['reference'] = $validated['reference'];
@@ -240,7 +259,11 @@ class TransactionController extends Controller
         try {
             $transaction = Transaction::create($data);
             if ($transaction->statut === 'valide') {
-                $this->updateAgentBalance($transaction);
+                if ($category === 'apport_virtuel') {
+                    $this->updateApportVirtuelBalance($transaction);
+                } else {
+                    $this->updateAgentBalance($transaction);
+                }
             }
             DB::commit();
 
@@ -685,5 +708,40 @@ class TransactionController extends Controller
                 'description' => "Transaction {$transaction->reference} ({$transaction->type})",
             ]);
         }
+    }
+
+    /**
+     * Apport virtuel reçu par SMS (agence → agent) : crédit float Mix uniquement, pas de mouvement espèce.
+     */
+    private function updateApportVirtuelBalance(Transaction $transaction): void
+    {
+        $agent = $transaction->agent;
+        $operateur = $transaction->operateur;
+        if (!$agent || !$operateur) {
+            return;
+        }
+
+        $nouveauVirtuel = $transaction->virtual_balance_after !== null && $transaction->virtual_balance_after > 0
+            ? (float) $transaction->virtual_balance_after
+            : null;
+
+        if ($nouveauVirtuel === null) {
+            $dernier = Solde::where('agent_id', $agent->id)
+                ->where('operateur_id', $operateur->id)
+                ->where('type', 'virtuel')
+                ->latest('date')
+                ->first();
+            $ancien = $dernier ? (float) $dernier->montant : 0;
+            $nouveauVirtuel = $ancien + (float) $transaction->montant;
+        }
+
+        Solde::create([
+            'agent_id' => $agent->id,
+            'operateur_id' => $operateur->id,
+            'montant' => $nouveauVirtuel,
+            'type' => 'virtuel',
+            'description' => "Apport virtuel {$transaction->reference}",
+        ]);
+        $transaction->update(['virtual_balance_after' => $nouveauVirtuel]);
     }
 }

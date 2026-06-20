@@ -21,6 +21,7 @@ object NotificationHelper {
     private const val NOTIFICATION_SYNC_OK = 2002
     private const val NOTIFICATION_SMS_SKIPPED = 2003
     private const val NOTIFICATION_SYNC_ERROR = 2004
+    private const val NOTIFICATION_SMS_RECEIVED = 2005
 
     private fun canNotify(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
@@ -30,12 +31,32 @@ object NotificationHelper {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
+    private fun notificationId(base: Int, key: String?): Int {
+        val suffix = (key?.hashCode() ?: System.currentTimeMillis().toInt()).and(0xFFFF)
+        return base + suffix
+    }
+
     private fun notify(context: Context, id: Int, notification: android.app.Notification) {
         if (!canNotify(context)) {
             Log.w(TAG, "Permission notifications refusée — alerte non affichée (id=$id)")
             return
         }
         context.getSystemService(NotificationManager::class.java)?.notify(id, notification)
+    }
+
+    fun showSmsReceived(context: Context, reference: String?) {
+        val refLabel = reference?.takeIf { it.isNotBlank() } ?: "—"
+        val text = context.getString(R.string.notif_sms_received_message, refLabel)
+        val notification = NotificationCompat.Builder(context, PdvConnectApp.CHANNEL_ALERTS_ID)
+            .setSmallIcon(android.R.drawable.ic_menu_upload)
+            .setContentTitle(context.getString(R.string.notif_sms_received_title))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+
+        notify(context, notificationId(NOTIFICATION_SMS_RECEIVED, reference), notification)
     }
 
     fun showPendingTransactions(context: Context, pendingCount: Int, offline: Boolean = false) {
@@ -67,7 +88,7 @@ object NotificationHelper {
         notify(context, NOTIFICATION_PENDING_TX, notification)
     }
 
-    fun showSyncError(context: Context, detail: String) {
+    fun showSyncError(context: Context, detail: String, reference: String? = null) {
         val notification = NotificationCompat.Builder(context, PdvConnectApp.CHANNEL_ALERTS_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(context.getString(R.string.notif_sync_error_title))
@@ -77,7 +98,7 @@ object NotificationHelper {
             .setAutoCancel(true)
             .build()
 
-        notify(context, NOTIFICATION_SYNC_ERROR, notification)
+        notify(context, notificationId(NOTIFICATION_SYNC_ERROR, reference ?: detail), notification)
     }
 
     fun showSyncSuccess(context: Context, syncedCount: Int) {
@@ -110,7 +131,7 @@ object NotificationHelper {
             .setAutoCancel(true)
             .build()
 
-        notify(context, NOTIFICATION_SMS_SKIPPED, notification)
+        notify(context, notificationId(NOTIFICATION_SMS_SKIPPED, reason), notification)
     }
 
     fun showSmsProcessed(context: Context, reference: String?, success: Boolean, detail: String? = null) {
@@ -135,7 +156,8 @@ object NotificationHelper {
             .setAutoCancel(true)
             .build()
 
-        notify(context, if (success) NOTIFICATION_SYNC_OK else NOTIFICATION_SYNC_ERROR, notification)
+        val base = if (success) NOTIFICATION_SYNC_OK else NOTIFICATION_SYNC_ERROR
+        notify(context, notificationId(base, reference), notification)
     }
 
     fun cancel(context: Context, id: Int) {

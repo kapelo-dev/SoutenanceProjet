@@ -2,6 +2,7 @@ package com.pdvconnect.smsservice.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.pdvconnect.smsservice.sms.SmsParser
 
 @Entity(tableName = "pending_transactions")
 data class PendingTransactionEntity(
@@ -17,6 +18,9 @@ data class PendingTransactionEntity(
     val commission: Double? = null,
     val agentCode: String? = null,
     val operatorCode: String? = null,
+    val transactionCategory: String = SmsParser.CATEGORY_COMMERCIAL,
+    val sourceAgentCode: String? = null,
+    val sourceAgentName: String? = null,
     val virtualBalanceAfter: Double? = null,
     val sender: String? = null,
     val apiBaseUrl: String,

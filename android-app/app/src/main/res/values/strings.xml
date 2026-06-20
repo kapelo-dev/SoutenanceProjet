@@ -48,6 +48,8 @@
     <string name="notification_alerts_channel_name">Alertes PDV Connect</string>
     <string name="notification_alerts_channel_description">Transactions non envoyées et synchronisation</string>
     <string name="notif_sms_skipped_title">SMS non transféré</string>
+    <string name="notif_sms_received_title">SMS transaction reçu</string>
+    <string name="notif_sms_received_message">Envoi en cours — réf. %1$s</string>
     <string name="notif_sms_ok_title">Transaction enregistrée</string>
     <string name="notif_sms_ok_message">Réf. %1$s envoyée au serveur.</string>
     <string name="notif_sms_failed_generic">Échec d\'envoi au serveur.</string>
@@ -58,6 +60,7 @@
     <string name="queue_empty_status">File d\'attente vide — toutes les transactions sont synchronisées</string>
     <string name="button_sync_now">Synchroniser maintenant</string>
     <string name="agent_offline_banner">Mode hors-ligne — données affichées depuis le cache local</string>
+    <string name="agent_server_unreachable_banner">Serveur inaccessible — données affichées depuis le cache (réseau OK)</string>
     <string name="agent_cancel_queued">Annulation enregistrée — sera envoyée au retour du réseau</string>
     <string name="agent_login_offline">Connexion impossible sans internet</string>
     <string name="agent_balances_title">Mes soldes</string>

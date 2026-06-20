@@ -91,6 +91,8 @@ class SmsReceiver : BroadcastReceiver() {
                 continue
             }
 
+            NotificationHelper.showSmsReceived(context, parsed.reference)
+
             withContext(Dispatchers.IO) {
                 val result = OfflineSyncRepository.get(context).enqueueSmsTransaction(
                     parsed = parsed,
@@ -103,32 +105,48 @@ class SmsReceiver : BroadcastReceiver() {
                     NotificationHelper.showSmsSkipped(context, it)
                 }
 
-                val sync = result.syncResult
-                when {
-                    sync == null -> {
+                when (result.itemOutcome) {
+                    OfflineSyncRepository.ItemOutcome.SYNCED -> {
+                        NotificationHelper.showSmsProcessed(context, parsed.reference, success = true)
+                    }
+                    OfflineSyncRepository.ItemOutcome.FAILED -> {
+                        NotificationHelper.showSmsProcessed(
+                            context,
+                            parsed.reference,
+                            success = false,
+                            detail = result.itemError ?: result.syncResult?.lastError,
+                        )
+                    }
+                    OfflineSyncRepository.ItemOutcome.QUEUED_OFFLINE -> {
                         NotificationHelper.showPendingTransactions(
                             context,
                             OfflineSyncRepository.get(context).pendingTotalCount(),
                             offline = true,
                         )
                     }
-                    sync.transactionsSynced > 0 -> {
-                        NotificationHelper.showSmsProcessed(context, parsed.reference, success = true)
-                    }
-                    sync.lastError != null -> {
-                        NotificationHelper.showSmsProcessed(
-                            context,
-                            parsed.reference,
-                            success = false,
-                            detail = sync.lastError,
-                        )
-                    }
-                    sync.stillPending > 0 -> {
-                        NotificationHelper.showPendingTransactions(context, sync.stillPending, offline = sync.networkError)
+                    OfflineSyncRepository.ItemOutcome.QUEUED_SERVER_ERROR -> {
+                        val detail = result.itemError ?: result.syncResult?.lastError
+                        if (detail != null) {
+                            NotificationHelper.showSmsProcessed(
+                                context,
+                                parsed.reference,
+                                success = false,
+                                detail = detail,
+                            )
+                        } else {
+                            NotificationHelper.showPendingTransactions(
+                                context,
+                                OfflineSyncRepository.get(context).pendingTotalCount(),
+                                offline = false,
+                            )
+                        }
                     }
                 }
 
-                Log.i(TAG, "SMS traité ref=${parsed.reference} queue=${result.queueId} sync=$sync")
+                Log.i(
+                    TAG,
+                    "SMS traité ref=${parsed.reference} queue=${result.queueId} outcome=${result.itemOutcome}",
+                )
             }
         }
     }

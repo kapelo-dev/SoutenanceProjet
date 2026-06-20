@@ -34,10 +34,19 @@ class OfflineSyncRepository(private val context: Context) {
         val lastError: String? = null,
     )
 
+    enum class ItemOutcome {
+        SYNCED,
+        QUEUED_OFFLINE,
+        QUEUED_SERVER_ERROR,
+        FAILED,
+    }
+
     data class EnqueueResult(
         val queueId: Long,
         val syncResult: SyncResult? = null,
         val skippedReason: String? = null,
+        val itemOutcome: ItemOutcome = ItemOutcome.QUEUED_OFFLINE,
+        val itemError: String? = null,
     )
 
     suspend fun enqueueSmsTransaction(
@@ -46,16 +55,19 @@ class OfflineSyncRepository(private val context: Context) {
         baseUrl: String,
         apiToken: String,
     ): EnqueueResult = withContext(Dispatchers.IO) {
+        var queueId: Long
+
         parsed.reference?.let { ref ->
             val existing = txDao.findByReference(ref)
             if (existing != null) {
                 Log.d(TAG, "Réf. $ref déjà en file (#${existing.id}, ${existing.status})")
+                queueId = existing.id
                 if (existing.status == PendingTransactionEntity.STATUS_SYNCING) {
                     txDao.update(existing.copy(status = PendingTransactionEntity.STATUS_PENDING))
                 }
-                val syncResult = if (NetworkUtils.isOnline(context)) syncAll() else null
-                return@withContext EnqueueResult(
-                    queueId = existing.id,
+                val syncResult = syncAll(notifyUser = false)
+                return@withContext buildEnqueueResult(
+                    queueId = queueId,
                     syncResult = syncResult,
                     skippedReason = "Réf. $ref — nouvelle tentative d'envoi",
                 )
@@ -74,25 +86,50 @@ class OfflineSyncRepository(private val context: Context) {
             commission = parsed.commission,
             agentCode = parsed.agentCode,
             operatorCode = parsed.operatorName,
+            transactionCategory = parsed.transactionCategory,
+            sourceAgentCode = parsed.sourceAgentCode,
+            sourceAgentName = parsed.sourceAgentName,
             virtualBalanceAfter = parsed.virtualBalanceAfter,
             sender = sender,
             apiBaseUrl = baseUrl,
             apiToken = apiToken,
         )
 
-        val id = txDao.insert(entity)
-        Log.d(TAG, "Transaction mise en file locale #$id")
+        queueId = txDao.insert(entity)
+        Log.d(TAG, "Transaction mise en file locale #$queueId")
 
         val syncResult = if (NetworkUtils.isOnline(context)) {
-            syncAll()
+            syncAll(notifyUser = false)
         } else {
-            val pending = txDao.pendingCount()
-            NotificationHelper.showPendingTransactions(context, pending, offline = true)
             SyncScheduler.scheduleImmediate(context)
             null
         }
 
-        EnqueueResult(queueId = id, syncResult = syncResult)
+        buildEnqueueResult(queueId = queueId, syncResult = syncResult)
+    }
+
+    private suspend fun buildEnqueueResult(
+        queueId: Long,
+        syncResult: SyncResult?,
+        skippedReason: String? = null,
+    ): EnqueueResult {
+        val item = txDao.findById(queueId)
+        val online = NetworkUtils.isOnline(context)
+
+        val outcome = when {
+            item == null -> ItemOutcome.SYNCED
+            item.status == PendingTransactionEntity.STATUS_FAILED -> ItemOutcome.FAILED
+            online -> ItemOutcome.QUEUED_SERVER_ERROR
+            else -> ItemOutcome.QUEUED_OFFLINE
+        }
+
+        return EnqueueResult(
+            queueId = queueId,
+            syncResult = syncResult,
+            skippedReason = skippedReason,
+            itemOutcome = outcome,
+            itemError = item?.lastError,
+        )
     }
 
     suspend fun enqueueCancelTransaction(
@@ -125,12 +162,14 @@ class OfflineSyncRepository(private val context: Context) {
         id
     }
 
-    suspend fun syncAll(): SyncResult = withContext(Dispatchers.IO) {
+    suspend fun syncAll(notifyUser: Boolean = true): SyncResult = withContext(Dispatchers.IO) {
         txDao.resetSyncingToPending()
 
         if (!NetworkUtils.isOnline(context)) {
             val pending = txDao.pendingCount() + actionDao.pendingCount()
-            NotificationHelper.showPendingTransactions(context, pending, offline = true)
+            if (notifyUser && pending > 0) {
+                NotificationHelper.showPendingTransactions(context, pending, offline = true)
+            }
             return@withContext SyncResult(stillPending = pending, networkError = true)
         }
 
@@ -161,6 +200,9 @@ class OfflineSyncRepository(private val context: Context) {
                     agentTelephone = agentContext.agentTelephone,
                     operatorCode = item.operatorCode,
                     virtualBalanceAfter = item.virtualBalanceAfter,
+                    transactionCategory = item.transactionCategory,
+                    sourceAgentCode = item.sourceAgentCode,
+                    sourceAgentName = item.sourceAgentName,
                 )
                 val response = api.sendTransactionFromSms(request)
                 if (response.isSuccessful) {
@@ -180,11 +222,12 @@ class OfflineSyncRepository(private val context: Context) {
                 }
             } catch (e: IOException) {
                 hadNetworkError = true
+                lastApiError = e.message ?: "Erreur réseau"
                 txDao.update(
                     item.copy(
                         status = PendingTransactionEntity.STATUS_PENDING,
                         attemptCount = item.attemptCount + 1,
-                        lastError = e.message,
+                        lastError = lastApiError,
                     ),
                 )
                 break
@@ -233,11 +276,12 @@ class OfflineSyncRepository(private val context: Context) {
                     }
                 } catch (e: IOException) {
                     hadNetworkError = true
+                    lastApiError = e.message ?: "Erreur réseau"
                     actionDao.update(
                         action.copy(
                             status = PendingAgentActionEntity.STATUS_PENDING,
                             attemptCount = action.attemptCount + 1,
-                            lastError = e.message,
+                            lastError = lastApiError,
                         ),
                     )
                     break
@@ -255,19 +299,22 @@ class OfflineSyncRepository(private val context: Context) {
 
         val stillPending = txDao.pendingCount() + actionDao.pendingCount()
 
-        if (stillPending > 0) {
-            if (hadNetworkError) {
-                NotificationHelper.showPendingTransactions(context, stillPending, offline = true)
+        if (notifyUser) {
+            if (stillPending > 0) {
+                if (hadNetworkError) {
+                    NotificationHelper.showPendingTransactions(context, stillPending, offline = false)
+                    lastApiError?.let { NotificationHelper.showSyncError(context, it) }
+                } else {
+                    NotificationHelper.showPendingTransactions(context, stillPending, offline = false)
+                    lastApiError?.let { NotificationHelper.showSyncError(context, it) }
+                }
             } else {
-                NotificationHelper.showPendingTransactions(context, stillPending, offline = false)
-                lastApiError?.let { NotificationHelper.showSyncError(context, it) }
+                NotificationHelper.cancel(context, 2001)
             }
-        } else {
-            NotificationHelper.cancel(context, 2001)
-        }
 
-        if (txSynced + actionSynced > 0) {
-            NotificationHelper.showSyncSuccess(context, txSynced + actionSynced)
+            if (txSynced + actionSynced > 0) {
+                NotificationHelper.showSyncSuccess(context, txSynced + actionSynced)
+            }
         }
 
         SyncResult(

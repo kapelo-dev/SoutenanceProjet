@@ -18,6 +18,9 @@ interface PendingTransactionDao {
     @Query("DELETE FROM pending_transactions WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    @Query("SELECT * FROM pending_transactions WHERE id = :id LIMIT 1")
+    suspend fun findById(id: Long): PendingTransactionEntity?
+
     @Query(
         """
         UPDATE pending_transactions SET status = 'pending'

@@ -3,138 +3,243 @@ package com.pdvconnect.smsservice.sms
 import java.util.regex.Pattern
 
 /**
- * Parse le corps d'un SMS pour en extraire les champs d'une transaction (Mobile Money).
- * Formats supportés : Mix (Yas), FLOOZ / Moov Money, et formats génériques.
+ * Parse les SMS Mobile Money (Mix/Yas, FLOOZ) en transactions structurées.
  *
- * Exemples :
- * - Mix retrait : "retrait de 4 900 FCFA effectue par 91069102 ... REF 13990966494"
- * - Mix dépôt   : "Depot de 2 000 FCFA effectue pour 90513298(AHIAKPOR) ..."
- * - FLOOZ retrait : "Montant: 2 000,00 FCFA ... par le client FABIO ,79984409 ... Txn ID 040228895463"
- * - FLOOZ dépôt   : "Depot reussi Montant:2600,00 FCFA beneficiaire : 96096844 ... Txn ID: 040229031027"
+ * Formats Mix supportés :
+ * 1. Dépôt client : « Dépôt de 5 000 FCFA effectue pour 91316317(NOM)... »
+ * 2. Retrait client : « Retrait de 3 000 FCFA effectue par 93036603... »
+ * 3. Envoi (= dépôt) : « Envoi de 20 000 FCFA au 90769121(NOM)... »
+ * 4. Apport virtuel agence : « L'agent 10019 (NOM) vous a envoyé 50 000 FCFA... »
  */
 object SmsParser {
 
-    // Montant : "4 900 FCFA", "2 000,00 FCFA", "Montant: 2 000,00 FCFA", "Montant:2600,00 FCFA"
-    private val AMOUNT_PATTERNS = listOf(
-        Pattern.compile("montant[\\s:]+([\\d\\s.,]+)\\s*FCFA", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("(\\d[\\d\\s.,]*)\\s*FCFA", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("(\\d[\\d\\s.,]*)\\s*F\\s*C\\s*F\\s*A", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("(\\d[\\d\\s.,]*)\\s*Francs", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("(\\d[\\d\\s.,]*)\\s*XAF", Pattern.CASE_INSENSITIVE)
-    )
+    const val CATEGORY_COMMERCIAL = "commercial"
+    const val CATEGORY_APPORT_VIRTUEL = "apport_virtuel"
 
-    // Type : dépôt / retrait (Mix: "retrait de", "Depot de" ; FLOOZ: "retrait valider", "Depot reussi")
     private val DEPOT_KEYWORDS = listOf(
         "reçu", "recu", "depot", "dépôt", "depôt", "credit", "crédit", "entree", "entrée",
-        "depot reussi", "dépôt réussi", "depot réussi", "beneficiaire"
+        "depot reussi", "dépôt réussi", "depot réussi", "beneficiaire", "envoi de", "envoyé de",
     )
     private val RETRAIT_KEYWORDS = listOf(
-        "retrait", "debit", "débit", "sortie", "envoyé", "envoye", "transfert",
-        "retrait valider", "retrait validé", "retrait effectue", "veillez remettre l'argent"
+        "retrait", "debit", "débit", "sortie", "veillez remettre l'argent",
+        "retrait valider", "retrait validé", "retrait effectue",
     )
 
     data class ParsedTransaction(
         val montant: Double,
-        val type: String, // depot, retrait, transfert, paiement
+        val type: String,
         val rawBody: String,
+        val transactionCategory: String = CATEGORY_COMMERCIAL,
         val reference: String? = null,
         val clientTelephone: String? = null,
         val clientNom: String? = null,
         val commission: Double? = null,
         val agentCode: String? = null,
-        val operatorName: String? = null, // FLOOZ, Mix, etc.
-        val virtualBalanceAfter: Double? = null
+        val sourceAgentCode: String? = null,
+        val sourceAgentName: String? = null,
+        val operatorName: String? = null,
+        val virtualBalanceAfter: Double? = null,
     ) {
         fun isValid(): Boolean = montant > 0 && type.isNotBlank()
     }
 
-    /**
-     * Tente d'extraire une transaction du corps du SMS.
-     * @return ParsedTransaction si le SMS semble être une notification de transaction, null sinon.
-     */
     fun parse(body: String?, sender: String? = null): ParsedTransaction? {
         if (body.isNullOrBlank()) return null
-        val normalized = body.replace("\n", " ").trim()
+        val text = body.replace("\n", " ").trim()
 
-        val montant = extractMainAmount(normalized) ?: return null
-        val type = detectType(normalized)
-        val reference = extractReference(normalized)
-        val (telephone, nom) = extractClientInfo(normalized)
-        val commission = extractCommission(normalized)
-        val agentCode = extractCodeAgent(normalized)
-        val operatorName = extractNetwork(normalized)
-        val virtualBalanceAfter = extractVirtualBalanceAfter(normalized)
+        // Ordre : formats les plus spécifiques en premier
+        parseApportVirtuel(text)?.let { return it }
+        parseEnvoiDepot(text)?.let { return it }
+        parseDepotRetraitMix(text)?.let { return it }
+        parseFloozGeneric(text)?.let { return it }
 
+        return parseGenericFallback(text)
+    }
+
+    /** Format 4 — Apport virtuel agence : crédit float Mix sans mouvement espèce caisse. */
+    private fun parseApportVirtuel(text: String): ParsedTransaction? {
+        val p = Pattern.compile(
+            "L'agent\\s+(\\d+)\\s*\\(([^)]+)\\)\\s+vous\\s+a\\s+envoy[ée]\\s+([\\d\\s.,]+)\\s*FCFA",
+            Pattern.CASE_INSENSITIVE,
+        )
+        val m = p.matcher(text)
+        if (!m.find()) return null
+
+        val montant = parseAmount(m.group(3)) ?: return null
+
+        return buildParsed(
+            text = text,
+            montant = montant,
+            type = "depot",
+            category = CATEGORY_APPORT_VIRTUEL,
+            sourceAgentCode = m.group(1)?.trim(),
+            sourceAgentName = m.group(2)?.trim()?.take(100),
+            clientNom = m.group(2)?.trim()?.take(100),
+        )
+    }
+
+    /** Format 3 — Envoi vers un client = dépôt commercial. */
+    private fun parseEnvoiDepot(text: String): ParsedTransaction? {
+        val p = Pattern.compile(
+            "Envoi\\s+de\\s+([\\d\\s.,]+)\\s*FCFA\\s+au\\s+(\\d{8,10})\\s*\\(([^)]+)\\)",
+            Pattern.CASE_INSENSITIVE,
+        )
+        val m = p.matcher(text)
+        if (!m.find()) return null
+
+        val montant = parseAmount(m.group(1)) ?: return null
+
+        return buildParsed(
+            text = text,
+            montant = montant,
+            type = "depot",
+            category = CATEGORY_COMMERCIAL,
+            clientTelephone = m.group(2),
+            clientNom = m.group(3)?.trim()?.take(100),
+        )
+    }
+
+    /** Formats 1 & 2 — Dépôt / retrait Mix classiques. */
+    private fun parseDepotRetraitMix(text: String): ParsedTransaction? {
+        val p = Pattern.compile(
+            "(Depot|Dépôt|Depôt|depot|dépôt|depôt|Retrait|retrait)\\s+de\\s+([\\d\\s.,]+)\\s*FCFA",
+            Pattern.CASE_INSENSITIVE,
+        )
+        val m = p.matcher(text)
+        if (!m.find()) return null
+
+        val keyword = m.group(1)?.lowercase() ?: return null
+        val montant = parseAmount(m.group(2)) ?: return null
+        val type = if (keyword.startsWith("r")) "retrait" else "depot"
+
+        val (phone, nom) = extractClientInfo(text)
+
+        return buildParsed(
+            text = text,
+            montant = montant,
+            type = type,
+            category = CATEGORY_COMMERCIAL,
+            clientTelephone = phone,
+            clientNom = nom,
+            agentCode = extractCodeAgent(text),
+        )
+    }
+
+    /** FLOOZ : Montant explicite + mots-clés Flooz. */
+    private fun parseFloozGeneric(text: String): ParsedTransaction? {
+        val lower = text.lowercase()
+        if (!lower.contains("flooz") && !lower.contains("moov money")) return null
+
+        val montant = extractMainAmount(text) ?: return null
+        val type = detectType(text)
+        val (phone, nom) = extractClientInfo(text)
+
+        return buildParsed(
+            text = text,
+            montant = montant,
+            type = type,
+            category = CATEGORY_COMMERCIAL,
+            clientTelephone = phone,
+            clientNom = nom,
+            agentCode = extractCodeAgent(text),
+            operatorName = "FLOOZ",
+        )
+    }
+
+    private fun parseGenericFallback(text: String): ParsedTransaction? {
+        val montant = extractMainAmount(text) ?: return null
+        val type = detectType(text)
+        val (phone, nom) = extractClientInfo(text)
+
+        return buildParsed(
+            text = text,
+            montant = montant,
+            type = type,
+            category = CATEGORY_COMMERCIAL,
+            clientTelephone = phone,
+            clientNom = nom,
+            agentCode = extractCodeAgent(text),
+        )
+    }
+
+    private fun buildParsed(
+        text: String,
+        montant: Double,
+        type: String,
+        category: String,
+        clientTelephone: String? = null,
+        clientNom: String? = null,
+        agentCode: String? = null,
+        sourceAgentCode: String? = null,
+        sourceAgentName: String? = null,
+        operatorName: String? = null,
+    ): ParsedTransaction {
         return ParsedTransaction(
             montant = montant,
             type = type,
-            rawBody = body.take(500),
-            reference = reference,
-            clientTelephone = telephone,
-            clientNom = nom,
-            commission = commission,
+            rawBody = text.take(500),
+            transactionCategory = category,
+            reference = extractReference(text),
+            clientTelephone = clientTelephone,
+            clientNom = clientNom,
+            commission = extractCommissionOrFrais(text),
             agentCode = agentCode,
-            operatorName = operatorName,
-            virtualBalanceAfter = virtualBalanceAfter
+            sourceAgentCode = sourceAgentCode,
+            sourceAgentName = sourceAgentName,
+            operatorName = operatorName ?: extractNetwork(text),
+            virtualBalanceAfter = extractVirtualBalanceAfter(text),
         )
     }
 
-    /** Montant principal : priorité aux libellés d'opération, pas au solde ni à la commission. */
     private fun extractMainAmount(text: String): Double? {
-        val operationPattern = Pattern.compile(
-            "(?:retrait|depot|dépôt|depôt)\\s+de\\s+([\\d\\s.,]+)\\s*FCFA",
-            Pattern.CASE_INSENSITIVE,
+        val patterns = listOf(
+            Pattern.compile("(?:retrait|depot|dépôt|depôt|envoi)\\s+de\\s+([\\d\\s.,]+)\\s*FCFA", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("montant\\s*:?\\s*([\\d\\s.,]+)\\s*FCFA", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("envoy[ée]\\s+([\\d\\s.,]+)\\s*FCFA", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("(\\d[\\d\\s.,]*)\\s*FCFA", Pattern.CASE_INSENSITIVE),
         )
-        val opM = operationPattern.matcher(text)
-        if (opM.find()) {
-            val raw = opM.group(1)?.replace(" ", "")?.replace(",", ".")?.trim() ?: return null
-            val value = raw.toDoubleOrNull()
-            if (value != null && value > 0) return value
-        }
 
-        val montantExplicit = Pattern.compile("montant\\s*:?\\s*([\\d\\s.,]+)\\s*FCFA", Pattern.CASE_INSENSITIVE)
-        val m = montantExplicit.matcher(text)
-        if (m.find()) {
-            val raw = m.group(1)?.replace(" ", "")?.replace(",", ".")?.trim() ?: return null
-            val value = raw.toDoubleOrNull()
-            if (value != null && value > 0) return value
-        }
-
-        val otherAmounts = mutableListOf<Double>()
-        for (pattern in AMOUNT_PATTERNS) {
-            if (pattern.pattern().contains("montant", ignoreCase = true)) continue
-            val matcher = pattern.matcher(text)
-            while (matcher.find()) {
-                val contextStart = maxOf(0, matcher.start() - 40)
-                val context = text.substring(contextStart, matcher.start()).lowercase()
-                if (context.contains("commission") || context.contains("commision") || context.contains("solde")) continue
-                val raw = matcher.group(1)?.replace(" ", "")?.replace(",", ".")?.trim() ?: continue
-                val value = raw.toDoubleOrNull()
-                if (value != null && value > 0) otherAmounts.add(value)
+        for (pattern in patterns) {
+            val m = pattern.matcher(text)
+            if (m.find()) {
+                val contextStart = maxOf(0, m.start() - 40)
+                val context = text.substring(contextStart, m.start()).lowercase()
+                if (context.contains("commission") || context.contains("commision") ||
+                    context.contains("frais") || context.contains("solde")
+                ) {
+                    continue
+                }
+                parseAmount(m.group(1))?.let { return it }
             }
-        }
-        return otherAmounts.minOrNull()
-    }
-
-    /** Commission : "Commission Net : 24,32 FCFA", "Commision: 21 FCFA" (typo Mix) */
-    private fun extractCommission(text: String): Double? {
-        val p = Pattern.compile("commis(?:sion|ion)\\s*(?:net\\s*)?:?\\s*([\\d\\s.,]+)\\s*FCFA", Pattern.CASE_INSENSITIVE)
-        val m = p.matcher(text)
-        if (m.find()) {
-            val raw = m.group(1)?.replace(" ", "")?.replace(",", ".")?.trim() ?: return null
-            return raw.toDoubleOrNull()
         }
         return null
     }
 
-    /** Code Agent : "Code Agent: 5150328" */
+    private fun parseAmount(raw: String?): Double? {
+        if (raw.isNullOrBlank()) return null
+        val normalized = raw.replace(" ", "").replace(",", ".").trim()
+        val value = normalized.toDoubleOrNull()
+        return if (value != null && value > 0) value else null
+    }
+
+    private fun extractCommissionOrFrais(text: String): Double? {
+        val patterns = listOf(
+            Pattern.compile("commis(?:sion|ion)\\s*:?\\s*([\\d\\s.,]+)\\s*FCFA", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("frais\\s*:?\\s*([\\d\\s.,]+)\\s*FCFA", Pattern.CASE_INSENSITIVE),
+        )
+        for (p in patterns) {
+            val m = p.matcher(text)
+            if (m.find()) return parseAmount(m.group(1))
+        }
+        return null
+    }
+
     private fun extractCodeAgent(text: String): String? {
         val p = Pattern.compile("code\\s+agent\\s*:?\\s*([0-9]+)", Pattern.CASE_INSENSITIVE)
         val m = p.matcher(text)
         return if (m.find()) m.group(1)?.trim()?.take(20) else null
     }
 
-    /** Réseau : "Nouveau solde FLOOZ" -> code FLOOZ, "solde mix/Mixx" -> code YAS (Mixx by yas) */
     private fun extractNetwork(text: String): String? {
         val lower = text.lowercase()
         if (lower.contains("flooz") || lower.contains("moov money")) return "FLOOZ"
@@ -142,14 +247,13 @@ object SmsParser {
         return null
     }
 
-    /** Nouveau solde virtuel : "Nouveau solde FLOOZ : 28 703,00 FCFA" */
     private fun extractVirtualBalanceAfter(text: String): Double? {
-        val p = Pattern.compile("(?:nouveau\\s+)?solde\\s*(?:\\s*[A-Za-z]*)?\\s*:?\\s*([\\d\\s.,]+)\\s*FCFA", Pattern.CASE_INSENSITIVE)
+        val p = Pattern.compile(
+            "(?:votre\\s+)?(?:nouveau\\s+)?solde\\s*(?:\\s*[A-Za-z]*)?\\s*:?\\s*([\\d\\s.,]+)\\s*FCFA",
+            Pattern.CASE_INSENSITIVE,
+        )
         val m = p.matcher(text)
-        if (m.find()) {
-            val raw = m.group(1)?.replace(" ", "")?.replace(",", ".")?.trim() ?: return null
-            return raw.toDoubleOrNull()
-        }
+        if (m.find()) return parseAmount(m.group(1))
         return null
     }
 
@@ -157,64 +261,53 @@ object SmsParser {
         val lower = text.lowercase()
         if (DEPOT_KEYWORDS.any { lower.contains(it) }) return "depot"
         if (RETRAIT_KEYWORDS.any { lower.contains(it) }) return "retrait"
-        // Par défaut : transfert ou paiement selon contexte
+        if (lower.contains("transfert")) return "transfert"
         if (lower.contains("paiement") || lower.contains("pay")) return "paiement"
         return "transfert"
     }
 
     private fun extractReference(text: String): String? {
-        // Txn ID (FLOOZ) : "Txn ID 040228895463" ou "Txn ID: 040229031027"
-        val txnIdPattern = Pattern.compile("Txn\\s*ID\\s*:?\\s*([A-Za-z0-9-]+)", Pattern.CASE_INSENSITIVE)
-        val txnM = txnIdPattern.matcher(text)
-        if (txnM.find()) return txnM.group(1)?.take(50)
-        // REF (Mix) : "REF 13990966494"
-        val refPattern = Pattern.compile("(?:ref|reference|n°|no|code)[\\s:]*([A-Za-z0-9-]+)", Pattern.CASE_INSENSITIVE)
-        val m = refPattern.matcher(text)
-        return if (m.find()) m.group(1)?.take(50) else null
+        val txnId = Pattern.compile("Txn\\s*ID\\s*:?\\s*([A-Za-z0-9-]+)", Pattern.CASE_INSENSITIVE)
+        txnId.matcher(text).let { if (it.find()) return it.group(1)?.take(50) }
+
+        val ref = Pattern.compile("(?:ref|reference|n°|no)\\s*:?\\s*([A-Za-z0-9-]+)", Pattern.CASE_INSENSITIVE)
+        ref.matcher(text).let { if (it.find()) return it.group(1)?.take(50) }
+
+        return null
     }
 
     private fun extractClientInfo(text: String): Pair<String?, String?> {
         var phone: String? = null
         var nom: String? = null
 
-        // FLOOZ: "beneficiaire : 96096844"
-        val beneficiairePattern = Pattern.compile("beneficiaire\\s*:?\\s*([0-9]{8,10})", Pattern.CASE_INSENSITIVE)
-        val benefM = beneficiairePattern.matcher(text)
-        if (benefM.find()) phone = benefM.group(1)
-
-        // Mix / FLOOZ: "effectue pour 90513298(AHIAKPOR)" → phone + nom
-        val pourPattern = Pattern.compile("(?:effectue\\s+)?pour\\s+([0-9]{8,10})\\s*\\(([^)]+)\\)", Pattern.CASE_INSENSITIVE)
-        val pourM = pourPattern.matcher(text)
-        if (pourM.find()) {
-            phone = phone ?: pourM.group(1)
-            nom = pourM.group(2)?.trim()?.take(100)
+        Pattern.compile("beneficiaire\\s*:?\\s*([0-9]{8,10})", Pattern.CASE_INSENSITIVE).matcher(text).let {
+            if (it.find()) phone = it.group(1)
         }
 
-        // "effectue par 91069102" ou "par 91069102"
-        val parPhonePattern = Pattern.compile("(?:effectue\\s+)?par\\s+([0-9]{8,10})\\b", Pattern.CASE_INSENSITIVE)
-        val parPhoneM = parPhonePattern.matcher(text)
-        if (parPhoneM.find() && phone == null) phone = parPhoneM.group(1)
-
-        // FLOOZ: "par le client FABIO ,79984409" ou "client FABIO ,79984409"
-        val clientPattern = Pattern.compile("(?:par\\s+le\\s+)?client\\s+([A-Za-z\\s]{2,30})\\s*,\\s*([0-9]{8,10})", Pattern.CASE_INSENSITIVE)
-        val clientM = clientPattern.matcher(text)
-        if (clientM.find()) {
-            nom = nom ?: clientM.group(1)?.trim()?.take(100)
-            phone = phone ?: clientM.group(2)
+        Pattern.compile("(?:effectue\\s+)?pour\\s+([0-9]{8,10})\\s*\\(([^)]+)\\)", Pattern.CASE_INSENSITIVE).matcher(text).let {
+            if (it.find()) {
+                phone = phone ?: it.group(1)
+                nom = it.group(2)?.trim()?.take(100)
+            }
         }
 
-        // Fallback: téléphone seul (séquence 8–10 chiffres, éventuellement +228)
+        Pattern.compile("(?:effectue\\s+)?par\\s+([0-9]{8,10})\\b", Pattern.CASE_INSENSITIVE).matcher(text).let {
+            if (it.find() && phone == null) phone = it.group(1)
+        }
+
+        Pattern.compile("(?:par\\s+le\\s+)?client\\s+([A-Za-z\\s]{2,30})\\s*,\\s*([0-9]{8,10})", Pattern.CASE_INSENSITIVE).matcher(text).let {
+            if (it.find()) {
+                nom = nom ?: it.group(1)?.trim()?.take(100)
+                phone = phone ?: it.group(2)
+            }
+        }
+
         if (phone == null) {
-            val phonePattern = Pattern.compile("(?:\\+228)?[0-9]{8,10}")
-            val phoneMatcher = phonePattern.matcher(text)
-            if (phoneMatcher.find()) phone = phoneMatcher.group()
+            Pattern.compile("(?:\\+228)?[0-9]{8,10}").matcher(text).let {
+                if (it.find()) phone = it.group()
+            }
         }
-        // Fallback: nom après "par " ou "de " (lettres seulement)
-        if (nom == null) {
-            val nomPattern = Pattern.compile("(?:par|de)\\s+([A-Za-z\\s]{2,30})(?:\\s|,|\\.|\\()", Pattern.CASE_INSENSITIVE)
-            val nomMatcher = nomPattern.matcher(text)
-            if (nomMatcher.find()) nom = nomMatcher.group(1)?.trim()?.take(100)
-        }
+
         return Pair(phone, nom)
     }
 }
