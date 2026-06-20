@@ -200,6 +200,13 @@ class TransactionController extends Controller
             ], 422);
         }
 
+        // Idempotence garantie même si l'app n'a pas extrait de référence :
+        // on dérive une clé stable du SMS brut + agent (le même SMS → la même clé).
+        if (empty($validated['reference']) && !empty($validated['raw_sms'])) {
+            $normalized = preg_replace('/\s+/', ' ', trim(mb_strtolower($validated['raw_sms'])));
+            $validated['reference'] = 'SMS-' . substr(sha1($agent->id . '|' . $normalized), 0, 18);
+        }
+
         if (!empty($validated['reference'])) {
             $existing = Transaction::where('reference', $validated['reference'])->first();
             if ($existing) {
