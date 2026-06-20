@@ -12,8 +12,8 @@ android {
         applicationId = "com.pdvconnect.smsservice"
         minSdk = 26
         targetSdk = 34
-        versionCode = 9
-        versionName = "1.9"
+        versionCode = 10
+        versionName = "2.0"
     }
 
     buildTypes {
@@ -72,4 +72,6 @@ dependencies {
 
     // Gson (cache dashboard agent)
     implementation("com.google.code.gson:gson:2.10.1")
+
+    testImplementation("junit:junit:4.13.2")
 }

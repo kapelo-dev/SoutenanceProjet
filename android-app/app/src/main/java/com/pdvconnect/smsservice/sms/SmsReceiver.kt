@@ -82,7 +82,10 @@ class SmsReceiver : BroadcastReceiver() {
             val parsed = SmsParser.parse(body, sender)
             if (parsed == null) {
                 Log.w(TAG, "SMS non reconnu comme transaction: ${body.take(80)}")
-                NotificationHelper.showSmsSkipped(context, "SMS reçu mais format non reconnu.")
+                NotificationHelper.showSmsSkipped(
+                    context,
+                    "SMS reçu mais format non reconnu : « ${body.take(100).replace("\n", " ")} »",
+                )
                 continue
             }
             if (!parsed.isValid()) {

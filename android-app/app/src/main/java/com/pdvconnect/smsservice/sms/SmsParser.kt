@@ -45,7 +45,7 @@ object SmsParser {
 
     fun parse(body: String?, sender: String? = null): ParsedTransaction? {
         if (body.isNullOrBlank()) return null
-        val text = body.replace("\n", " ").trim()
+        val text = normalizeSmsText(body)
 
         // Ordre : formats les plus spécifiques en premier
         parseApportVirtuel(text)?.let { return it }
@@ -56,10 +56,21 @@ object SmsParser {
         return parseGenericFallback(text)
     }
 
+    /** Nettoie espaces insécables, apostrophes typographiques, etc. */
+    private fun normalizeSmsText(body: String): String {
+        return body
+            .replace('\u00a0', ' ')
+            .replace('\u202f', ' ')
+            .replace(Regex("[\\u2018\\u2019\\u02BC\\u0060]"), "'")
+            .replace("\n", " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+    }
+
     /** Format 4 — Apport virtuel agence : crédit float Mix sans mouvement espèce caisse. */
     private fun parseApportVirtuel(text: String): ParsedTransaction? {
         val p = Pattern.compile(
-            "L'agent\\s+(\\d+)\\s*\\(([^)]+)\\)\\s+vous\\s+a\\s+envoy[ée]\\s+([\\d\\s.,]+)\\s*FCFA",
+            "L'?\\s*agent\\s+(\\d+)\\s*\\(([^)]+)\\)\\s+vous\\s+a\\s+envoy[ée]\\s+([\\d\\s.,]+)\\s*FCFA",
             Pattern.CASE_INSENSITIVE,
         )
         val m = p.matcher(text)
@@ -80,11 +91,29 @@ object SmsParser {
 
     /** Format 3 — Envoi vers un client = dépôt commercial. */
     private fun parseEnvoiDepot(text: String): ParsedTransaction? {
-        val p = Pattern.compile(
-            "Envoi\\s+de\\s+([\\d\\s.,]+)\\s*FCFA\\s+au\\s+(\\d{8,10})\\s*\\(([^)]+)\\)",
+        val withName = Pattern.compile(
+            "Envoi\\s+de\\s+([\\d\\s.,]+)\\s*FCFA\\s+(?:au|à|a)\\s+(\\d{8,10})\\s*\\(([^)]+)\\)",
             Pattern.CASE_INSENSITIVE,
         )
-        val m = p.matcher(text)
+        withName.matcher(text).let { m ->
+            if (m.find()) {
+                val montant = parseAmount(m.group(1)) ?: return@let
+                return buildParsed(
+                    text = text,
+                    montant = montant,
+                    type = "depot",
+                    category = CATEGORY_COMMERCIAL,
+                    clientTelephone = m.group(2),
+                    clientNom = m.group(3)?.trim()?.take(100),
+                )
+            }
+        }
+
+        val phoneOnly = Pattern.compile(
+            "Envoi\\s+de\\s+([\\d\\s.,]+)\\s*FCFA\\s+(?:au|à|a)\\s+(\\d{8,10})\\b",
+            Pattern.CASE_INSENSITIVE,
+        )
+        val m = phoneOnly.matcher(text)
         if (!m.find()) return null
 
         val montant = parseAmount(m.group(1)) ?: return null
@@ -95,7 +124,6 @@ object SmsParser {
             type = "depot",
             category = CATEGORY_COMMERCIAL,
             clientTelephone = m.group(2),
-            clientNom = m.group(3)?.trim()?.take(100),
         )
     }
 
@@ -217,7 +245,13 @@ object SmsParser {
 
     private fun parseAmount(raw: String?): Double? {
         if (raw.isNullOrBlank()) return null
-        val normalized = raw.replace(" ", "").replace(",", ".").trim()
+        var normalized = raw.replace("\u00a0", " ").replace(" ", "").trim()
+        // Format européen 2.000,00 → 2000.00
+        if (normalized.contains(",") && normalized.contains(".")) {
+            normalized = normalized.replace(".", "").replace(",", ".")
+        } else if (normalized.contains(",") && !normalized.contains(".")) {
+            normalized = normalized.replace(",", ".")
+        }
         val value = normalized.toDoubleOrNull()
         return if (value != null && value > 0) value else null
     }
@@ -267,12 +301,15 @@ object SmsParser {
     }
 
     private fun extractReference(text: String): String? {
-        val txnId = Pattern.compile("Txn\\s*ID\\s*:?\\s*([A-Za-z0-9-]+)", Pattern.CASE_INSENSITIVE)
-        txnId.matcher(text).let { if (it.find()) return it.group(1)?.take(50) }
-
-        val ref = Pattern.compile("(?:ref|reference|n°|no)\\s*:?\\s*([A-Za-z0-9-]+)", Pattern.CASE_INSENSITIVE)
-        ref.matcher(text).let { if (it.find()) return it.group(1)?.take(50) }
-
+        val patterns = listOf(
+            Pattern.compile("Txn\\s*ID\\s*:?\\s*([A-Za-z0-9-]+)", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("\\b(?:ref(?:erence|érence)?|n°|no)\\s*:\\s*([A-Za-z0-9-]+)", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("\\bref(?:erence|érence)?\\s+([0-9]{6,})", Pattern.CASE_INSENSITIVE),
+        )
+        for (p in patterns) {
+            val m = p.matcher(text)
+            if (m.find()) return m.group(1)?.take(50)
+        }
         return null
     }
 
