@@ -43,9 +43,29 @@ class DashboardMonthMap {
     }
 
     async loadData() {
+        const mapRef = this.map;
         try {
-            const response = await fetch('/api/dashboard/carte-performance-mois');
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const response = await fetch('/api/dashboard/carte-performance-mois', {
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (!response.ok) {
+                let message = `Erreur HTTP ${response.status}`;
+                try {
+                    const body = await response.json();
+                    if (body?.error) message = body.error;
+                    else if (body?.message) message = body.message;
+                } catch (_) {
+                    // ignore
+                }
+                this.renderRanking([], message);
+                this.isInitializing = false;
+                return;
+            }
 
             const points = await response.json();
             if (!Array.isArray(points)) {
@@ -53,6 +73,10 @@ class DashboardMonthMap {
                     ? `Erreur serveur : ${points.error}`
                     : 'Réponse inattendue du serveur.';
                 this.renderRanking([], message);
+                this.isInitializing = false;
+                return;
+            }
+            if (!mapRef || this.map !== mapRef) {
                 this.isInitializing = false;
                 return;
             }
@@ -76,9 +100,12 @@ class DashboardMonthMap {
     spreadOverlapping(points) {
         const groups = {};
         points.forEach((p) => {
-            const key = `${p.latitude.toFixed(4)}|${p.longitude.toFixed(4)}`;
+            const lat = Number(p.latitude);
+            const lng = Number(p.longitude);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+            const key = `${lat.toFixed(4)}|${lng.toFixed(4)}`;
             if (!groups[key]) groups[key] = [];
-            groups[key].push(p);
+            groups[key].push({ ...p, latitude: lat, longitude: lng });
         });
 
         const spread = [];
@@ -149,6 +176,8 @@ class DashboardMonthMap {
     }
 
     renderPoints(points) {
+        if (!this.map) return;
+
         this.clearMarkers();
 
         const sorted = [...points].sort((a, b) => (b.montant || 0) - (a.montant || 0));

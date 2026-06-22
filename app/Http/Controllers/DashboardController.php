@@ -241,43 +241,60 @@ class DashboardController extends Controller
     public function cartePerformanceMois()
     {
         try {
-            $zoneExpr = "COALESCE(NULLIF(TRIM(kiosques.quartier), ''), 'Non renseignée')";
-            $villeExpr = "COALESCE(NULLIF(TRIM(kiosques.ville), ''), 'Lomé')";
-
-            // Partir des transactions du mois (pas seulement des kiosques déjà géolocalisés)
-            $rows = Transaction::query()
+            $transactions = Transaction::query()
                 ->commerciale()
                 ->valide()
                 ->duMois()
-                ->join('agents', 'agents.id', '=', 'transactions.agent_id')
-                ->join('kiosques', 'kiosques.id', '=', 'agents.kiosque_id')
-                ->whereNull('kiosques.deleted_at')
-                ->groupByRaw("{$zoneExpr}, {$villeExpr}")
-                ->select([
-                    DB::raw("{$zoneExpr} as zone"),
-                    DB::raw("{$villeExpr} as ville"),
-                    DB::raw('AVG(CASE WHEN kiosques.latitude IS NOT NULL AND kiosques.longitude IS NOT NULL THEN kiosques.latitude END) as latitude'),
-                    DB::raw('AVG(CASE WHEN kiosques.latitude IS NOT NULL AND kiosques.longitude IS NOT NULL THEN kiosques.longitude END) as longitude'),
-                    DB::raw('COUNT(DISTINCT kiosques.id) as kiosques'),
-                    DB::raw('SUM(transactions.montant) as montant'),
-                    DB::raw('COUNT(transactions.id) as transactions'),
-                ])
-                ->havingRaw('SUM(transactions.montant) > 0')
-                ->orderByDesc(DB::raw('SUM(transactions.montant)'))
+                ->with(['agent.kiosque'])
                 ->get();
+
+            $groups = [];
+
+            foreach ($transactions as $transaction) {
+                $kiosque = $transaction->agent?->kiosque;
+                if (! $kiosque) {
+                    continue;
+                }
+
+                $zone = trim((string) ($kiosque->quartier ?? '')) ?: 'Non renseignée';
+                $ville = trim((string) ($kiosque->ville ?? '')) ?: 'Lomé';
+                $key = $zone.'|'.$ville;
+
+                if (! isset($groups[$key])) {
+                    $groups[$key] = [
+                        'zone' => $zone,
+                        'ville' => $ville,
+                        'kiosque_ids' => [],
+                        'latitudes' => [],
+                        'longitudes' => [],
+                        'montant' => 0.0,
+                        'transactions' => 0,
+                    ];
+                }
+
+                $groups[$key]['kiosque_ids'][$kiosque->id] = true;
+                if ($kiosque->latitude !== null && $kiosque->longitude !== null) {
+                    $groups[$key]['latitudes'][] = (float) $kiosque->latitude;
+                    $groups[$key]['longitudes'][] = (float) $kiosque->longitude;
+                }
+                $groups[$key]['montant'] += (float) $transaction->montant;
+                $groups[$key]['transactions']++;
+            }
+
+            $rows = collect($groups)
+                ->filter(fn (array $row) => $row['montant'] > 0)
+                ->sortByDesc('montant')
+                ->values();
 
             $totalMois = (float) $rows->sum('montant');
 
-            $points = $rows->values()->map(function ($row, $index) use ($totalMois) {
-                $montant = (float) $row->montant;
-                $zone = $row->zone;
-                $ville = $row->ville;
-                $coords = $this->resolveZoneCoordinates(
-                    $zone,
-                    $ville,
-                    $row->latitude !== null ? (float) $row->latitude : null,
-                    $row->longitude !== null ? (float) $row->longitude : null,
-                );
+            $points = $rows->map(function (array $row, int $index) use ($totalMois) {
+                $montant = (float) $row['montant'];
+                $zone = $row['zone'];
+                $ville = $row['ville'];
+                $lat = $row['latitudes'] !== [] ? array_sum($row['latitudes']) / count($row['latitudes']) : null;
+                $lng = $row['longitudes'] !== [] ? array_sum($row['longitudes']) / count($row['longitudes']) : null;
+                $coords = $this->resolveZoneCoordinates($zone, $ville, $lat, $lng);
 
                 return [
                     'id' => md5($zone.'|'.$ville),
@@ -287,15 +304,15 @@ class DashboardController extends Controller
                     'latitude' => $coords['latitude'],
                     'longitude' => $coords['longitude'],
                     'approximate' => $coords['approximate'],
-                    'kiosques' => (int) $row->kiosques,
+                    'kiosques' => count($row['kiosque_ids']),
                     'montant' => $montant,
-                    'transactions' => (int) $row->transactions,
+                    'transactions' => (int) $row['transactions'],
                     'rang' => $index + 1,
                     'part_pct' => $totalMois > 0 ? round(($montant / $totalMois) * 100, 1) : 0,
                 ];
             });
 
-            return response()->json($points);
+            return response()->json($points->values());
         } catch (\Exception $e) {
             Log::error('[Dashboard] Erreur dans cartePerformanceMois', [
                 'message' => $e->getMessage(),
