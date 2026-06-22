@@ -48,7 +48,15 @@ class DashboardMonthMap {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             const points = await response.json();
-            if (!Array.isArray(points) || points.length === 0) {
+            if (!Array.isArray(points)) {
+                const message = points?.error
+                    ? `Erreur serveur : ${points.error}`
+                    : 'Réponse inattendue du serveur.';
+                this.renderRanking([], message);
+                this.isInitializing = false;
+                return;
+            }
+            if (points.length === 0) {
                 this.renderRanking([]);
                 this.isInitializing = false;
                 return;
@@ -59,6 +67,7 @@ class DashboardMonthMap {
             this.isInitializing = false;
         } catch (error) {
             console.error('[DashboardMap] Erreur chargement:', error);
+            this.renderRanking([], 'Impossible de charger les performances par zone.');
             this.isInitializing = false;
         }
     }
@@ -188,9 +197,14 @@ class DashboardMonthMap {
         }
     }
 
-    renderRanking(points) {
+    renderRanking(points, errorMessage = null) {
         const container = document.getElementById('dashboard_month_map_ranking');
         if (!container) return;
+
+        if (errorMessage) {
+            container.innerHTML = `<p class="text-xs text-destructive">${errorMessage}</p>`;
+            return;
+        }
 
         if (!points.length) {
             container.innerHTML = '<p class="text-xs text-secondary-foreground">Aucune transaction commerciale ce mois pour afficher les performances par zone.</p>';

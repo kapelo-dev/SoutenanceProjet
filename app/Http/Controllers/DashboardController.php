@@ -263,7 +263,7 @@ class DashboardController extends Controller
                     DB::raw('COUNT(transactions.id) as transactions'),
                 ])
                 ->havingRaw('SUM(transactions.montant) > 0')
-                ->orderByDesc('montant')
+                ->orderByDesc(DB::raw('SUM(transactions.montant)'))
                 ->get();
 
             $totalMois = (float) $rows->sum('montant');

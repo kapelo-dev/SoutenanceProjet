@@ -89,7 +89,7 @@ class Transaction extends Model
     
     public function scopeValide($query)
     {
-        return $query->where('statut', 'valide');
+        return $query->where($query->getModel()->getTable().'.statut', 'valide');
     }
 
     public function scopeEnAttente($query)
@@ -109,18 +109,22 @@ class Transaction extends Model
 
     public function scopePeriode($query, $dateDebut, $dateFin)
     {
-        return $query->whereBetween('date', [$dateDebut, $dateFin]);
+        $table = $query->getModel()->getTable();
+
+        return $query->whereBetween("{$table}.date", [$dateDebut, $dateFin]);
     }
 
     public function scopeDuJour($query)
     {
-        return $query->whereDate('date', today());
+        return $query->whereDate($query->getModel()->getTable().'.date', today());
     }
 
     public function scopeDuMois($query)
     {
-        return $query->whereYear('date', now()->year)
-                     ->whereMonth('date', now()->month);
+        $table = $query->getModel()->getTable();
+
+        return $query->whereYear("{$table}.date", now()->year)
+            ->whereMonth("{$table}.date", now()->month);
     }
 
     /**
@@ -128,7 +132,7 @@ class Transaction extends Model
      */
     public function scopeCommerciale($query)
     {
-        return $query->whereNull('type_operation_id');
+        return $query->whereNull($query->getModel()->getTable().'.type_operation_id');
     }
 
     /**
@@ -136,7 +140,7 @@ class Transaction extends Model
      */
     public function scopeOperationAgence($query)
     {
-        return $query->whereNotNull('type_operation_id');
+        return $query->whereNotNull($query->getModel()->getTable().'.type_operation_id');
     }
 
     public function isOperationAgence(): bool
