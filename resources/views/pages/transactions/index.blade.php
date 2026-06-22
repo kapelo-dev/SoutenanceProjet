@@ -127,24 +127,26 @@
                                         </span>
                                     </div>
                                 </td>
-                                <td class="text-center">
-                                    <div class="flex items-center justify-center gap-2.5">
+                                <td class="text-left">
+                                    <div class="flex items-center gap-2.5 min-w-0">
                                         @if($transaction->operateur)
                                             @php
                                                 $operateurLogo = $transaction->operateur->logo
                                                     ? asset('storage/' . $transaction->operateur->logo)
                                                     : null;
                                             @endphp
+                                            <div class="w-8 h-8 shrink-0 flex items-center justify-center">
                                             @if($operateurLogo)
-                                                <img class="h-8 w-8 rounded-full object-cover flex-shrink-0" src="{{ $operateurLogo }}" alt="{{ $transaction->operateur->libelle }}"/>
+                                                <img class="h-8 w-8 rounded-full object-cover" src="{{ $operateurLogo }}" alt="{{ $transaction->operateur->libelle }}"/>
                                             @else
-                                                <div class="h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-semibold text-white flex-shrink-0"
+                                                <div class="h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-semibold text-white"
                                                      style="background-color: {{ $transaction->operateur->couleur ?? '#6366f1' }};">
                                                     {{ strtoupper(substr($transaction->operateur->code, 0, 2)) }}
                                                 </div>
                                             @endif
+                                            </div>
                                         @endif
-                                        <div class="flex flex-col gap-0.5 items-start max-w-[180px]">
+                                        <div class="flex flex-col gap-0.5 items-start min-w-0 flex-1">
                                             <span class="leading-none font-medium text-sm truncate w-full">
                                                 @if($transaction->client_nom)
                                                     {{ $transaction->client_nom }}
