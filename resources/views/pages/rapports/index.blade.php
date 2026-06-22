@@ -18,6 +18,14 @@
                 </div>
             </div>
             <div class="flex items-center gap-2.5">
+                <label class="flex items-center gap-2 cursor-pointer rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:bg-accent/40 transition-colors">
+                    <input type="checkbox"
+                        class="kt-checkbox kt-checkbox-sm"
+                        id="toggle_top_agents"
+                        {{ $afficherTopAgents ? 'checked' : '' }}
+                        onchange="toggleRapportTopAgents(this)">
+                    <span>Top 10 agents</span>
+                </label>
                 <button type="button"
                     class="kt-btn kt-btn-outline"
                     data-pdf-preview
@@ -35,7 +43,7 @@
                     <i class="ki-filled ki-setting-4"></i>
                     Filtres
                 </button>
-                <a href="{{ route('rapports.index', request()->except(['date_debut', 'date_fin', 'agent_id', 'operateur_id', 'type', 'statut', 'kiosque_id'])) }}" class="kt-btn kt-btn-outline" onclick="return confirm('Voulez-vous réinitialiser tous les filtres ?')">
+                <a href="{{ route('rapports.index', request()->except(['date_debut', 'date_fin', 'agent_id', 'operateur_id', 'type', 'statut', 'kiosque_id', 'afficher_top_agents'])) }}" class="kt-btn kt-btn-outline" onclick="return confirm('Voulez-vous réinitialiser tous les filtres ?')">
                     <i class="ki-filled ki-arrows-circle"></i>
                     Réinitialiser
                 </a>
@@ -230,6 +238,16 @@
                                 </div>
                             </div>
                         </div>
+                        <label class="flex items-center gap-3 cursor-pointer rounded-lg border border-border px-4 py-3 hover:bg-accent/40 transition-colors">
+                            <input type="hidden" name="afficher_top_agents" value="0">
+                            <input type="checkbox"
+                                name="afficher_top_agents"
+                                value="1"
+                                class="kt-checkbox kt-checkbox-sm"
+                                id="filtre_afficher_top_agents"
+                                {{ $afficherTopAgents ? 'checked' : '' }}>
+                            <span class="text-sm text-foreground">Inclure le Top 10 agents dans le rapport (page et exports)</span>
+                        </label>
                     </div>
                 </div>
                 <div class="kt-modal-footer">
@@ -332,7 +350,7 @@
             @endif
 
             {{-- Top 10 Agents --}}
-            @if(count($topAgents) > 0)
+            @if($afficherTopAgents && count($topAgents) > 0)
             <div class="kt-card">
                 <div class="kt-card-header">
                     <h3 class="kt-card-title">Top 10 Agents</h3>
@@ -734,6 +752,30 @@ function setupAgentFormSubmit() {
     });
 }
 
+function toggleRapportTopAgents(checkbox) {
+    const url = new URL(window.location.href);
+    if (checkbox.checked) {
+        url.searchParams.delete('afficher_top_agents');
+    } else {
+        url.searchParams.set('afficher_top_agents', '0');
+    }
+    const target = url.toString();
+    if (window.AjaxNavigation && typeof window.AjaxNavigation.loadPage === 'function') {
+        window.AjaxNavigation.loadPage(target);
+    } else {
+        window.location.href = target;
+    }
+}
+
+function syncRapportTopAgentsCheckboxes() {
+    const toolbar = document.getElementById('toggle_top_agents');
+    const modal = document.getElementById('filtre_afficher_top_agents');
+    if (!toolbar || !modal) return;
+    modal.onchange = function() {
+        toolbar.checked = modal.checked;
+    };
+}
+
 // Mettre à jour le texte du bouton selon l'état initial
 function updateToggleButtonsText() {
     const toggleButtons = document.querySelectorAll('[onclick*="toggleAllCheckboxes"]');
@@ -771,6 +813,7 @@ window.initRapportsPage = function() {
     // Initialiser la recherche d'agents
     initAgentSearch();
     setupAgentFormSubmit();
+    syncRapportTopAgentsCheckboxes();
     
     // Configurer la fermeture du modal après soumission du formulaire
     setupFiltresFormClose();

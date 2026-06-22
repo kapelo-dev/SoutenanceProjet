@@ -14,11 +14,18 @@ use Carbon\Carbon;
 class RapportController extends Controller
 {
     use Exportable;
+
+    private function afficherTopAgents(Request $request): bool
+    {
+        return $request->input('afficher_top_agents', '1') !== '0';
+    }
+
     /**
      * Afficher la page des rapports
      */
     public function index(Request $request)
     {
+        $afficherTopAgents = $this->afficherTopAgents($request);
         // Récupérer les paramètres de filtres
         $dateDebut = $request->filled('date_debut') ? Carbon::parse($request->date_debut) : Carbon::now()->startOfMonth();
         $dateFin = $request->filled('date_fin') ? Carbon::parse($request->date_fin)->endOfDay() : Carbon::now()->endOfDay();
@@ -109,56 +116,9 @@ class RapportController extends Controller
             ];
         }
         
-        // Top agents (par nombre de transactions ou montant) - Top 10 comme dans le PDF
-        $topAgents = Agent::with(['utilisateur', 'kiosque'])
-            ->whereHas('transactions', function($q) use ($dateDebut, $dateFin) {
-                $q->commerciale()->whereBetween('date', [$dateDebut, $dateFin]);
-            })
-            ->get()
-            ->map(function($agent) use ($request, $dateDebut, $dateFin) {
-                $agentQuery = Transaction::commerciale()->whereBetween('date', [$dateDebut, $dateFin])
-                    ->where('agent_id', $agent->id);
-                
-                // Appliquer les mêmes filtres que la requête principale
-                if ($request->filled('operateur_id')) {
-                    $operateurIds = is_array($request->operateur_id) ? $request->operateur_id : [$request->operateur_id];
-                    $operateurIds = array_filter($operateurIds, function($id) {
-                        return $id !== 'tous' && $id !== '';
-                    });
-                    if (!empty($operateurIds)) {
-                        $agentQuery->whereIn('operateur_id', $operateurIds);
-                    }
-                }
-                if ($request->filled('type')) {
-                    $types = is_array($request->type) ? $request->type : [$request->type];
-                    $types = array_filter($types, function($type) {
-                        return $type !== 'tous' && $type !== '';
-                    });
-                    if (!empty($types)) {
-                        $agentQuery->whereIn('type', $types);
-                    }
-                }
-                if ($request->filled('statut')) {
-                    $statuts = is_array($request->statut) ? $request->statut : [$request->statut];
-                    $statuts = array_filter($statuts);
-                    if (!empty($statuts)) {
-                        $agentQuery->whereIn('statut', $statuts);
-                    }
-                }
-                
-                return [
-                    'agent' => $agent,
-                    'nombre_transactions' => $agentQuery->valide()->count(),
-                    'montant_total' => $agentQuery->valide()->sum('montant'),
-                    'commission_total' => $agentQuery->valide()->sum('commission'),
-                ];
-            })
-            ->filter(function($item) {
-                return $item['nombre_transactions'] > 0;
-            })
-            ->sortByDesc('montant_total')
-            ->take(10)
-            ->values();
+        $topAgents = $afficherTopAgents
+            ? $this->buildTopAgents($request, $dateDebut, $dateFin)
+            : collect();
         
         // Toutes les transactions filtrées (pas seulement les 5 dernières, comme dans le PDF)
         $transactions = (clone $query)
@@ -204,7 +164,8 @@ class RapportController extends Controller
             'agentsJson',
             'kiosques',
             'dateDebut',
-            'dateFin'
+            'dateFin',
+            'afficherTopAgents'
         ));
     }
 
@@ -213,6 +174,8 @@ class RapportController extends Controller
      */
     public function export(Request $request)
     {
+        $afficherTopAgents = $this->afficherTopAgents($request);
+
         // Récupérer les paramètres de filtres (même logique que index)
         $dateDebut = $request->filled('date_debut') ? Carbon::parse($request->date_debut) : Carbon::now()->startOfMonth();
         $dateFin = $request->filled('date_fin') ? Carbon::parse($request->date_fin)->endOfDay() : Carbon::now()->endOfDay();
@@ -313,56 +276,9 @@ class RapportController extends Controller
             ];
         }
 
-        // Top agents
-        $topAgents = Agent::with(['utilisateur', 'kiosque'])
-            ->whereHas('transactions', function($q) use ($dateDebut, $dateFin) {
-                $q->commerciale()->whereBetween('date', [$dateDebut, $dateFin]);
-            })
-            ->get()
-            ->map(function($agent) use ($request, $dateDebut, $dateFin) {
-                $agentQuery = Transaction::commerciale()->whereBetween('date', [$dateDebut, $dateFin])
-                    ->where('agent_id', $agent->id);
-                
-                // Appliquer les mêmes filtres
-                if ($request->filled('operateur_id')) {
-                    $operateurIds = is_array($request->operateur_id) ? $request->operateur_id : [$request->operateur_id];
-                    $operateurIds = array_filter($operateurIds, function($id) {
-                        return $id !== 'tous' && $id !== '';
-                    });
-                    if (!empty($operateurIds)) {
-                        $agentQuery->whereIn('operateur_id', $operateurIds);
-                    }
-                }
-                if ($request->filled('type')) {
-                    $types = is_array($request->type) ? $request->type : [$request->type];
-                    $types = array_filter($types, function($type) {
-                        return $type !== 'tous' && $type !== '';
-                    });
-                    if (!empty($types)) {
-                        $agentQuery->whereIn('type', $types);
-                    }
-                }
-                if ($request->filled('statut')) {
-                    $statuts = is_array($request->statut) ? $request->statut : [$request->statut];
-                    $statuts = array_filter($statuts);
-                    if (!empty($statuts)) {
-                        $agentQuery->whereIn('statut', $statuts);
-                    }
-                }
-                
-                return [
-                    'agent' => $agent,
-                    'nombre_transactions' => $agentQuery->valide()->count(),
-                    'montant_total' => $agentQuery->valide()->sum('montant'),
-                    'commission_total' => $agentQuery->valide()->sum('commission'),
-                ];
-            })
-            ->filter(function($item) {
-                return $item['nombre_transactions'] > 0;
-            })
-            ->sortByDesc('montant_total')
-            ->take(10)
-            ->values();
+        $topAgents = $afficherTopAgents
+            ? $this->buildTopAgents($request, $dateDebut, $dateFin)
+            : collect();
 
         // Préparer les données pour le PDF
         $headers = ['Référence', 'Date', 'Type', 'Montant (XOF)', 'Opérateur', 'Agent', 'Client', 'Téléphone Client', 'Commission (XOF)', 'Statut'];
@@ -477,5 +393,51 @@ class RapportController extends Controller
             'dateFin' => $dateFin,
             'filtersText' => $filtersText,
         ], $request);
+    }
+
+    private function buildTopAgents(Request $request, Carbon $dateDebut, Carbon $dateFin)
+    {
+        return Agent::with(['utilisateur', 'kiosque'])
+            ->whereHas('transactions', function ($q) use ($dateDebut, $dateFin) {
+                $q->commerciale()->whereBetween('date', [$dateDebut, $dateFin]);
+            })
+            ->get()
+            ->map(function ($agent) use ($request, $dateDebut, $dateFin) {
+                $agentQuery = Transaction::commerciale()->whereBetween('date', [$dateDebut, $dateFin])
+                    ->where('agent_id', $agent->id);
+
+                if ($request->filled('operateur_id')) {
+                    $operateurIds = is_array($request->operateur_id) ? $request->operateur_id : [$request->operateur_id];
+                    $operateurIds = array_filter($operateurIds, fn ($id) => $id !== 'tous' && $id !== '');
+                    if (!empty($operateurIds)) {
+                        $agentQuery->whereIn('operateur_id', $operateurIds);
+                    }
+                }
+                if ($request->filled('type')) {
+                    $types = is_array($request->type) ? $request->type : [$request->type];
+                    $types = array_filter($types, fn ($type) => $type !== 'tous' && $type !== '');
+                    if (!empty($types)) {
+                        $agentQuery->whereIn('type', $types);
+                    }
+                }
+                if ($request->filled('statut')) {
+                    $statuts = is_array($request->statut) ? $request->statut : [$request->statut];
+                    $statuts = array_filter($statuts);
+                    if (!empty($statuts)) {
+                        $agentQuery->whereIn('statut', $statuts);
+                    }
+                }
+
+                return [
+                    'agent' => $agent,
+                    'nombre_transactions' => $agentQuery->valide()->count(),
+                    'montant_total' => $agentQuery->valide()->sum('montant'),
+                    'commission_total' => $agentQuery->valide()->sum('commission'),
+                ];
+            })
+            ->filter(fn ($item) => $item['nombre_transactions'] > 0)
+            ->sortByDesc('montant_total')
+            ->take(10)
+            ->values();
     }
 }
