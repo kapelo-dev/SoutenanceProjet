@@ -53,104 +53,122 @@ class SmsReceiver : BroadcastReceiver() {
 
         ServiceStarter.startForegroundService(context)
 
-        val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return
+        val rawMessages = Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return
+        val incoming = SmsMessageAssembler.fromMessages(rawMessages) ?: return
 
-        for (sms in messages) {
-            val sender = sms.originatingAddress ?: ""
-            val body = sms.messageBody ?: ""
+        if (incoming.partCount > 1) {
+            Log.d(TAG, "SMS multipart recollé (${incoming.partCount} segments, ${incoming.body.length} car.)")
+        }
 
-            if (filterList.isNotEmpty()) {
-                val normalizedSender = sender.replace(" ", "").replace("+", "")
-                val matches = filterList.any { filter ->
-                    val f = filter.trim().replace(" ", "").replace("+", "")
-                    when {
-                        f.all { c -> c.isDigit() || c == '+' } -> {
-                            normalizedSender.contains(f) || f.contains(normalizedSender.takeLast(8))
-                        }
-                        else -> {
-                            body.contains(filter, ignoreCase = true) ||
-                                normalizedSender.contains(filter, ignoreCase = true)
-                        }
+        processOneSms(
+            context = context,
+            sender = incoming.sender,
+            body = incoming.body,
+            filterList = filterList,
+            apiUrl = apiUrl,
+            apiToken = apiToken,
+        )
+    }
+
+    private suspend fun processOneSms(
+        context: Context,
+        sender: String,
+        body: String,
+        filterList: List<String>,
+        apiUrl: String,
+        apiToken: String,
+    ) {
+        if (filterList.isNotEmpty()) {
+            val normalizedSender = sender.replace(" ", "").replace("+", "")
+            val matches = filterList.any { filter ->
+                val f = filter.trim().replace(" ", "").replace("+", "")
+                when {
+                    f.all { c -> c.isDigit() || c == '+' } -> {
+                        normalizedSender.contains(f) || f.contains(normalizedSender.takeLast(8))
+                    }
+                    else -> {
+                        body.contains(filter, ignoreCase = true) ||
+                            normalizedSender.contains(filter, ignoreCase = true)
                     }
                 }
-                if (!matches) {
-                    Log.d(TAG, "SMS de $sender ignoré (filtres: $filterList)")
-                    continue
+            }
+            if (!matches) {
+                Log.d(TAG, "SMS de $sender ignoré (filtres: $filterList)")
+                return
+            }
+        }
+
+        val parsed = SmsParser.parse(body, sender)
+        if (parsed == null) {
+            Log.w(TAG, "SMS non reconnu comme transaction: ${body.take(80)}")
+            NotificationHelper.showSmsSkipped(
+                context,
+                "SMS reçu mais format non reconnu : « ${body.take(100).replace("\n", " ")} »",
+            )
+            return
+        }
+        if (!parsed.isValid()) {
+            Log.w(TAG, "SMS parsé invalide: montant=${parsed.montant}, type=${parsed.type}")
+            NotificationHelper.showSmsSkipped(context, "SMS reçu mais montant/type invalide.")
+            return
+        }
+
+        NotificationHelper.showSmsReceived(context, parsed.reference)
+
+        withContext(Dispatchers.IO) {
+            val result = OfflineSyncRepository.get(context).enqueueSmsTransaction(
+                parsed = parsed,
+                sender = sender,
+                baseUrl = apiUrl,
+                apiToken = apiToken,
+            )
+
+            result.skippedReason?.let {
+                NotificationHelper.showSmsSkipped(context, it)
+            }
+
+            when (result.itemOutcome) {
+                OfflineSyncRepository.ItemOutcome.SYNCED -> {
+                    NotificationHelper.showSmsProcessed(context, parsed.reference, success = true)
                 }
-            }
-
-            val parsed = SmsParser.parse(body, sender)
-            if (parsed == null) {
-                Log.w(TAG, "SMS non reconnu comme transaction: ${body.take(80)}")
-                NotificationHelper.showSmsSkipped(
-                    context,
-                    "SMS reçu mais format non reconnu : « ${body.take(100).replace("\n", " ")} »",
-                )
-                continue
-            }
-            if (!parsed.isValid()) {
-                Log.w(TAG, "SMS parsé invalide: montant=${parsed.montant}, type=${parsed.type}")
-                NotificationHelper.showSmsSkipped(context, "SMS reçu mais montant/type invalide.")
-                continue
-            }
-
-            NotificationHelper.showSmsReceived(context, parsed.reference)
-
-            withContext(Dispatchers.IO) {
-                val result = OfflineSyncRepository.get(context).enqueueSmsTransaction(
-                    parsed = parsed,
-                    sender = sender,
-                    baseUrl = apiUrl,
-                    apiToken = apiToken,
-                )
-
-                result.skippedReason?.let {
-                    NotificationHelper.showSmsSkipped(context, it)
+                OfflineSyncRepository.ItemOutcome.FAILED -> {
+                    NotificationHelper.showSmsProcessed(
+                        context,
+                        parsed.reference,
+                        success = false,
+                        detail = result.itemError ?: result.syncResult?.lastError,
+                    )
                 }
-
-                when (result.itemOutcome) {
-                    OfflineSyncRepository.ItemOutcome.SYNCED -> {
-                        NotificationHelper.showSmsProcessed(context, parsed.reference, success = true)
-                    }
-                    OfflineSyncRepository.ItemOutcome.FAILED -> {
+                OfflineSyncRepository.ItemOutcome.QUEUED_OFFLINE -> {
+                    NotificationHelper.showPendingTransactions(
+                        context,
+                        OfflineSyncRepository.get(context).pendingTotalCount(),
+                        offline = true,
+                    )
+                }
+                OfflineSyncRepository.ItemOutcome.QUEUED_SERVER_ERROR -> {
+                    val detail = result.itemError ?: result.syncResult?.lastError
+                    if (detail != null) {
                         NotificationHelper.showSmsProcessed(
                             context,
                             parsed.reference,
                             success = false,
-                            detail = result.itemError ?: result.syncResult?.lastError,
+                            detail = detail,
                         )
-                    }
-                    OfflineSyncRepository.ItemOutcome.QUEUED_OFFLINE -> {
+                    } else {
                         NotificationHelper.showPendingTransactions(
                             context,
                             OfflineSyncRepository.get(context).pendingTotalCount(),
-                            offline = true,
+                            offline = false,
                         )
                     }
-                    OfflineSyncRepository.ItemOutcome.QUEUED_SERVER_ERROR -> {
-                        val detail = result.itemError ?: result.syncResult?.lastError
-                        if (detail != null) {
-                            NotificationHelper.showSmsProcessed(
-                                context,
-                                parsed.reference,
-                                success = false,
-                                detail = detail,
-                            )
-                        } else {
-                            NotificationHelper.showPendingTransactions(
-                                context,
-                                OfflineSyncRepository.get(context).pendingTotalCount(),
-                                offline = false,
-                            )
-                        }
-                    }
                 }
-
-                Log.i(
-                    TAG,
-                    "SMS traité ref=${parsed.reference} queue=${result.queueId} outcome=${result.itemOutcome}",
-                )
             }
+
+            Log.i(
+                TAG,
+                "SMS traité ref=${parsed.reference} queue=${result.queueId} outcome=${result.itemOutcome}",
+            )
         }
     }
 
