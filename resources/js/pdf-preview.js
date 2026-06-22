@@ -39,7 +39,7 @@ function openPdfPreviewModal(exportUrl, title) {
 }
 
 function initPdfPreviewButtons(root = document) {
-    root.querySelectorAll('[data-pdf-preview]').forEach((button) => {
+    root.querySelectorAll('[data-pdf-preview]:not([data-export-table])').forEach((button) => {
         if (button._pdfPreviewBound) {
             return;
         }

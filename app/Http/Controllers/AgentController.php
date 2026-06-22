@@ -11,6 +11,7 @@ use App\Models\Profil;
 use App\Models\Transaction;
 use App\Models\TypeOperation;
 use App\Models\AgentKiosqueHistorique;
+use App\Support\ExportSelection;
 use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -839,6 +840,8 @@ class AgentController extends Controller
             });
         }
 
+        ExportSelection::apply($query, $request);
+
         $agents = $query->orderBy('nom')->orderBy('prenom')->get();
 
         $headers = ['Code Agent', 'Nom', 'Prénom', 'Téléphone', 'Email', 'Kiosque', 'Statut', 'Montant Total Initial'];
@@ -890,6 +893,8 @@ class AgentController extends Controller
                   ->orWhere('code_agent', 'like', "%{$search}%");
             });
         }
+
+        ExportSelection::apply($query, $request);
 
         $agents = $query->actif()->orderBy('nom')->get();
         $operateurs = Operateur::actif()->get();
@@ -952,6 +957,9 @@ class AgentController extends Controller
         }
         if ($request->filled('search')) {
             $parts[] = 'Recherche : ' . $request->search;
+        }
+        if (ExportSelection::ids($request) !== []) {
+            $parts[] = 'Sélection : ' . count(ExportSelection::ids($request)) . ' élément(s)';
         }
 
         return $parts ? implode(' · ', $parts) : null;

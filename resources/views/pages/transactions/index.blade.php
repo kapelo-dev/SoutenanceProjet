@@ -16,13 +16,14 @@
             <button type="button"
                 class="kt-btn kt-btn-outline"
                 data-pdf-preview
+                data-export-table="#transactions_table"
                 data-pdf-url="{{ route('transactions.export', request()->all()) }}"
                 data-pdf-title="Liste des transactions">
                 <img src="{{ asset('assets/media/app/pdf-icon.svg') }}" alt="PDF" class="w-5 h-5 inline-block mr-2" />
                 Exporter en PDF
             </button>
             <a href="{{ route('transactions.export', array_merge(request()->all(), ['format' => 'excel'])) }}"
-                class="kt-btn kt-btn-outline" data-ajax="false">
+                class="kt-btn kt-btn-outline" data-ajax="false" data-export-table="#transactions_table">
                 <img src="{{ asset('assets/media/file-types/excel.svg') }}" alt="Excel" class="w-5 h-5 inline-block mr-2" />
                 Exporter en Excel
             </a>

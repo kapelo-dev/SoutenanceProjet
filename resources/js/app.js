@@ -13,6 +13,7 @@ import './menu-permissions';
 // Importer le système d'initialisation des pages
 import './page-init';
 import './pdf-preview';
+import './grid-export';
 
 // Start Alpine.js
 window.Alpine = Alpine;

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Agent;
 use App\Models\Transaction;
 use App\Models\TypeOperation;
+use App\Support\ExportSelection;
 use App\Support\AgentPhoneResolver;
 use App\Models\Operateur;
 use App\Models\Solde;
@@ -529,6 +530,8 @@ class TransactionController extends Controller
             });
         }
 
+        ExportSelection::apply($query, $request);
+
         $transactions = $query->latest('date')->get();
 
         $headers = ['Référence', 'Date', 'Type', 'Montant (XOF)', 'Opérateur', 'Agent', 'Client', 'Téléphone Client', 'Commission (XOF)', 'Statut'];
@@ -612,6 +615,9 @@ class TransactionController extends Controller
         }
         if ($request->filled('search')) {
             $parts[] = 'Recherche : ' . $request->search;
+        }
+        if (ExportSelection::ids($request) !== []) {
+            $parts[] = 'Sélection : ' . count(ExportSelection::ids($request)) . ' élément(s)';
         }
 
         return $parts ? implode(' · ', $parts) : null;
