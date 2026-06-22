@@ -40,9 +40,6 @@
                         <table class="kt-table kt-table-border" data-kt-datatable-table="true" id="operateurs_table" style="table-layout: fixed; width: 100%;">
                             <thead>
                                 <tr>
-                                    <th class="w-[50px] text-center">
-                                        <input class="kt-checkbox kt-checkbox-sm" data-kt-datatable-check="true" type="checkbox"/>
-                                    </th>
                                     <th class="min-w-[200px]" style="width: 25%;">
                                         <span class="kt-table-col">
                                             <span class="kt-table-col-label">
@@ -88,9 +85,6 @@
                             <tbody>
                             @foreach($operateurs as $operateur)
                             <tr data-statut="{{ $operateur->statut }}">
-                                <td class="text-center">
-                                    <input class="kt-checkbox kt-checkbox-sm" data-kt-datatable-row-check="true" type="checkbox" value="{{ $operateur->id }}"/>
-                                </td>
                                 <td>
                                     <div class="flex items-center gap-2.5">
                                         @if($operateur->logo)
