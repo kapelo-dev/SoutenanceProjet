@@ -81,6 +81,9 @@
     <string name="dialog_change_password_title">Modifier le mot de passe</string>
 
     <string name="faq_intro">Questions fréquentes sur l\'utilisation de PDV Connect sur mobile.</string>
+    <string name="faq_search_hint">Rechercher une question…</string>
+    <string name="faq_search_empty">Aucune question ne correspond à votre recherche.</string>
+    <string name="faq_expand_toggle">Afficher ou masquer la réponse</string>
     <string name="faq_q_login">Comment me connecter à l\'espace agent ?</string>
     <string name="faq_a_login">Saisissez votre code agent (ou numéro de téléphone) et votre mot de passe PDV Connect, puis appuyez sur Se connecter. Vous accédez ensuite à vos soldes, statistiques et transactions du mois.</string>
     <string name="faq_q_sms_service">Comment activer le transfert automatique des SMS ?</string>

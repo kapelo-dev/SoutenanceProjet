@@ -50,6 +50,7 @@ data class AgentVirtuelBalance(
     val code: String?,
     val libelle: String?,
     val montant: Double = 0.0,
+    @SerializedName("logo_url") val logoUrl: String? = null,
 )
 
 data class AgentStats(
@@ -69,6 +70,7 @@ data class OperateurStats(
     val count: Int = 0,
     val total: Double = 0.0,
     val commission: Double = 0.0,
+    @SerializedName("logo_url") val logoUrl: String? = null,
 )
 
 data class AgentTransaction(
@@ -80,6 +82,7 @@ data class AgentTransaction(
     val commission: Double = 0.0,
     val operateur: String?,
     @SerializedName("operateur_code") val operateurCode: String? = null,
+    @SerializedName("operateur_logo_url") val operateurLogoUrl: String? = null,
     val date: String?,
     @SerializedName("can_cancel") val canCancel: Boolean = false,
 )

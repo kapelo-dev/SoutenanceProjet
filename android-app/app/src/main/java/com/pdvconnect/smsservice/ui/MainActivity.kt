@@ -5,9 +5,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -62,6 +65,15 @@ class MainActivity : AppCompatActivity() {
     private var pendingUpdateResult: AppUpdateChecker.Result? = null
     private var configAccessDialog: AlertDialog? = null
     private var faqPopulated = false
+    private var faqSearchBound = false
+    private val faqCards = mutableListOf<FaqCardHolder>()
+
+    private data class FaqCardHolder(
+        val root: View,
+        val question: String,
+        val answer: String,
+        var expanded: Boolean = false,
+    )
 
     private val requestPermissions = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -167,6 +179,20 @@ class MainActivity : AppCompatActivity() {
         binding.agentPanel.visibility = View.GONE
         binding.buttonRefresh.visibility = View.GONE
         populateFaqIfNeeded()
+        setupFaqSearchIfNeeded()
+        filterFaqItems(binding.editFaqSearch.text?.toString().orEmpty())
+    }
+
+    private fun setupFaqSearchIfNeeded() {
+        if (faqSearchBound) return
+        faqSearchBound = true
+        binding.editFaqSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                filterFaqItems(s?.toString().orEmpty())
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
     }
 
     private fun populateFaqIfNeeded() {
@@ -175,10 +201,42 @@ class MainActivity : AppCompatActivity() {
         val container = binding.faqListContainer
         FaqContent.items.forEach { item ->
             val card = layoutInflater.inflate(R.layout.item_faq_card, container, false)
-            card.findViewById<TextView>(R.id.text_faq_question).setText(item.questionRes)
-            card.findViewById<TextView>(R.id.text_faq_answer).setText(item.answerRes)
+            val question = getString(item.questionRes)
+            val answer = getString(item.answerRes)
+            card.findViewById<TextView>(R.id.text_faq_question).text = question
+            card.findViewById<TextView>(R.id.text_faq_answer).text = answer
+
+            val holder = FaqCardHolder(card, question, answer)
+            card.findViewById<View>(R.id.faq_header).setOnClickListener {
+                toggleFaqCard(holder)
+            }
+            faqCards.add(holder)
             container.addView(card)
         }
+    }
+
+    private fun toggleFaqCard(holder: FaqCardHolder) {
+        holder.expanded = !holder.expanded
+        val answerView = holder.root.findViewById<TextView>(R.id.text_faq_answer)
+        val iconView = holder.root.findViewById<ImageView>(R.id.icon_faq_expand)
+        answerView.visibility = if (holder.expanded) View.VISIBLE else View.GONE
+        iconView.setImageResource(
+            if (holder.expanded) R.drawable.ic_expand_less_24 else R.drawable.ic_expand_more_24,
+        )
+    }
+
+    private fun filterFaqItems(query: String) {
+        val needle = query.trim().lowercase(Locale.getDefault())
+        var visibleCount = 0
+        faqCards.forEach { holder ->
+            val matches = needle.isEmpty() ||
+                holder.question.lowercase(Locale.getDefault()).contains(needle) ||
+                holder.answer.lowercase(Locale.getDefault()).contains(needle)
+            holder.root.visibility = if (matches) View.VISIBLE else View.GONE
+            if (matches) visibleCount++
+        }
+        binding.textFaqEmpty.visibility =
+            if (needle.isNotEmpty() && visibleCount == 0) View.VISIBLE else View.GONE
     }
 
     override fun onResume() {
@@ -744,34 +802,86 @@ class MainActivity : AppCompatActivity() {
         if (balances == null) return
 
         binding.agentBalanceCards.addView(
-            createBalanceCard(getString(R.string.agent_balance_espece), balances.espece, fmt, R.color.primary),
+            createBalanceCard(
+                title = getString(R.string.agent_balance_espece),
+                amount = balances.espece,
+                fmt = fmt,
+            ),
         )
         balances.virtuels.orEmpty().forEach { virtuel ->
-            val accent = when (virtuel.code?.uppercase()) {
-                "YAS" -> R.color.yas_brown
-                "FLOOZ" -> R.color.flooz_blue
-                else -> R.color.primary
-            }
             val label = getString(
                 R.string.agent_balance_virtuel,
                 virtuel.libelle ?: virtuel.code ?: "Opérateur",
             )
-            binding.agentBalanceCards.addView(createBalanceCard(label, virtuel.montant, fmt, accent))
+            binding.agentBalanceCards.addView(
+                createBalanceCard(
+                    title = label,
+                    amount = virtuel.montant,
+                    fmt = fmt,
+                    operatorCode = virtuel.code,
+                    operatorLibelle = virtuel.libelle,
+                    logoUrl = virtuel.logoUrl,
+                ),
+            )
         }
     }
 
-    private fun createBalanceCard(title: String, amount: Double, fmt: NumberFormat, accentColor: Int): MaterialCardView {
+    private fun createOperatorTitleRow(
+        title: String,
+        accentColor: Int,
+        operatorCode: String?,
+        operatorLibelle: String?,
+        logoUrl: String? = null,
+    ): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            val fallbackLogo = OperateurBranding.logoDrawable(operatorCode, operatorLibelle)
+            if (fallbackLogo != null || !logoUrl.isNullOrBlank()) {
+                addView(ImageView(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply {
+                        marginEnd = dp(10)
+                    }
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    contentDescription = title
+                    OperateurBranding.bindLogo(
+                        this,
+                        lifecycleScope,
+                        logoUrl,
+                        operatorCode,
+                        operatorLibelle,
+                    )
+                })
+            }
+            addView(TextView(context).apply {
+                text = title
+                textSize = 13f
+                setTextColor(accentColor)
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f,
+                )
+            })
+        }
+    }
+
+    private fun createBalanceCard(
+        title: String,
+        amount: Double,
+        fmt: NumberFormat,
+        operatorCode: String? = null,
+        operatorLibelle: String? = null,
+        logoUrl: String? = null,
+    ): MaterialCardView {
+        val accentColor = OperateurBranding.accentColor(this, operatorCode, operatorLibelle)
         val padding = dp(12)
         val inner = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(padding, padding, padding, padding)
         }
-        inner.addView(TextView(this).apply {
-            text = title
-            textSize = 13f
-            setTextColor(ContextCompat.getColor(this@MainActivity, accentColor))
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
-        })
+        inner.addView(createOperatorTitleRow(title, accentColor, operatorCode, operatorLibelle, logoUrl))
         inner.addView(TextView(this).apply {
             text = "${fmt.format(amount)} F"
             textSize = 20f
@@ -864,22 +974,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun createOperateurCard(op: OperateurStats, fmt: NumberFormat): MaterialCardView {
-        val accent = when (op.code?.uppercase()) {
-            "YAS" -> R.color.yas_brown
-            "FLOOZ" -> R.color.flooz_blue
-            else -> R.color.primary
-        }
+        val title = op.libelle ?: op.code ?: "Opérateur"
+        val accentColor = OperateurBranding.accentColor(this, op.code, op.libelle)
         val padding = dp(12)
         val inner = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(padding, padding, padding, padding)
         }
-        inner.addView(TextView(this).apply {
-            text = op.libelle ?: op.code ?: "Opérateur"
-            textSize = 14f
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
-            setTextColor(ContextCompat.getColor(this@MainActivity, accent))
-        })
+        inner.addView(createOperatorTitleRow(title, accentColor, op.code, op.libelle, op.logoUrl))
         inner.addView(TextView(this).apply {
             text = "${fmt.format(op.total)} F · ${getString(R.string.agent_stats_tx_count, op.count)}"
             textSize = 15f
@@ -955,22 +1057,21 @@ class MainActivity : AppCompatActivity() {
     private fun createTransactionRow(tx: AgentTransaction): View {
         val fmt = NumberFormat.getNumberInstance(Locale.FRANCE)
         val padding = dp(12)
+        val accentColor = OperateurBranding.accentColor(this, tx.operateurCode, tx.operateur)
         val inner = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(padding, padding, padding, padding)
         }
 
-        val accent = when (tx.operateurCode?.uppercase()) {
-            "YAS" -> R.color.yas_brown
-            "FLOOZ" -> R.color.flooz_blue
-            else -> R.color.primary
-        }
-
-        inner.addView(TextView(this).apply {
-            text = tx.reference ?: "—"
-            textSize = 14f
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
-        })
+        inner.addView(
+            createOperatorTitleRow(
+                title = tx.reference ?: "—",
+                accentColor = accentColor,
+                operatorCode = tx.operateurCode,
+                operatorLibelle = tx.operateur,
+                logoUrl = tx.operateurLogoUrl,
+            ),
+        )
         inner.addView(TextView(this).apply {
             text = buildString {
                 append((tx.type ?: "").replaceFirstChar { it.uppercase() })
@@ -979,7 +1080,7 @@ class MainActivity : AppCompatActivity() {
                 append(" F")
             }
             textSize = 16f
-            setTextColor(ContextCompat.getColor(this@MainActivity, accent))
+            setTextColor(accentColor)
             setPadding(0, dp(4), 0, 0)
         })
         inner.addView(TextView(this).apply {

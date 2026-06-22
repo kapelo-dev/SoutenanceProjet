@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
+use App\Models\Operateur;
 use App\Models\Transaction;
 use App\Support\AuthIdentifier;
 use Illuminate\Http\Request;
@@ -246,6 +247,7 @@ class MobileAgentController extends Controller
                     'code' => $solde->operateur->code,
                     'libelle' => $solde->operateur->libelle,
                     'montant' => (float) $solde->montant,
+                    'logo_url' => $this->operateurLogoUrl($solde->operateur->logo),
                 ];
             }
         }
@@ -267,6 +269,7 @@ class MobileAgentController extends Controller
             'commission' => (float) ($t->commission ?? 0),
             'operateur' => $t->operateur?->libelle,
             'operateur_code' => $t->operateur?->code,
+            'operateur_logo_url' => $this->operateurLogoUrl($t->operateur?->logo),
             'date' => $t->date?->format('d/m/Y H:i'),
             'can_cancel' => self::canAgentCancel($t),
         ];
@@ -277,17 +280,16 @@ class MobileAgentController extends Controller
      */
     private function statsByOperateur($query): array
     {
-        $definitions = [
-            'YAS' => 'Mixx by yas',
-            'FLOOZ' => 'Flooz MONEY',
-        ];
+        $operateurs = Operateur::whereIn('code', ['YAS', 'FLOOZ'])->get()->keyBy('code');
 
         $rows = [];
-        foreach ($definitions as $code => $defaultLabel) {
+        foreach (['YAS' => 'Mixx by yas', 'FLOOZ' => 'Flooz MONEY'] as $code => $defaultLabel) {
+            $operateur = $operateurs->get($code);
             $operateurQuery = (clone $query)->whereHas('operateur', fn ($q) => $q->where('code', $code));
             $rows[] = [
                 'code' => $code,
-                'libelle' => $defaultLabel,
+                'libelle' => $operateur?->libelle ?? $defaultLabel,
+                'logo_url' => $this->operateurLogoUrl($operateur?->logo),
                 'count' => $operateurQuery->count(),
                 'total' => (float) $operateurQuery->sum('montant'),
                 'commission' => (float) $operateurQuery->sum('commission'),
@@ -295,5 +297,14 @@ class MobileAgentController extends Controller
         }
 
         return $rows;
+    }
+
+    private function operateurLogoUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        return asset('storage/'.$path);
     }
 }
