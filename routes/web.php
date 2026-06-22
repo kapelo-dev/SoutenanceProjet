@@ -218,6 +218,7 @@ Route::middleware(['auth', 'require.password.change', 'route.permission'])->grou
     Route::get('/rapports/export', [RapportController::class, 'export'])->name('rapports.export'); 
 
     Route::get('/operations-agence', [OperationsAgenceController::class, 'index'])->name('operations-agence.index');
+    Route::get('/operations-agence/export', [OperationsAgenceController::class, 'export'])->name('operations-agence.export');
     Route::post('/operations-agence', [OperationsAgenceController::class, 'store'])->name('operations-agence.store');
 
     // Gestion d'entreprise (Salaires, Formules, Trésorerie)

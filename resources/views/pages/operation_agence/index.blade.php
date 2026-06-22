@@ -13,6 +13,20 @@
             </div>
         </div>
         <div class="flex items-center gap-2.5">
+            <button type="button"
+                class="kt-btn kt-btn-outline"
+                data-pdf-preview
+                data-export-table="#operations_agence_table"
+                data-pdf-url="{{ route('operations-agence.export', request()->all()) }}"
+                data-pdf-title="Opérations en agence">
+                <img src="{{ asset('assets/media/app/pdf-icon.svg') }}" alt="PDF" class="w-5 h-5 inline-block mr-2" />
+                Exporter en PDF
+            </button>
+            <a href="{{ route('operations-agence.export', array_merge(request()->all(), ['format' => 'excel'])) }}"
+                class="kt-btn kt-btn-outline" data-ajax="false" data-export-table="#operations_agence_table">
+                <img src="{{ asset('assets/media/file-types/excel.svg') }}" alt="Excel" class="w-5 h-5 inline-block mr-2" />
+                Exporter en Excel
+            </a>
             <a class="kt-btn kt-btn-primary" data-kt-modal-toggle="#modal_nouvelle_operation">
                 <i class="ki-filled ki-plus"></i>
                 Nouvelle Opération
@@ -28,7 +42,7 @@
             <div class="flex items-center gap-5 ml-auto">
                 <label class="kt-input">
                     <i class="ki-filled ki-magnifier"></i>
-                    <input data-kt-datatable-search="#transactions_table" placeholder="Rechercher une transaction" type="text" value=""/>
+                    <input data-kt-datatable-search="#operations_agence_table" placeholder="Rechercher une transaction" type="text" value=""/>
                 </label>
                 
             </div>
@@ -36,7 +50,7 @@
         <div class="kt-card-content">
             <div class="grid" data-kt-datatable="true" data-kt-datatable-page-size="10">
                 <div class="kt-scrollable-x-auto">
-                    <table class="kt-table kt-table-border" data-kt-datatable-table="true" id="transactions_table" style="table-layout: fixed; width: 100%;">
+                    <table class="kt-table kt-table-border" data-kt-datatable-table="true" id="operations_agence_table" style="table-layout: fixed; width: 100%;">
                         <thead>
                             <tr>
                                 <th class="w-[50px] text-center">

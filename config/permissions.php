@@ -43,6 +43,7 @@ return [
         'routes.*' => 'roles-et-permissions.gestion-routes',
 
         'rapports.*' => 'rapports.index',
+        'operations-agence.export' => 'operations-agence.index',
         'operations-agence.*' => 'operations-agence.index',
         'gestion-entreprise.*' => 'gestion-entreprise.index',
         'parametres-app-mobile.*' => 'parametres-app-mobile.index',
@@ -77,6 +78,7 @@ return [
         'roles-et-permissions/gestion-permissions' => 'roles-et-permissions.gestion-permissions',
         'roles-et-permissions/gestion-routes' => 'roles-et-permissions.gestion-routes',
         'rapports' => 'rapports.index',
+        'operations-agence/export' => 'operations-agence.index',
         'operations-agence' => 'operations-agence.index',
         'gestion-entreprise' => 'gestion-entreprise.index',
         'parametres-app-mobile' => 'parametres-app-mobile.index',

@@ -7,11 +7,15 @@ use App\Models\Operateur;
 use App\Models\Transaction;
 use App\Models\TypeOperation;
 use App\Models\Solde;
+use App\Support\ExportSelection;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class OperationsAgenceController extends Controller
 {
+    use Exportable;
+
     /**
      * Afficher la page des opérations en agence avec les vraies données.
      * Types d'opération et opérateurs sont chargés dynamiquement depuis la base.
@@ -171,6 +175,118 @@ class OperationsAgenceController extends Controller
                 ->withInput()
                 ->with('error', 'Erreur lors de l\'enregistrement: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Exporter les opérations en agence (PDF ou Excel).
+     */
+    public function export(Request $request)
+    {
+        $query = Transaction::operationAgence()
+            ->with(['agent.utilisateur', 'operateur', 'typeOperation']);
+
+        if ($request->filled('statut')) {
+            $query->where('statut', $request->statut);
+        }
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+        if ($request->filled('agent_id')) {
+            $query->where('agent_id', $request->agent_id);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('reference', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhereHas('agent', function ($aq) use ($search) {
+                        $aq->where('nom', 'like', "%{$search}%")
+                            ->orWhere('prenom', 'like', "%{$search}%")
+                            ->orWhere('code_agent', 'like', "%{$search}%")
+                            ->orWhere('telephone', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        ExportSelection::apply($query, $request);
+
+        $transactions = $query->latest('date')->get();
+
+        $headers = [
+            'Référence',
+            'Date',
+            'Opération',
+            'Type',
+            'Agent',
+            'Téléphone',
+            'Opérateur',
+            'Montant (XOF)',
+            'Statut',
+            'Note',
+        ];
+
+        $data = $transactions->map(function (Transaction $transaction) {
+            $agent = $transaction->agent;
+
+            return [
+                $transaction->reference ?? '-',
+                $transaction->date ? $transaction->date->format('d/m/Y H:i') : '-',
+                $transaction->typeOperation?->libelle ?? '-',
+                ucfirst($transaction->type ?? '-'),
+                $agent ? trim(($agent->prenom ?? '').' '.($agent->nom ?? '')) : '-',
+                $agent?->telephone ?? '-',
+                $transaction->operateur?->libelle ?? '-',
+                number_format((float) ($transaction->montant ?? 0), 0, ',', ' ').' XOF',
+                ucfirst(str_replace('_', ' ', $transaction->statut ?? '-')),
+                $transaction->description ?? '-',
+            ];
+        })->toArray();
+
+        $filename = 'operations_agence_'.now()->format('Y-m-d_His');
+        $filters = $this->buildExportFilters($request);
+
+        if ($this->wantsExcelExport($request)) {
+            return $this->exportToExcel(
+                $headers,
+                $data,
+                $this->excelFilename($filename),
+                'Opérations en agence',
+                'Historique des opérations effectuées en agence',
+                $filters,
+            );
+        }
+
+        return $this->exportToPdf(
+            'Opérations en agence',
+            $headers,
+            $data,
+            $filename.'.pdf',
+            'landscape',
+            $request,
+            [
+                'subtitle' => 'Historique des opérations effectuées en agence',
+                'filtersText' => $filters,
+            ],
+        );
+    }
+
+    private function buildExportFilters(Request $request): ?string
+    {
+        $parts = [];
+        if ($request->filled('statut')) {
+            $parts[] = 'Statut : '.ucfirst($request->statut);
+        }
+        if ($request->filled('type')) {
+            $parts[] = 'Type : '.ucfirst($request->type);
+        }
+        if ($request->filled('search')) {
+            $parts[] = 'Recherche : '.$request->search;
+        }
+        if (ExportSelection::ids($request) !== []) {
+            $parts[] = 'Sélection : '.count(ExportSelection::ids($request)).' élément(s)';
+        }
+
+        return $parts ? implode(' · ', $parts) : null;
     }
 }
 
