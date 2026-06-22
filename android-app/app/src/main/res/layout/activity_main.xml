@@ -10,20 +10,52 @@
     android:orientation="vertical"
     android:padding="20dp">
 
-    <ImageView
-        android:layout_width="wrap_content"
-        android:layout_height="44dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="12dp"
-        android:contentDescription="@string/app_name"
-        android:scaleType="fitCenter"
-        android:src="@drawable/pdv_connect_logo" />
-
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/main_tabs"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/app_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginBottom="12dp"
+        android:minHeight="48dp">
+
+        <ImageView
+            android:id="@+id/image_logo"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:contentDescription="@string/app_name"
+            android:scaleType="fitCenter"
+            android:src="@drawable/pdv_connect_logo"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageButton
+            android:id="@+id/button_refresh"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/agent_refresh"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_refresh_24"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/button_settings"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageButton
+            android:id="@+id/button_settings"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/menu_settings"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_settings_24"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -117,11 +149,42 @@
                 android:text="@string/code_access_cancel" />
         </LinearLayout>
 
-        <ScrollView
+        <LinearLayout
             android:id="@+id/config_panel"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fillViewport="true">
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingBottom="8dp">
+
+                <ImageButton
+                    android:id="@+id/button_config_back"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/menu_back_agent"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_arrow_back_24" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/menu_sms_service"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:fillViewport="true">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -193,7 +256,8 @@
                     android:layout_height="wrap_content"
                     android:text="@string/save" />
             </LinearLayout>
-        </ScrollView>
+            </ScrollView>
+        </LinearLayout>
 
         <ScrollView
             android:id="@+id/agent_panel"
@@ -344,30 +408,6 @@
                         android:orientation="horizontal"
                         android:baselineAligned="false"
                         android:weightSum="2" />
-
-                    <Button
-                        android:id="@+id/buttonAgentRefresh"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:text="@string/agent_refresh" />
-
-                    <Button
-                        android:id="@+id/buttonAgentChangePassword"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:text="@string/agent_change_password" />
-
-                    <Button
-                        android:id="@+id/buttonAgentLogout"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        android:text="@string/agent_logout" />
 
                     <TextView
                         android:layout_width="match_parent"

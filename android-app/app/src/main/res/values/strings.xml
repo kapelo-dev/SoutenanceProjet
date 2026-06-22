@@ -30,6 +30,10 @@
     <string name="notification_channel_description">Notifications du service de transfert des SMS de transaction.</string>
     <string name="tab_sms">Service SMS</string>
     <string name="tab_agent">Espace agent</string>
+    <string name="menu_settings">Paramètres</string>
+    <string name="menu_sms_service">Service SMS</string>
+    <string name="menu_faq">FAQ</string>
+    <string name="menu_back_agent">Retour à l\'espace agent</string>
     <string name="agent_login_intro">Connectez-vous avec votre code agent (ou téléphone) et votre mot de passe PDV Connect.</string>
     <string name="agent_identifiant_hint">Téléphone ou code agent</string>
     <string name="agent_password_hint">Mot de passe</string>
@@ -44,7 +48,7 @@
     <string name="agent_stats_commission">Commissions</string>
     <string name="agent_stats_tx_count">%1$d transaction(s)</string>
     <string name="agent_cancel_dialog_message">Annulation possible uniquement dans les 24 h suivant la transaction.</string>
-    <string name="agent_api_url_required">Configurez d\'abord l\'URL et le token dans l\'onglet Service SMS (première configuration).</string>
+    <string name="agent_api_url_required">Configurez d\'abord l\'URL et le token dans Service SMS (menu Paramètres).</string>
     <string name="notification_alerts_channel_name">Alertes PDV Connect</string>
     <string name="notification_alerts_channel_description">Transactions non envoyées et synchronisation</string>
     <string name="notif_sms_skipped_title">SMS non transféré</string>

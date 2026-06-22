@@ -3,6 +3,7 @@ package com.pdvconnect.smsservice.ui
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
@@ -12,13 +13,14 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputEditText
 import com.pdvconnect.smsservice.R
 import com.pdvconnect.smsservice.api.AgentApiClient
@@ -56,7 +58,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var syncRepository: OfflineSyncRepository
 
     private var smsConfigUnlockedThisSession = false
-    private var suppressTabCallback = false
     private var agentToken: String? = null
     private var currentAgent: AgentInfo? = null
     private var showingOfflineCache = false
@@ -80,11 +81,12 @@ class MainActivity : AppCompatActivity() {
         dashboardCache = AgentDashboardCache(this)
         syncRepository = OfflineSyncRepository.get(this)
 
-        setupTabs()
+        setupHeader()
         requestPermissionsIfNeeded()
         setupListeners()
         setupAgentListeners()
         setupUpdatePanel()
+        setupBackNavigation()
 
         lifecycleScope.launch {
             if (checkForAppUpdate()) return@launch
@@ -95,14 +97,73 @@ class MainActivity : AppCompatActivity() {
     private suspend fun initializeMainUi() {
         agentToken = prefs.agentSessionToken.first()
         ensureBoundAgentFromCache()
-        binding.mainTabs.visibility = View.VISIBLE
+        binding.appHeader.visibility = View.VISIBLE
         binding.codeEntryPanel.visibility = View.GONE
-        suppressTabCallback = true
-        binding.mainTabs.getTabAt(TAB_AGENT)?.select()
-        suppressTabCallback = false
         showAgentTab()
         if (!agentToken.isNullOrBlank()) {
             refreshAgentDashboard()
+        }
+    }
+
+    private fun setupBackNavigation() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (binding.configPanel.visibility == View.VISIBLE) {
+                    showAgentTab()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+    }
+
+    private fun setupHeader() {
+        binding.buttonRefresh.setOnClickListener { refreshAgentDashboard() }
+        binding.buttonSettings.setOnClickListener { showSettingsMenu(it) }
+        binding.buttonConfigBack.setOnClickListener { showAgentTab() }
+    }
+
+    private fun showSettingsMenu(anchor: View) {
+        val popup = PopupMenu(this, anchor)
+        popup.menuInflater.inflate(R.menu.main_settings_menu, popup.menu)
+        val loggedIn = !agentToken.isNullOrBlank()
+        popup.menu.findItem(R.id.menu_change_password).isEnabled = loggedIn
+        popup.menu.findItem(R.id.menu_logout).isEnabled = loggedIn
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.menu_sms_service -> {
+                    requestSmsConfigAccess()
+                    true
+                }
+                R.id.menu_change_password -> {
+                    if (loggedIn) showChangePasswordDialog()
+                    else Toast.makeText(this, "Connectez-vous d'abord.", Toast.LENGTH_SHORT).show()
+                    true
+                }
+                R.id.menu_faq -> {
+                    openFaq()
+                    true
+                }
+                R.id.menu_logout -> {
+                    if (loggedIn) performAgentLogout()
+                    else Toast.makeText(this, "Connectez-vous d'abord.", Toast.LENGTH_SHORT).show()
+                    true
+                }
+                else -> false
+            }
+        }
+        popup.show()
+    }
+
+    private fun openFaq() {
+        lifecycleScope.launch {
+            val base = prefs.apiBaseUrl.first()?.trimEnd('/')
+            if (base.isNullOrBlank()) {
+                Toast.makeText(this@MainActivity, R.string.agent_api_url_required, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("$base/faq")))
         }
     }
 
@@ -161,7 +222,7 @@ class MainActivity : AppCompatActivity() {
     private fun showUpdateRequired(result: AppUpdateChecker.Result) {
         pendingUpdateResult = result
         binding.updateRequiredPanel.visibility = View.VISIBLE
-        binding.mainTabs.visibility = View.GONE
+        binding.appHeader.visibility = View.GONE
         binding.codeEntryPanel.visibility = View.GONE
         binding.configPanel.visibility = View.GONE
         binding.agentPanel.visibility = View.GONE
@@ -177,7 +238,7 @@ class MainActivity : AppCompatActivity() {
     private fun hideUpdateRequired() {
         binding.updateRequiredPanel.visibility = View.GONE
         pendingUpdateResult = null
-        binding.mainTabs.visibility = View.VISIBLE
+        binding.appHeader.visibility = View.VISIBLE
     }
 
     private fun updateQueueStatus(pendingCount: Int) {
@@ -191,34 +252,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupTabs() {
-        binding.mainTabs.addTab(binding.mainTabs.newTab().setText(R.string.tab_sms))
-        binding.mainTabs.addTab(binding.mainTabs.newTab().setText(R.string.tab_agent))
-        binding.mainTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                if (suppressTabCallback) return
-                if (tab?.position == TAB_SMS) {
-                    requestSmsTabAccess()
-                } else {
-                    showAgentTab()
-                }
-            }
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {
-                if (tab?.position == TAB_SMS) requestSmsTabAccess()
-            }
-        })
-    }
-
-    private fun requestSmsTabAccess() {
+    private fun requestSmsConfigAccess() {
         if (smsConfigUnlockedThisSession) {
             showSmsTab()
             return
         }
         lifecycleScope.launch {
-            suppressTabCallback = true
-            binding.mainTabs.getTabAt(TAB_AGENT)?.select()
-            suppressTabCallback = false
             if (prefs.isApiConfigured()) {
                 showConfigCodeDialog()
             } else {
@@ -230,6 +269,7 @@ class MainActivity : AppCompatActivity() {
     private fun showSmsTab() {
         binding.configPanel.visibility = View.VISIBLE
         binding.agentPanel.visibility = View.GONE
+        binding.buttonRefresh.visibility = View.GONE
         lifecycleScope.launch {
             loadSettingsSync()
             updateQueueStatus(syncRepository.pendingTotalCount())
@@ -265,7 +305,7 @@ class MainActivity : AppCompatActivity() {
                     )
                     if (ok) {
                         configAccessDialog?.dismiss()
-                        unlockSmsTab()
+                        unlockSmsConfig()
                     }
                 }
             }
@@ -300,7 +340,7 @@ class MainActivity : AppCompatActivity() {
                     )
                     if (ok) {
                         configAccessDialog?.dismiss()
-                        unlockSmsTab()
+                        unlockSmsConfig()
                     }
                 }
             }
@@ -308,11 +348,8 @@ class MainActivity : AppCompatActivity() {
         configAccessDialog?.show()
     }
 
-    private fun unlockSmsTab() {
+    private fun unlockSmsConfig() {
         smsConfigUnlockedThisSession = true
-        suppressTabCallback = true
-        binding.mainTabs.getTabAt(TAB_SMS)?.select()
-        suppressTabCallback = false
         showSmsTab()
     }
 
@@ -400,9 +437,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupAgentListeners() {
         binding.buttonAgentLogin.setOnClickListener { performAgentLogin() }
-        binding.buttonAgentRefresh.setOnClickListener { refreshAgentDashboard() }
-        binding.buttonAgentChangePassword.setOnClickListener { showChangePasswordDialog() }
-        binding.buttonAgentLogout.setOnClickListener { performAgentLogout() }
     }
 
     private fun triggerManualSync() {
@@ -583,6 +617,7 @@ class MainActivity : AppCompatActivity() {
             dashboardCache.clear()
             binding.editAgentPassword.setText("")
             binding.textAgentOfflineBanner.visibility = View.GONE
+            showAgentTab()
             updateAgentUi()
         }
     }
@@ -598,6 +633,8 @@ class MainActivity : AppCompatActivity() {
         val loggedIn = !agentToken.isNullOrBlank()
         binding.agentLoginSection.visibility = if (loggedIn) View.GONE else View.VISIBLE
         binding.agentDashboardSection.visibility = if (loggedIn) View.VISIBLE else View.GONE
+        val showRefresh = loggedIn && binding.agentPanel.visibility == View.VISIBLE
+        binding.buttonRefresh.visibility = if (showRefresh) View.VISIBLE else View.GONE
     }
 
     private fun renderDashboard(
@@ -1024,10 +1061,5 @@ class MainActivity : AppCompatActivity() {
 
     private fun startForegroundServiceIfNeeded() {
         ServiceStarter.startForegroundService(this)
-    }
-
-    companion object {
-        private const val TAB_SMS = 0
-        private const val TAB_AGENT = 1
     }
 }

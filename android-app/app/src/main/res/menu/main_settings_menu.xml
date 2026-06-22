@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_sms_service"
+        android:title="@string/menu_sms_service" />
+    <item
+        android:id="@+id/menu_change_password"
+        android:title="@string/agent_change_password" />
+    <item
+        android:id="@+id/menu_faq"
+        android:title="@string/menu_faq" />
+    <item
+        android:id="@+id/menu_logout"
+        android:title="@string/agent_logout" />
+</menu>
