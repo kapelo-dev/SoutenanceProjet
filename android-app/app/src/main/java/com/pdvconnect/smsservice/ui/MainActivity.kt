@@ -10,6 +10,7 @@ import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -838,20 +839,14 @@ class MainActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
             val fallbackLogo = OperateurBranding.logoDrawable(operatorCode, operatorLibelle)
             if (fallbackLogo != null || !logoUrl.isNullOrBlank()) {
-                addView(ImageView(context).apply {
-                    layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply {
-                        marginEnd = dp(10)
-                    }
-                    scaleType = ImageView.ScaleType.FIT_CENTER
-                    contentDescription = title
-                    OperateurBranding.bindLogo(
-                        this,
-                        lifecycleScope,
-                        logoUrl,
-                        operatorCode,
-                        operatorLibelle,
-                    )
-                })
+                addView(
+                    createCircularOperatorLogoView(
+                        operatorCode = operatorCode,
+                        operatorLibelle = operatorLibelle,
+                        logoUrl = logoUrl,
+                        contentDescription = title,
+                    ),
+                )
             }
             addView(TextView(context).apply {
                 text = title
@@ -864,6 +859,31 @@ class MainActivity : AppCompatActivity() {
                     1f,
                 )
             })
+        }
+    }
+
+    private fun createCircularOperatorLogoView(
+        operatorCode: String?,
+        operatorLibelle: String?,
+        logoUrl: String?,
+        contentDescription: String,
+    ): ImageView {
+        return ImageView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
+                marginEnd = dp(10)
+            }
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            setBackgroundResource(R.drawable.bg_operator_logo_circle)
+            clipToOutline = true
+            outlineProvider = ViewOutlineProvider.BACKGROUND
+            this.contentDescription = contentDescription
+            OperateurBranding.bindLogo(
+                this,
+                lifecycleScope,
+                logoUrl,
+                operatorCode,
+                operatorLibelle,
+            )
         }
     }
 

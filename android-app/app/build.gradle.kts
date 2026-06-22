@@ -12,8 +12,8 @@ android {
         applicationId = "com.pdvconnect.smsservice"
         minSdk = 26
         targetSdk = 34
-        versionCode = 18
-        versionName = "2.8"
+        versionCode = 19
+        versionName = "2.9"
     }
 
     buildTypes {
