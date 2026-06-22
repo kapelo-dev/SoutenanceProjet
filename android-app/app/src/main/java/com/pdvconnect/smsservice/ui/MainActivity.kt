@@ -3,7 +3,6 @@ package com.pdvconnect.smsservice.ui
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
@@ -62,6 +61,7 @@ class MainActivity : AppCompatActivity() {
     private var showingServerUnreachable = false
     private var pendingUpdateResult: AppUpdateChecker.Result? = null
     private var configAccessDialog: AlertDialog? = null
+    private var faqPopulated = false
 
     private val requestPermissions = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -106,11 +106,13 @@ class MainActivity : AppCompatActivity() {
     private fun setupBackNavigation() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (binding.configPanel.visibility == View.VISIBLE) {
-                    showAgentTab()
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
+                when {
+                    binding.configPanel.visibility == View.VISIBLE -> showAgentTab()
+                    binding.faqPanel.visibility == View.VISIBLE -> showAgentTab()
+                    else -> {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                    }
                 }
             }
         })
@@ -120,6 +122,7 @@ class MainActivity : AppCompatActivity() {
         binding.buttonRefresh.setOnClickListener { refreshAgentDashboard() }
         binding.buttonSettings.setOnClickListener { showSettingsMenu(it) }
         binding.buttonConfigBack.setOnClickListener { showAgentTab() }
+        binding.buttonFaqBack.setOnClickListener { showAgentTab() }
     }
 
     private fun showSettingsMenu(anchor: View) {
@@ -155,13 +158,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openFaq() {
-        lifecycleScope.launch {
-            val base = prefs.apiBaseUrl.first()?.trimEnd('/')
-            if (base.isNullOrBlank()) {
-                Toast.makeText(this@MainActivity, R.string.agent_api_url_required, Toast.LENGTH_LONG).show()
-                return@launch
-            }
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("$base/faq")))
+        showFaqPanel()
+    }
+
+    private fun showFaqPanel() {
+        binding.faqPanel.visibility = View.VISIBLE
+        binding.configPanel.visibility = View.GONE
+        binding.agentPanel.visibility = View.GONE
+        binding.buttonRefresh.visibility = View.GONE
+        populateFaqIfNeeded()
+    }
+
+    private fun populateFaqIfNeeded() {
+        if (faqPopulated) return
+        faqPopulated = true
+        val container = binding.faqListContainer
+        FaqContent.items.forEach { item ->
+            val card = layoutInflater.inflate(R.layout.item_faq_card, container, false)
+            card.findViewById<TextView>(R.id.text_faq_question).setText(item.questionRes)
+            card.findViewById<TextView>(R.id.text_faq_answer).setText(item.answerRes)
+            container.addView(card)
         }
     }
 
@@ -223,6 +239,7 @@ class MainActivity : AppCompatActivity() {
         binding.appHeader.visibility = View.GONE
         binding.codeEntryPanel.visibility = View.GONE
         binding.configPanel.visibility = View.GONE
+        binding.faqPanel.visibility = View.GONE
         binding.agentPanel.visibility = View.GONE
         binding.textUpdateMessage.text = getString(
             R.string.update_version_info,
@@ -266,6 +283,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSmsTab() {
         binding.configPanel.visibility = View.VISIBLE
+        binding.faqPanel.visibility = View.GONE
         binding.agentPanel.visibility = View.GONE
         binding.buttonRefresh.visibility = View.GONE
         lifecycleScope.launch {
@@ -276,6 +294,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showAgentTab() {
         binding.configPanel.visibility = View.GONE
+        binding.faqPanel.visibility = View.GONE
         binding.agentPanel.visibility = View.VISIBLE
         updateAgentUi()
     }

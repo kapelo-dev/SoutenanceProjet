@@ -79,4 +79,26 @@
     <string name="dialog_sms_config_title">Accès configuration SMS</string>
     <string name="dialog_first_setup_title">Configuration Service SMS</string>
     <string name="dialog_change_password_title">Modifier le mot de passe</string>
+
+    <string name="faq_intro">Questions fréquentes sur l\'utilisation de PDV Connect sur mobile.</string>
+    <string name="faq_q_login">Comment me connecter à l\'espace agent ?</string>
+    <string name="faq_a_login">Saisissez votre code agent (ou numéro de téléphone) et votre mot de passe PDV Connect, puis appuyez sur Se connecter. Vous accédez ensuite à vos soldes, statistiques et transactions du mois.</string>
+    <string name="faq_q_sms_service">Comment activer le transfert automatique des SMS ?</string>
+    <string name="faq_a_sms_service">Menu Paramètres (icône en haut à droite) → Service SMS. Saisissez le code défini sur le portail web, configurez l\'URL et le token API, activez le service puis enregistrez. Les SMS de transaction Mix/Yas et Flooz seront envoyés au serveur.</string>
+    <string name="faq_q_agent_id">Comment l\'application identifie-t-elle l\'agent pour une transaction ?</string>
+    <string name="faq_a_agent_id">Connectez-vous d\'abord à l\'Espace agent. Les SMS Mix ne contiennent pas le code agent : l\'app envoie votre identité (session agent + téléphone SIM) au serveur pour associer chaque transaction au bon agent.</string>
+    <string name="faq_q_format">Pourquoi un SMS affiche « format non reconnu » ?</string>
+    <string name="faq_a_format">Le texte reçu n\'a pas pu être lu comme transaction (montant ou mot-clé manquant). Vérifiez qu\'il s\'agit d\'un SMS de dépôt, retrait ou envoi Mix/Yas, ou Flooz. Installez la dernière version de l\'application.</string>
+    <string name="faq_q_offline">Que signifient « mode hors-ligne » et « serveur inaccessible » ?</string>
+    <string name="faq_a_offline">Hors-ligne = pas de réseau mobile ou Wi‑Fi. Serveur inaccessible = réseau OK mais le serveur PDV Connect ne répond pas. Appuyez sur Actualiser (↻ en haut) une fois la connexion rétablie.</string>
+    <string name="faq_q_pending">Que signifie une transaction en attente de synchronisation ?</string>
+    <string name="faq_a_pending">La transaction est enregistrée sur le téléphone mais pas encore envoyée au serveur (pas de réseau ou erreur temporaire). Elle partira automatiquement au retour du réseau, ou via Synchroniser maintenant dans Service SMS.</string>
+    <string name="faq_q_notifications">Les notifications sont-elles nécessaires ?</string>
+    <string name="faq_a_notifications">Oui, surtout sur Android 13 et plus. Elles indiquent si un SMS a été reçu, envoyé au serveur ou en attente. Autorisez les notifications pour PDV Connect dans les paramètres du téléphone.</string>
+    <string name="faq_q_password">Comment modifier mon mot de passe ?</string>
+    <string name="faq_a_password">Connectez-vous à l\'Espace agent, puis menu Paramètres → Modifier le mot de passe.</string>
+    <string name="faq_q_update">Comment mettre à jour l\'application ?</string>
+    <string name="faq_a_update">Si une mise à jour est obligatoire, l\'écran de l\'app vous le signale au démarrage. Sinon, téléchargez la dernière version depuis la page Application mobile du portail web PDV Connect.</string>
+    <string name="faq_q_reboot">Le service SMS fonctionne-t-il après redémarrage du téléphone ?</string>
+    <string name="faq_a_reboot">Oui. Si le transfert SMS est activé et configuré, le service redémarre automatiquement après un reboot ou une mise à jour de l\'application.</string>
 </resources>
