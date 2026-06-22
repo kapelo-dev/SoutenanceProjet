@@ -9,7 +9,6 @@ import android.os.Bundle
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -25,7 +24,6 @@ import com.google.android.material.textfield.TextInputEditText
 import com.pdvconnect.smsservice.R
 import com.pdvconnect.smsservice.api.AgentApiClient
 import com.pdvconnect.smsservice.api.AgentBalances
-import com.pdvconnect.smsservice.api.AgentCancelRequest
 import com.pdvconnect.smsservice.api.AgentChangePasswordRequest
 import com.pdvconnect.smsservice.api.AgentDashboard
 import com.pdvconnect.smsservice.api.AgentInfo
@@ -652,8 +650,6 @@ class MainActivity : AppCompatActivity() {
             else -> ""
         }
 
-        val readOnly = offline || serverUnreachable
-
         agent?.let {
             binding.textAgentWelcome.text = "Bonjour ${it.prenom ?: ""} ${it.nom ?: ""}".trim()
         }
@@ -720,7 +716,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         transactions.forEach { tx ->
-            binding.agentTransactionsList.addView(createTransactionRow(tx, readOnly))
+            binding.agentTransactionsList.addView(createTransactionRow(tx))
         }
     }
 
@@ -937,7 +933,7 @@ class MainActivity : AppCompatActivity() {
         resources.displayMetrics,
     ).toInt()
 
-    private fun createTransactionRow(tx: AgentTransaction, offline: Boolean): View {
+    private fun createTransactionRow(tx: AgentTransaction): View {
         val fmt = NumberFormat.getNumberInstance(Locale.FRANCE)
         val padding = dp(12)
         val inner = LinearLayout(this).apply {
@@ -979,17 +975,6 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, dp(2), 0, 0)
         })
 
-        if (tx.canCancel && !offline) {
-            inner.addView(Button(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                text = getString(R.string.agent_cancel)
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply { topMargin = dp(8) }
-                setOnClickListener { confirmCancelTransaction(tx) }
-            })
-        }
-
         return MaterialCardView(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -999,63 +984,6 @@ class MainActivity : AppCompatActivity() {
             cardElevation = dp(1).toFloat()
             setCardBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.white))
             addView(inner)
-        }
-    }
-
-    private fun confirmCancelTransaction(tx: AgentTransaction) {
-        val input = android.widget.EditText(this).apply {
-            hint = "Raison de l'annulation"
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Annuler ${tx.reference}")
-            .setMessage(getString(R.string.agent_cancel_dialog_message))
-            .setView(input)
-            .setPositiveButton("Annuler la transaction") { _, _ ->
-                val raison = input.text?.toString()?.trim().orEmpty()
-                if (raison.isBlank()) {
-                    Toast.makeText(this, "La raison est obligatoire.", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-                lifecycleScope.launch { cancelTransaction(tx.id, raison) }
-            }
-            .setNegativeButton("Fermer", null)
-            .show()
-    }
-
-    private suspend fun cancelTransaction(id: Long, raison: String) {
-        val apiUrl = prefs.apiBaseUrl.first()
-        val token = agentToken ?: prefs.agentSessionToken.first()
-        if (apiUrl.isNullOrBlank() || token.isNullOrBlank()) return
-
-        if (!NetworkUtils.isOnline(this)) {
-            syncRepository.enqueueCancelTransaction(id, raison, token, apiUrl)
-            Toast.makeText(this, R.string.agent_cancel_queued, Toast.LENGTH_LONG).show()
-            updateQueueStatus(syncRepository.pendingTotalCount())
-            return
-        }
-
-        try {
-            val response = AgentApiClient.create(apiUrl)
-                .cancelTransaction("Bearer $token", id, AgentCancelRequest(raison))
-            if (response.success) {
-                Toast.makeText(this, response.message ?: "Transaction annulée.", Toast.LENGTH_SHORT).show()
-                dashboardCache.save(
-                    AgentLoginResponse(
-                        success = true,
-                        agent = response.agent ?: currentAgent,
-                        dashboard = response.dashboard,
-                    ),
-                )
-                renderDashboard(response.dashboard, response.agent ?: currentAgent, offline = false)
-            } else {
-                Toast.makeText(this, response.message ?: "Échec de l'annulation.", Toast.LENGTH_LONG).show()
-            }
-        } catch (e: IOException) {
-            syncRepository.enqueueCancelTransaction(id, raison, token, apiUrl)
-            Toast.makeText(this, R.string.agent_cancel_queued, Toast.LENGTH_LONG).show()
-            updateQueueStatus(syncRepository.pendingTotalCount())
-        } catch (e: Exception) {
-            Toast.makeText(this, "Erreur : ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
