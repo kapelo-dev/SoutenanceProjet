@@ -241,53 +241,52 @@ class DashboardController extends Controller
     public function cartePerformanceMois()
     {
         try {
-            Log::info('[Dashboard] cartePerformanceMois appelée', [
-                'timestamp' => now()->toDateTimeString(),
-                'ip' => request()->clientIp(),
-            ]);
-
             $zoneExpr = "COALESCE(NULLIF(TRIM(kiosques.quartier), ''), 'Non renseignée')";
             $villeExpr = "COALESCE(NULLIF(TRIM(kiosques.ville), ''), 'Lomé')";
 
-            // Agréger par zone (quartier + ville) : plusieurs kiosques peuvent partager la même zone
-            $points = Kiosque::query()
-                ->whereNotNull('latitude')
-                ->whereNotNull('longitude')
-                ->leftJoin('agents', 'agents.kiosque_id', '=', 'kiosques.id')
-                ->leftJoin('transactions', function ($join) {
-                    $join->on('transactions.agent_id', '=', 'agents.id')
-                        ->where('transactions.statut', 'valide')
-                        ->whereNull('transactions.type_operation_id')
-                        ->whereBetween('transactions.date', [now()->startOfMonth(), now()->endOfMonth()]);
-                })
+            // Partir des transactions du mois (pas seulement des kiosques déjà géolocalisés)
+            $rows = Transaction::query()
+                ->commerciale()
+                ->valide()
+                ->duMois()
+                ->join('agents', 'agents.id', '=', 'transactions.agent_id')
+                ->join('kiosques', 'kiosques.id', '=', 'agents.kiosque_id')
+                ->whereNull('kiosques.deleted_at')
                 ->groupByRaw("{$zoneExpr}, {$villeExpr}")
                 ->select([
                     DB::raw("{$zoneExpr} as zone"),
                     DB::raw("{$villeExpr} as ville"),
-                    DB::raw('AVG(kiosques.latitude) as latitude'),
-                    DB::raw('AVG(kiosques.longitude) as longitude'),
+                    DB::raw('AVG(CASE WHEN kiosques.latitude IS NOT NULL AND kiosques.longitude IS NOT NULL THEN kiosques.latitude END) as latitude'),
+                    DB::raw('AVG(CASE WHEN kiosques.latitude IS NOT NULL AND kiosques.longitude IS NOT NULL THEN kiosques.longitude END) as longitude'),
                     DB::raw('COUNT(DISTINCT kiosques.id) as kiosques'),
-                    DB::raw('COALESCE(SUM(transactions.montant), 0) as montant'),
+                    DB::raw('SUM(transactions.montant) as montant'),
                     DB::raw('COUNT(transactions.id) as transactions'),
                 ])
-                ->get()
-                ->sortByDesc('montant')
-                ->values();
+                ->havingRaw('SUM(transactions.montant) > 0')
+                ->orderByDesc('montant')
+                ->get();
 
-            $totalMois = $points->sum('montant');
+            $totalMois = (float) $rows->sum('montant');
 
-            $points = $points->map(function ($row, $index) use ($totalMois) {
+            $points = $rows->values()->map(function ($row, $index) use ($totalMois) {
                 $montant = (float) $row->montant;
                 $zone = $row->zone;
                 $ville = $row->ville;
+                $coords = $this->resolveZoneCoordinates(
+                    $zone,
+                    $ville,
+                    $row->latitude !== null ? (float) $row->latitude : null,
+                    $row->longitude !== null ? (float) $row->longitude : null,
+                );
 
                 return [
-                    'id' => md5($zone . '|' . $ville),
+                    'id' => md5($zone.'|'.$ville),
                     'zone' => $zone,
                     'ville' => $ville,
-                    'nom' => $zone . ($ville ? ', ' . $ville : ''),
-                    'latitude' => (float) $row->latitude,
-                    'longitude' => (float) $row->longitude,
+                    'nom' => $zone.($ville ? ', '.$ville : ''),
+                    'latitude' => $coords['latitude'],
+                    'longitude' => $coords['longitude'],
+                    'approximate' => $coords['approximate'],
                     'kiosques' => (int) $row->kiosques,
                     'montant' => $montant,
                     'transactions' => (int) $row->transactions,
@@ -296,19 +295,57 @@ class DashboardController extends Controller
                 ];
             });
 
-            Log::info('[Dashboard] cartePerformanceMois points calculés', [
-                'count' => $points->count(),
-                'sample' => $points->first(),
-                'all_points' => $points->toArray(),
-            ]);
-
             return response()->json($points);
         } catch (\Exception $e) {
             Log::error('[Dashboard] Erreur dans cartePerformanceMois', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return response()->json(['error' => 'Erreur lors du calcul des données'], 500);
         }
+    }
+
+    /**
+     * Coordonnées GPS d'une zone : kiosque géolocalisé, quartier connu, ou position approximative autour de Lomé.
+     *
+     * @return array{latitude: float, longitude: float, approximate: bool}
+     */
+    private function resolveZoneCoordinates(string $zone, string $ville, ?float $lat, ?float $lng): array
+    {
+        if ($lat && $lng) {
+            return [
+                'latitude' => $lat,
+                'longitude' => $lng,
+                'approximate' => false,
+            ];
+        }
+
+        $known = [
+            'agoè' => [6.1667, 1.2167],
+            'agoe' => [6.1667, 1.2167],
+            'tokoin' => [6.1733, 1.2309],
+            'bè' => [6.1289, 1.2158],
+            'be' => [6.1289, 1.2158],
+            'be-kpota' => [6.1289, 1.2158],
+        ];
+        $key = strtolower(trim($zone));
+        if (isset($known[$key])) {
+            return [
+                'latitude' => $known[$key][0],
+                'longitude' => $known[$key][1],
+                'approximate' => true,
+            ];
+        }
+
+        $hash = crc32($zone.'|'.$ville);
+        $angle = ($hash % 360) * (M_PI / 180);
+        $radius = 0.008 + (($hash >> 8) % 100) / 10000;
+
+        return [
+            'latitude' => 6.1375 + ($radius * cos($angle)),
+            'longitude' => 1.2123 + ($radius * sin($angle)),
+            'approximate' => true,
+        ];
     }
 }

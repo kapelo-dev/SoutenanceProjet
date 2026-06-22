@@ -626,9 +626,6 @@ const AjaxNavigation = {
         
         // Carte du dashboard (performance du mois) - utiliser la nouvelle instance de classe
         const dashboardMapElement = document.getElementById('dashboard_month_map');
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/26370817-2ad4-48a9-8621-53fe8856d785',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ajax-navigation.js:initAllMaps',message:'dashboard map check',data:{hasEl:!!dashboardMapElement,hasInstance:!!window.dashboardMonthMapInstance,hasL:typeof L!=='undefined'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-        // #endregion
         if (dashboardMapElement && window.dashboardMonthMapInstance) {
             // Détruire l'ancienne carte si elle existe
             window.dashboardMonthMapInstance.destroy();

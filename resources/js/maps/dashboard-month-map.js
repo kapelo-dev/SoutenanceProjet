@@ -162,6 +162,9 @@ class DashboardMonthMap {
 
             const zoneLabel = point.zone || point.nom || 'Zone';
             const villeLabel = point.ville ? `, ${point.ville}` : '';
+            const approxNote = point.approximate
+                ? '<div style="margin-top:4px;font-size:11px;color:#64748b">Position estimée — renseignez le GPS du kiosque pour plus de précision.</div>'
+                : '';
             marker.bindPopup(`
                 <div style="min-width:220px;font-size:13px;line-height:1.5">
                     <div style="font-weight:700;margin-bottom:6px">Zone ${zoneLabel}${villeLabel}</div>
@@ -171,6 +174,7 @@ class DashboardMonthMap {
                     <div><strong>Part :</strong> ${point.part_pct ?? 0} %</div>
                     <div><strong>Transactions :</strong> ${point.transactions ?? 0}</div>
                     <div style="margin-top:6px;color:${style.bg};font-weight:600">Performance ${style.label.toLowerCase()}</div>
+                    ${approxNote}
                 </div>
             `);
 
@@ -189,7 +193,7 @@ class DashboardMonthMap {
         if (!container) return;
 
         if (!points.length) {
-            container.innerHTML = '<p class="text-xs text-secondary-foreground">Aucune zone géolocalisée avec activité ce mois.</p>';
+            container.innerHTML = '<p class="text-xs text-secondary-foreground">Aucune transaction commerciale ce mois pour afficher les performances par zone.</p>';
             return;
         }
 
@@ -262,7 +266,12 @@ if (document.readyState === 'loading') {
 }
 
 document.addEventListener('ajax-content-loaded', () => {
-    dashboardMonthMapInstance.destroy();
+    if (document.getElementById('dashboard_month_map')) {
+        dashboardMonthMapInstance.destroy();
+        setTimeout(() => dashboardMonthMapInstance.init(), 250);
+    } else {
+        dashboardMonthMapInstance.destroy();
+    }
 });
 
 export default dashboardMonthMapInstance;
