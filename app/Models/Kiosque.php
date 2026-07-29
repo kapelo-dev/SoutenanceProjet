@@ -51,7 +51,16 @@ class Kiosque extends Model
             if (empty($model->uid)) {
                 $model->uid = (string) Str::uuid();
             }
+
+            if (empty($model->code)) {
+                $model->code = self::generateCode();
+            }
         });
+    }
+
+    public static function generateCode(int $length = 8): string
+    {
+        return 'K' . Str::upper(Str::random($length));
     }
 
     /**

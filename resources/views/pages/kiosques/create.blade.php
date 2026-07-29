@@ -58,7 +58,7 @@
                         <label class="kt-form-label">
                             Code <span class="text-muted-foreground text-xs">(généré automatiquement)</span>
                         </label>
-                        <input class="kt-input bg-muted cursor-not-allowed @error('code') kt-input-error @enderror" type="text" value="{{ old('code', $suggestedCode ?? '') }}" placeholder="Ex: K001" disabled readonly />
+                        <input class="kt-input bg-muted cursor-not-allowed @error('code') kt-input-error @enderror" type="text" value="{{ old('code', $suggestedCode ?? '') }}" placeholder="Ex: K8F3Q2LM" disabled readonly />
                         <input type="hidden" name="code" value="{{ old('code', $suggestedCode ?? '') }}" />
                         @error('code')
                             <span class="text-xs text-destructive">{{ $message }}</span>

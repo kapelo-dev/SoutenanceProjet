@@ -8,6 +8,7 @@ use App\Models\Transaction;
 use App\Models\Operateur;
 use App\Models\AgentKiosqueHistorique;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -78,13 +79,7 @@ class KiosqueController extends Controller
      */
     public function create()
     {
-        // Générer le prochain code
-        $lastCode = Kiosque::where('code', 'like', 'K%')
-            ->orderBy('code', 'desc')
-            ->first();
-        
-        $nextNumber = $lastCode ? intval(substr($lastCode->code, 1)) + 1 : 1;
-        $suggestedCode = 'K' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        $suggestedCode = Kiosque::generateCode();
 
         return view('pages.kiosques.create', compact('suggestedCode'));
     }
@@ -94,16 +89,9 @@ class KiosqueController extends Controller
      */
     public function getNextCode()
     {
-        $lastCode = Kiosque::where('code', 'like', 'K%')
-            ->orderBy('code', 'desc')
-            ->first();
-        
-        $nextNumber = $lastCode ? intval(substr($lastCode->code, 1)) + 1 : 1;
-        $suggestedCode = 'K' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
-
         return response()->json([
             'success' => true,
-            'code' => $suggestedCode
+            'code' => Kiosque::generateCode(),
         ]);
     }
 
@@ -113,7 +101,7 @@ class KiosqueController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'code' => 'nullable|string|max:50|unique:kiosques,code',
+            'code' => 'nullable|string|max:50',
             'nom' => 'required|string|max:150',
             'adresse' => 'nullable|string',
             'quartier' => 'nullable|string|max:100',
@@ -144,10 +132,36 @@ class KiosqueController extends Controller
             $validated['horaire_fermeture'] = $validated['horaire_fermeture'] . ':00';
         }
 
-        $kiosque = Kiosque::create($validated);
+        unset($validated['code']);
+
+        $attempts = 0;
+
+        do {
+            $validated['code'] = Kiosque::generateCode();
+
+            try {
+                $kiosque = Kiosque::create($validated);
+                break;
+            } catch (QueryException $e) {
+                $attempts++;
+
+                if ($attempts >= 5 || ! $this->isDuplicateKiosqueCodeError($e)) {
+                    throw $e;
+                }
+            }
+        } while (true);
 
         return redirect()->route('kiosques.index')
             ->with('success', 'Kiosque créé avec succès !');
+    }
+
+    private function isDuplicateKiosqueCodeError(QueryException $e): bool
+    {
+        $message = $e->getMessage();
+
+        return $e->getCode() === '23000'
+            && str_contains($message, 'kiosques')
+            && str_contains($message, 'code');
     }
 
     /**
