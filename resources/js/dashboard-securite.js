@@ -1,8 +1,8 @@
 const GAUGE_BAR = { ok: 'bg-emerald-600', warning: 'bg-amber-500', error: 'bg-destructive', info: 'bg-muted-foreground/40' };
 const BANNER = {
-    ok: { border: 'border-emerald-200/50', bg: 'bg-emerald-50/80 dark:bg-emerald-950/20', text: 'text-emerald-900 dark:text-emerald-100', icon: 'ki-shield-tick', badge: 'kt-badge-success', badgeLabel: 'Normal' },
-    warning: { border: 'border-amber-200/50', bg: 'bg-amber-50/80 dark:bg-amber-950/20', text: 'text-amber-950 dark:text-amber-100', icon: 'ki-shield-search', badge: 'kt-badge-warning', badgeLabel: 'Surveillance' },
-    error: { border: 'border-destructive/30', bg: 'bg-destructive/5', text: 'text-destructive', icon: 'ki-shield-cross', badge: 'kt-badge-destructive', badgeLabel: 'Alerte' },
+    ok: { border: 'border-emerald-200', bg: 'bg-emerald-50 dark:bg-emerald-950/30', text: 'text-emerald-900 dark:text-emerald-100', icon: 'ki-shield-tick', badge: 'kt-badge-success', badgeLabel: 'Normal' },
+    warning: { border: 'border-amber-200', bg: 'bg-amber-50 dark:bg-amber-950/30', text: 'text-amber-900 dark:text-amber-100', icon: 'ki-shield-search', badge: 'kt-badge-warning', badgeLabel: 'Surveillance' },
+    error: { border: 'border-red-200', bg: 'bg-red-50 dark:bg-destructive/10', text: 'text-red-800 dark:text-red-200', icon: 'ki-shield-cross', badge: 'kt-badge-destructive', badgeLabel: 'Alerte' },
 };
 
 function renderHealth(health, stats) {
@@ -143,7 +143,7 @@ function renderAlerts(alerts) {
     if (!panel) return;
     const actionable = (alerts || []).filter(a => a.severity === 'critical' || a.severity === 'warning');
     if (!actionable.length) {
-        panel.innerHTML = `<div class="kt-card border border-emerald-200/40 bg-emerald-50/30 dark:bg-emerald-950/10" id="sec_alerts_ok">
+        panel.innerHTML = `<div class="kt-card border border-emerald-200 bg-emerald-50 dark:border-emerald-800/40 dark:bg-emerald-950/20" id="sec_alerts_ok">
             <div class="kt-card-content flex items-center gap-4 p-5">
                 <i class="ki-filled ki-shield-tick text-3xl text-emerald-600"></i>
                 <div><div class="font-semibold text-foreground">Aucune menace active détectée</div>
@@ -151,7 +151,7 @@ function renderAlerts(alerts) {
             </div></div>`;
         return;
     }
-    panel.innerHTML = `<div class="kt-card border border-border">
+        panel.innerHTML = `<div class="kt-card border border-border bg-card">
         <div class="kt-card-header border-b border-border bg-muted/30">
             <h3 class="kt-card-title flex items-center gap-2"><i class="ki-filled ki-information-3 text-destructive"></i> Alertes sécurité</h3>
         </div>

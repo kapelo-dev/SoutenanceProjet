@@ -63,12 +63,12 @@
             </li>
         </ul>
         <div class="mb-2.5 flex flex-col gap-3.5 px-2.5 pt-1.5">
-            <div class="hidden flex items-center justify-between gap-2">
+            <div class="flex items-center justify-between gap-2">
                 <span class="flex items-center gap-2">
-                    <i class="ki-filled ki-moon text-base text-muted-foreground">
-                    </i>
-                    <span class="text-2sm font-medium">
-                        Mode Sombre
+                    <i class="ki-filled ki-moon text-base text-muted-foreground theme-icon-dark"></i>
+                    <i class="ki-filled ki-sun text-base text-muted-foreground theme-icon-light hidden"></i>
+                    <span class="text-2sm font-medium theme-label">
+                        Mode sombre
                     </span>
                 </span>
                 <input class="kt-switch" data-kt-theme-switch-state="dark" data-kt-theme-switch-toggle="true"

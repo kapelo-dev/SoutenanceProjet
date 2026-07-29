@@ -7,9 +7,9 @@
     $actionableAlerts = collect($alerts)->whereIn('severity', ['critical', 'warning']);
     $gaugeBar = ['ok' => 'bg-emerald-600', 'warning' => 'bg-amber-500', 'error' => 'bg-destructive', 'info' => 'bg-muted-foreground/40'];
     $statusConfig = [
-        'ok' => ['border' => 'border-emerald-200/50', 'bg' => 'bg-emerald-50/80 dark:bg-emerald-950/20', 'text' => 'text-emerald-900 dark:text-emerald-100', 'icon' => 'ki-shield-tick', 'badge' => 'kt-badge-success', 'badgeLabel' => 'Normal'],
-        'warning' => ['border' => 'border-amber-200/50', 'bg' => 'bg-amber-50/80 dark:bg-amber-950/20', 'text' => 'text-amber-950 dark:text-amber-100', 'icon' => 'ki-shield-search', 'badge' => 'kt-badge-warning', 'badgeLabel' => 'Surveillance'],
-        'error' => ['border' => 'border-destructive/30', 'bg' => 'bg-destructive/5', 'text' => 'text-destructive', 'icon' => 'ki-shield-cross', 'badge' => 'kt-badge-destructive', 'badgeLabel' => 'Alerte'],
+        'ok' => ['border' => 'border-emerald-200', 'bg' => 'bg-emerald-50 dark:bg-emerald-950/30', 'text' => 'text-emerald-900 dark:text-emerald-100', 'icon' => 'ki-shield-tick', 'badge' => 'kt-badge-success', 'badgeLabel' => 'Normal'],
+        'warning' => ['border' => 'border-amber-200', 'bg' => 'bg-amber-50 dark:bg-amber-950/30', 'text' => 'text-amber-900 dark:text-amber-100', 'icon' => 'ki-shield-search', 'badge' => 'kt-badge-warning', 'badgeLabel' => 'Surveillance'],
+        'error' => ['border' => 'border-red-200', 'bg' => 'bg-red-50 dark:bg-destructive/10', 'text' => 'text-red-800 dark:text-red-200', 'icon' => 'ki-shield-cross', 'badge' => 'kt-badge-destructive', 'badgeLabel' => 'Alerte'],
     ];
     $cfg = $statusConfig[$health['status']] ?? $statusConfig['warning'];
     $maxTimeline = max(1, collect($metrics['timeline'])->max(fn($t) => max($t['failed'], $t['success'])));
@@ -69,7 +69,7 @@
 
     <div class="mb-6" id="sec_alerts_panel">
         @if($actionableAlerts->isNotEmpty())
-            <div class="kt-card border border-border">
+            <div class="kt-card border border-border bg-card">
                 <div class="kt-card-header border-b border-border bg-muted/30">
                     <h3 class="kt-card-title flex items-center gap-2">
                         <i class="ki-filled ki-information-3 text-destructive"></i>
@@ -83,7 +83,7 @@
                 </div>
             </div>
         @else
-            <div class="kt-card border border-emerald-200/40 bg-emerald-50/30 dark:bg-emerald-950/10" id="sec_alerts_ok">
+            <div class="kt-card border border-emerald-200 bg-emerald-50 dark:border-emerald-800/40 dark:bg-emerald-950/20" id="sec_alerts_ok">
                 <div class="kt-card-content flex items-center gap-4 p-5">
                     <i class="ki-filled ki-shield-tick text-3xl text-emerald-600"></i>
                     <div>

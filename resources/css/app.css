@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @source "../views/**/*.blade.php";
+@source "../js/**/*.js";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* Animation de chargement des pages - contenu qui monte du bas */
 @keyframes slideUp {

@@ -20,6 +20,42 @@ window.Alpine = Alpine;
 Alpine.start();
 
 // Metronic Core JavaScript functionality
+function syncThemeSwitchUi(isDark) {
+    document.querySelectorAll('[data-kt-theme-switch-toggle="true"]').forEach((toggle) => {
+        toggle.checked = isDark;
+    });
+    document.querySelectorAll('.theme-label').forEach((label) => {
+        label.textContent = isDark ? 'Mode sombre' : 'Mode clair';
+    });
+    document.querySelectorAll('.theme-icon-dark').forEach((icon) => {
+        icon.classList.toggle('hidden', !isDark);
+    });
+    document.querySelectorAll('.theme-icon-light').forEach((icon) => {
+        icon.classList.toggle('hidden', isDark);
+    });
+}
+
+function applyThemeMode(mode) {
+    const themeMode = mode === 'dark' ? 'dark' : 'light';
+    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.classList.add(themeMode);
+    document.documentElement.setAttribute('data-kt-theme-mode', themeMode);
+    localStorage.setItem('kt-theme', themeMode);
+    syncThemeSwitchUi(themeMode === 'dark');
+}
+
+function initThemeSwitch() {
+    syncThemeSwitchUi(document.documentElement.classList.contains('dark'));
+
+    document.querySelectorAll('[data-kt-theme-switch-toggle="true"]').forEach((toggle) => {
+        if (toggle._themeBound) return;
+        toggle._themeBound = true;
+        toggle.addEventListener('change', () => {
+            applyThemeMode(toggle.checked ? 'dark' : 'light');
+        });
+    });
+}
+
 function initMetronicCore() {
     // Initialize drawer functionality
     initDrawers();
@@ -38,6 +74,8 @@ function initMetronicCore() {
 
     // Initialize agents "soldes" page specific behaviours
     initSoldesPage();
+
+    initThemeSwitch();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
