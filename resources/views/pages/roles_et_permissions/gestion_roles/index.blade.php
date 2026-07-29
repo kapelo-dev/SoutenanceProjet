@@ -243,15 +243,37 @@
 window.currentRoleId = window.currentRoleId ?? null;
 
 function resetModal() {
-    // Réinitialiser le formulaire
-    document.getElementById('form_nouveau_role').reset();
-    document.getElementById('role_id').value = '';
-    document.getElementById('error_libelle').classList.add('hidden');
-    
-    // Réinitialiser le titre et le bouton
-    document.getElementById('modal_role_title').textContent = 'Nouveau Rôle';
-    document.getElementById('btn_save_text').textContent = 'Créer le rôle';
-    document.getElementById('btn_save_role').setAttribute('onclick', 'saveRole()');
+    const form = document.getElementById('form_nouveau_role');
+    if (form) {
+        form.reset();
+    }
+
+    const roleIdInput = document.getElementById('role_id');
+    if (roleIdInput) {
+        roleIdInput.value = '';
+    }
+
+    const errorLibelle = document.getElementById('error_libelle');
+    if (errorLibelle) {
+        errorLibelle.textContent = '';
+        errorLibelle.classList.add('hidden');
+    }
+
+    const modalTitle = document.getElementById('modal_role_title');
+    if (modalTitle) {
+        modalTitle.textContent = 'Nouveau Rôle';
+    }
+
+    const saveText = document.getElementById('btn_save_text');
+    if (saveText) {
+        saveText.textContent = 'Créer le rôle';
+    }
+
+    const saveBtn = document.getElementById('btn_save_role');
+    if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.setAttribute('onclick', 'saveRole()');
+    }
 }
 
 function editRole(roleId, libelle, description, parentId) {
@@ -323,9 +345,12 @@ function saveRole() {
     
     // Désactiver le bouton pendant le traitement
     const submitBtn = document.getElementById('btn_save_role');
-    const originalText = submitBtn.innerHTML;
+    const saveTextEl = document.getElementById('btn_save_text');
+    const originalText = saveTextEl ? saveTextEl.textContent : '';
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="ki-filled ki-loading"></i> ' + (roleId ? 'Enregistrement...' : 'Création...');
+    if (saveTextEl) {
+        saveTextEl.textContent = roleId ? 'Enregistrement...' : 'Création...';
+    }
     
     // Déterminer l'URL et la méthode selon si c'est une création ou une modification
     const url = roleId 
@@ -389,14 +414,18 @@ function saveRole() {
             }
             AppToast.error(data.message || 'Une erreur est survenue');
             submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
+            if (saveTextEl) {
+                saveTextEl.textContent = originalText;
+            }
         }
     })
     .catch(error => {
         console.error('Error:', error);
         AppToast.error(error.message || ('Une erreur est survenue lors de ' + (roleId ? 'la modification' : 'la création') + ' du rôle.'));
         submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
+        if (saveTextEl) {
+            saveTextEl.textContent = originalText;
+        }
     });
 }
 
