@@ -32,7 +32,17 @@ class UserMenuPermissions
             ];
         }
 
-        $profilIds = $profils->pluck('id')->toArray();
+        $profilIds = $user->effectiveProfilIds();
+
+        if ($profilIds === []) {
+            return [
+                'success' => true,
+                'profils' => [],
+                'routes' => [],
+                'route_names' => [],
+                'permissions' => [],
+            ];
+        }
 
         $liens = DB::table('profil_liens')
             ->join('liens', 'profil_liens.lien_id', '=', 'liens.id')
@@ -82,7 +92,7 @@ class UserMenuPermissions
             'profils' => $profils->map(fn ($profil) => [
                 'id' => $profil->id,
                 'libelle' => $profil->libelle,
-                'niveau' => $profil->niveau,
+                'parent_id' => $profil->parent_id,
             ])->values()->all(),
             'routes' => array_values(array_unique(array_filter($allowedUrls))),
             'route_names' => array_values(array_unique(array_filter($allowedRouteNames))),

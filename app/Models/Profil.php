@@ -15,10 +15,12 @@ class Profil extends Model
     protected $fillable = [
         'libelle',
         'description',
+        'parent_id',
         'niveau',
     ];
 
     protected $casts = [
+        'parent_id' => 'integer',
         'niveau' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -52,12 +54,68 @@ class Profil extends Model
             ->withTimestamps();
     }
 
+    public function parent()
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function enfants()
+    {
+        return $this->hasMany(self::class, 'parent_id');
+    }
+
+    /**
+     * IDs du profil et de tous ses ancêtres (héritage permissions).
+     */
+    public function ancestorIdsIncludingSelf(): array
+    {
+        $ids = [];
+        $current = $this;
+
+        while ($current) {
+            if (in_array($current->id, $ids, true)) {
+                break;
+            }
+            $ids[] = $current->id;
+            $current = $current->parent;
+        }
+
+        return $ids;
+    }
+
+    public function wouldCreateParentCycle(?int $parentId): bool
+    {
+        if (! $parentId) {
+            return false;
+        }
+
+        if ($this->exists && $parentId === $this->id) {
+            return true;
+        }
+
+        $current = self::find($parentId);
+
+        while ($current) {
+            if ($this->exists && $current->id === $this->id) {
+                return true;
+            }
+            $current = $current->parent;
+        }
+
+        return false;
+    }
+
     /**
      * Scopes
      */
-    
+
+    public function scopeOrdreAffichage($query)
+    {
+        return $query->orderBy('libelle');
+    }
+
     public function scopeOrdreParNiveau($query)
     {
-        return $query->orderBy('niveau', 'asc');
+        return $query->orderBy('libelle');
     }
 }

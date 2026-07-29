@@ -15,8 +15,8 @@ class PermissionController extends Controller
     public function index()
     {
         try {
-            // Récupérer tous les rôles (profils) triés par niveau
-            $roles = Profil::ordreParNiveau()->get();
+            // Récupérer tous les rôles (profils)
+            $roles = Profil::ordreAffichage()->get();
             
             // Récupérer tous les liens/routes triés par ordre
             $liens = Lien::orderBy('ordre')->orderBy('libelle')->get();

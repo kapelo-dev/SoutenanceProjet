@@ -16,32 +16,43 @@ class ProfilSeeder extends Seeder
             [
                 'libelle' => 'Super Admin',
                 'description' => 'Accès complet au système',
-                'niveau' => 0,
+                'parent_id' => null,
             ],
             [
                 'libelle' => 'Admin',
                 'description' => 'Administrateur de l\'application',
-                'niveau' => 1,
+                'parent_libelle' => 'Super Admin',
             ],
             [
                 'libelle' => 'Superviseur',
                 'description' => 'Supervision des agents et kiosques',
-                'niveau' => 2,
+                'parent_libelle' => 'Admin',
             ],
             [
                 'libelle' => 'Comptable',
                 'description' => 'Gestion comptable et rapports',
-                'niveau' => 2,
+                'parent_libelle' => 'Admin',
             ],
             [
                 'libelle' => 'Agent',
                 'description' => 'Agent de terrain',
-                'niveau' => 3,
+                'parent_libelle' => 'Superviseur',
             ],
         ];
 
         foreach ($profils as $profil) {
-            Profil::updateOrCreate(['libelle' => $profil['libelle']], $profil);
+            $parentId = null;
+            if (! empty($profil['parent_libelle'])) {
+                $parentId = Profil::where('libelle', $profil['parent_libelle'])->value('id');
+            }
+
+            Profil::updateOrCreate(
+                ['libelle' => $profil['libelle']],
+                [
+                    'description' => $profil['description'],
+                    'parent_id' => $parentId,
+                ]
+            );
         }
 
         $this->command->info('✅ Profils créés/mis à jour avec succès!');

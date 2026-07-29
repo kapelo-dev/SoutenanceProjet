@@ -24,20 +24,15 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-7.5">
        @forelse($roles as $role)
        @php
-           // Déterminer les couleurs et icônes selon le niveau ou le libellé
            $iconClass = 'ki-setting';
            $iconColor = 'text-primary';
            $strokeClass = 'stroke-primary/10 fill-primary/5';
-           
-           if (stripos($role->libelle, 'admin') !== false || $role->niveau == 0) {
+
+           if (stripos($role->libelle, 'admin') !== false) {
                $iconClass = 'ki-setting';
-               $iconColor = 'text-primary';
-               $strokeClass = 'stroke-primary/10 fill-primary/5';
            } elseif (stripos($role->libelle, 'viewer') !== false || stripos($role->libelle, 'lecteur') !== false) {
                $iconClass = 'ki-eye';
-               $iconColor = 'text-primary';
-               $strokeClass = 'stroke-primary/10 fill-primary/5';
-           } elseif (stripos($role->libelle, 'superviseur') !== false || $role->niveau == 2) {
+           } elseif (stripos($role->libelle, 'superviseur') !== false) {
                $iconClass = 'ki-chart-line-up-2';
                $iconColor = 'text-violet-500';
                $strokeClass = 'stroke-violet-100 dark:stroke-violet-950 ring-violet-50 dark:ring-violet-950 fill-violet-50 dark:fill-violet-950/30';
@@ -45,14 +40,15 @@
                $iconClass = 'ki-people';
                $iconColor = 'text-green-500';
                $strokeClass = 'stroke-green-200 dark:stroke-green-950 dark:ring-green-950 fill-green-50 dark:fill-green-950/30';
-           } elseif (stripos($role->libelle, 'agent') !== false || $role->niveau >= 3) {
+           } elseif (stripos($role->libelle, 'agent') !== false) {
                $iconClass = 'ki-face-id';
                $iconColor = 'text-green-500';
                $strokeClass = 'stroke-green-200 dark:stroke-green-950 dark:ring-green-950 fill-green-50 dark:fill-green-950/30';
            }
-           
-           $isDefault = $role->niveau <= 1;
-           $roleType = $isDefault ? 'Default role' : ($role->niveau >= 3 ? 'Remote role' : 'Default role');
+
+           $roleType = $role->parent
+               ? 'Hérite de ' . $role->parent->libelle
+               : 'Rôle racine';
            $usersCount = $role->users_count ?? $role->utilisateurs()->count();
        @endphp
        <div class="kt-card flex flex-col gap-5 p-5 lg:p-7.5" data-role-id="{{ $role->id }}">
@@ -102,7 +98,7 @@
              </a>
             </div>
             <div class="kt-menu-item">
-             <a class="kt-menu-link" href="#" onclick="editRole({{ $role->id }}, '{{ $role->libelle }}', '{{ addslashes($role->description) }}', {{ $role->niveau }})">
+             <a class="kt-menu-link" href="#" onclick="editRole({{ $role->id }}, '{{ $role->libelle }}', '{{ addslashes($role->description) }}', {{ $role->parent_id ?? 'null' }})">
               <span class="kt-menu-icon">
                <i class="ki-filled ki-pencil">
                </i>
@@ -216,17 +212,15 @@
          </div>
          <div class="flex flex-col gap-2">
           <label class="kt-label">
-           Niveau hiérarchique <span class="text-destructive">*</span>
+           Rôle parent
           </label>
-          <select class="kt-select" name="niveau" id="role_niveau" data-kt-select="true" required>
-           <option value="0">0 - Super Admin (Plus haut niveau)</option>
-           <option value="1">1 - Admin</option>
-           <option value="2">2 - Superviseur/Manager</option>
-           <option value="3">3 - Agent/Utilisateur</option>
-           <option value="4">4 - Utilisateur standard</option>
-           <option value="5">5 - Visiteur</option>
+          <select class="kt-select" name="parent_id" id="role_parent_id" data-kt-select="true">
+           <option value="">Aucun (rôle racine)</option>
+           @foreach($roles as $parentRole)
+            <option value="{{ $parentRole->id }}">{{ $parentRole->libelle }}</option>
+           @endforeach
           </select>
-          <span class="text-xs text-secondary-foreground">Le niveau détermine la hiérarchie (0 = plus élevé)</span>
+          <span class="text-xs text-secondary-foreground">Le rôle hérite des permissions de son parent</span>
          </div>
         </form>
        </div>
@@ -258,12 +252,11 @@ function resetModal() {
     document.getElementById('btn_save_role').setAttribute('onclick', 'saveRole()');
 }
 
-function editRole(roleId, libelle, description, niveau) {
-    // Charger les données dans le formulaire
+function editRole(roleId, libelle, description, parentId) {
     document.getElementById('role_id').value = roleId;
     document.getElementById('role_libelle').value = libelle;
     document.getElementById('role_description').value = description || '';
-    document.getElementById('role_niveau').value = niveau;
+    document.getElementById('role_parent_id').value = parentId ?? '';
     
     // Mettre à jour le titre et le bouton
     document.getElementById('modal_role_title').textContent = 'Modifier le Rôle';
@@ -284,21 +277,21 @@ function editRole(roleId, libelle, description, niveau) {
         document.getElementById('role_id').value = roleId;
         document.getElementById('role_libelle').value = libelle;
         document.getElementById('role_description').value = description || '';
-        
-        // Mettre à jour le select
-        const niveauSelect = document.getElementById('role_niveau');
-        niveauSelect.value = niveau;
-        
-        // Si le framework utilise un plugin pour les selects, déclencher un événement de changement
-        if (niveauSelect.dispatchEvent) {
-            niveauSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        document.getElementById('role_parent_id').value = parentId ?? '';
+
+        const parentSelect = document.getElementById('role_parent_id');
+        Array.from(parentSelect.options).forEach(option => {
+            option.disabled = option.value !== '' && String(option.value) === String(roleId);
+        });
+
+        if (parentSelect.dispatchEvent) {
+            parentSelect.dispatchEvent(new Event('change', { bubbles: true }));
         }
-        
-        // Réinitialiser le select personnalisé si KTSelect est utilisé
-        if (typeof KTSelect !== 'undefined' && niveauSelect) {
-            const selectInstance = KTSelect.getInstance(niveauSelect);
+
+        if (typeof KTSelect !== 'undefined' && parentSelect) {
+            const selectInstance = KTSelect.getInstance(parentSelect);
             if (selectInstance) {
-                selectInstance.setValue(niveau);
+                selectInstance.setValue(parentId ?? '');
             }
         }
     }, 200);
@@ -312,7 +305,9 @@ function saveRole() {
     
     // Retirer role_id des données à envoyer
     delete data.role_id;
-    
+    if (!data.parent_id) {
+        data.parent_id = null;
+    }
     // Validation côté client
     if (!data.libelle || data.libelle.trim() === '') {
         document.getElementById('error_libelle').textContent = 'Le nom du rôle est requis.';
@@ -430,7 +425,7 @@ function viewRoleDetails(roleId) {
             const details = `
 Nom: ${role.libelle}
 Description: ${role.description || 'Aucune description'}
-Niveau: ${role.niveau}
+Parent: ${role.parent ? role.parent.libelle : 'Aucun (rôle racine)'}
 Utilisateurs: ${role.users_count || 0}
             `;
             AppToast.info(details);

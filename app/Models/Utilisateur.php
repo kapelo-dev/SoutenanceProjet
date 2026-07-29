@@ -155,15 +155,38 @@ class Utilisateur extends Authenticatable
 
     public function canAccessRoute(string $routeName): bool
     {
+        $profilIds = $this->effectiveProfilIds();
+
+        if ($profilIds === []) {
+            return false;
+        }
+
         return DB::table('profil_liens')
             ->join('liens', 'profil_liens.lien_id', '=', 'liens.id')
-            ->join('user_profils', 'profil_liens.profil_id', '=', 'user_profils.profil_id')
-            ->where('user_profils.user_id', $this->id)
+            ->whereIn('profil_liens.profil_id', $profilIds)
             ->where('liens.route', $routeName)
             ->whereNull('profil_liens.deleted_at')
             ->whereNull('liens.deleted_at')
-            ->whereNull('user_profils.deleted_at')
             ->where('liens.visible', true)
             ->exists();
+    }
+
+    /**
+     * Profils assignés + ancêtres pour l'héritage des permissions.
+     */
+    public function effectiveProfilIds(): array
+    {
+        $profils = $this->profils()
+            ->whereNull('user_profils.deleted_at')
+            ->with('parent')
+            ->get();
+
+        $ids = [];
+
+        foreach ($profils as $profil) {
+            $ids = array_merge($ids, $profil->ancestorIdsIncludingSelf());
+        }
+
+        return array_values(array_unique($ids));
     }
 }
