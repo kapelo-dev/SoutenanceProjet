@@ -176,6 +176,13 @@ class Utilisateur extends Authenticatable
      */
     public function effectiveProfilIds(): array
     {
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('profils', 'parent_id')) {
+            return $this->profils()
+                ->whereNull('user_profils.deleted_at')
+                ->pluck('profils.id')
+                ->all();
+        }
+
         $profils = $this->profils()
             ->whereNull('user_profils.deleted_at')
             ->with('parent')

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Profil;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class RoleController extends Controller
@@ -11,18 +12,24 @@ class RoleController extends Controller
     public function index()
     {
         try {
-            $roles = Profil::with('parent')->ordreAffichage()->get();
+            $roles = Profil::query()
+                ->when($this->hasParentColumn(), fn ($q) => $q->with('parent'))
+                ->ordreAffichage()
+                ->get();
 
             foreach ($roles as $role) {
                 $role->users_count = $role->utilisateurs()->count();
             }
 
-            return $this->ajaxView('pages.roles_et_permissions.gestion_roles.index', compact('roles'));
+            $hasParentColumn = $this->hasParentColumn();
+
+            return $this->ajaxView('pages.roles_et_permissions.gestion_roles.index', compact('roles', 'hasParentColumn'));
         } catch (\Exception $e) {
             \Log::error('Erreur dans RoleController@index: ' . $e->getMessage());
 
             return $this->ajaxView('pages.roles_et_permissions.gestion_roles.index', [
                 'roles' => collect([]),
+                'hasParentColumn' => false,
             ]);
         }
     }
@@ -40,26 +47,30 @@ class RoleController extends Controller
                 ], 422);
             }
 
-            $role = new Profil([
+            $attributes = [
                 'libelle' => $request->libelle,
                 'description' => $request->description ?? '',
-                'parent_id' => $request->filled('parent_id') ? $request->parent_id : null,
-            ]);
+            ];
 
-            if ($role->wouldCreateParentCycle($role->parent_id)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Erreurs de validation',
-                    'errors' => ['parent_id' => ['Le rôle parent choisi créerait une boucle d\'héritage.']],
-                ], 422);
+            if ($this->hasParentColumn()) {
+                $parentId = $this->resolveParentId($request);
+                $role = new Profil($attributes);
+                if ($role->wouldCreateParentCycle($parentId)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Erreurs de validation',
+                        'errors' => ['parent_id' => ['Le rôle parent choisi créerait une boucle d\'héritage.']],
+                    ], 422);
+                }
+                $attributes['parent_id'] = $parentId;
             }
 
-            $role->save();
+            $role = Profil::create($attributes);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Rôle créé avec succès',
-                'role' => $role->load('parent'),
+                'role' => $this->hasParentColumn() ? $role->load('parent') : $role,
             ], 201);
         } catch (\Exception $e) {
             \Log::error('Erreur dans RoleController@store: ' . $e->getMessage());
@@ -85,9 +96,9 @@ class RoleController extends Controller
                 ], 422);
             }
 
-            $parentId = $request->filled('parent_id') ? (int) $request->parent_id : null;
+            $parentId = $this->hasParentColumn() ? $this->resolveParentId($request) : null;
 
-            if ($role->wouldCreateParentCycle($parentId)) {
+            if ($this->hasParentColumn() && $role->wouldCreateParentCycle($parentId)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Erreurs de validation',
@@ -95,16 +106,21 @@ class RoleController extends Controller
                 ], 422);
             }
 
-            $role->update([
+            $payload = [
                 'libelle' => $request->libelle,
                 'description' => $request->description ?? '',
-                'parent_id' => $parentId,
-            ]);
+            ];
+
+            if ($this->hasParentColumn()) {
+                $payload['parent_id'] = $parentId;
+            }
+
+            $role->update($payload);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Rôle mis à jour avec succès',
-                'role' => $role->fresh(['parent']),
+                'role' => $this->hasParentColumn() ? $role->fresh(['parent']) : $role->fresh(),
             ]);
         } catch (\Exception $e) {
             \Log::error('Erreur dans RoleController@update: ' . $e->getMessage());
@@ -129,7 +145,7 @@ class RoleController extends Controller
                 ], 422);
             }
 
-            if ($role->enfants()->exists()) {
+            if ($this->hasParentColumn() && $role->enfants()->exists()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Impossible de supprimer ce rôle car d\'autres rôles en héritent.',
@@ -155,7 +171,10 @@ class RoleController extends Controller
     public function show($id)
     {
         try {
-            $role = Profil::with(['parent', 'utilisateurs'])->findOrFail($id);
+            $role = Profil::query()
+                ->when($this->hasParentColumn(), fn ($q) => $q->with(['parent', 'utilisateurs']))
+                ->when(! $this->hasParentColumn(), fn ($q) => $q->with('utilisateurs'))
+                ->findOrFail($id);
             $role->users_count = $role->utilisateurs()->count();
 
             return response()->json([
@@ -174,20 +193,38 @@ class RoleController extends Controller
 
     private function makeValidator(Request $request, ?int $roleId = null)
     {
-        $parentRule = 'nullable|exists:profils,id';
-        if ($roleId) {
-            $parentRule .= '|not_in:' . $roleId;
-        }
-
-        return Validator::make($request->all(), [
+        $rules = [
             'libelle' => 'required|string|max:100|unique:profils,libelle' . ($roleId ? ',' . $roleId : ''),
             'description' => 'nullable|string',
-            'parent_id' => $parentRule,
-        ], [
+        ];
+
+        if ($this->hasParentColumn()) {
+            $parentRule = 'nullable|exists:profils,id';
+            if ($roleId) {
+                $parentRule .= '|not_in:' . $roleId;
+            }
+            $rules['parent_id'] = $parentRule;
+        }
+
+        return Validator::make($request->all(), $rules, [
             'libelle.required' => 'Le nom du rôle est requis.',
             'libelle.unique' => 'Ce nom de rôle existe déjà.',
             'parent_id.exists' => 'Le rôle parent sélectionné n\'existe pas.',
             'parent_id.not_in' => 'Un rôle ne peut pas être son propre parent.',
         ]);
+    }
+
+    private function hasParentColumn(): bool
+    {
+        return Schema::hasColumn('profils', 'parent_id');
+    }
+
+    private function resolveParentId(Request $request): ?int
+    {
+        if (! $request->filled('parent_id')) {
+            return null;
+        }
+
+        return (int) $request->parent_id;
     }
 }

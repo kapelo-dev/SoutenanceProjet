@@ -46,9 +46,9 @@
                $strokeClass = 'stroke-green-200 dark:stroke-green-950 dark:ring-green-950 fill-green-50 dark:fill-green-950/30';
            }
 
-           $roleType = $role->parent
+           $roleType = ($role->parent_id ?? null) && $role->relationLoaded('parent') && $role->parent
                ? 'Hérite de ' . $role->parent->libelle
-               : 'Rôle racine';
+               : (($role->parent_id ?? null) ? 'Rôle enfant' : 'Rôle racine');
            $usersCount = $role->users_count ?? $role->utilisateurs()->count();
        @endphp
        <div class="kt-card flex flex-col gap-5 p-5 lg:p-7.5" data-role-id="{{ $role->id }}">
@@ -210,6 +210,7 @@
           </label>
           <textarea class="kt-input" rows="3" name="description" id="role_description" placeholder="Description du rôle..."></textarea>
          </div>
+         @if($hasParentColumn ?? false)
          <div class="flex flex-col gap-2">
           <label class="kt-label">
            Rôle parent
@@ -222,6 +223,7 @@
           </select>
           <span class="text-xs text-secondary-foreground">Le rôle hérite des permissions de son parent</span>
          </div>
+         @endif
         </form>
        </div>
        <div class="kt-modal-footer">
@@ -256,7 +258,10 @@ function editRole(roleId, libelle, description, parentId) {
     document.getElementById('role_id').value = roleId;
     document.getElementById('role_libelle').value = libelle;
     document.getElementById('role_description').value = description || '';
-    document.getElementById('role_parent_id').value = parentId ?? '';
+    const parentSelectInit = document.getElementById('role_parent_id');
+    if (parentSelectInit) {
+        parentSelectInit.value = parentId ?? '';
+    }
     
     // Mettre à jour le titre et le bouton
     document.getElementById('modal_role_title').textContent = 'Modifier le Rôle';
@@ -277,21 +282,20 @@ function editRole(roleId, libelle, description, parentId) {
         document.getElementById('role_id').value = roleId;
         document.getElementById('role_libelle').value = libelle;
         document.getElementById('role_description').value = description || '';
-        document.getElementById('role_parent_id').value = parentId ?? '';
-
         const parentSelect = document.getElementById('role_parent_id');
-        Array.from(parentSelect.options).forEach(option => {
-            option.disabled = option.value !== '' && String(option.value) === String(roleId);
-        });
-
-        if (parentSelect.dispatchEvent) {
-            parentSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-
-        if (typeof KTSelect !== 'undefined' && parentSelect) {
-            const selectInstance = KTSelect.getInstance(parentSelect);
-            if (selectInstance) {
-                selectInstance.setValue(parentId ?? '');
+        if (parentSelect) {
+            parentSelect.value = parentId ?? '';
+            Array.from(parentSelect.options).forEach(option => {
+                option.disabled = option.value !== '' && String(option.value) === String(roleId);
+            });
+            if (parentSelect.dispatchEvent) {
+                parentSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (typeof KTSelect !== 'undefined') {
+                const selectInstance = KTSelect.getInstance(parentSelect);
+                if (selectInstance) {
+                    selectInstance.setValue(parentId ?? '');
+                }
             }
         }
     }, 200);
@@ -333,11 +337,26 @@ function saveRole() {
         method: method,
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
         },
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+    .then(async (response) => {
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (_) {
+            throw new Error('Réponse serveur invalide (HTTP ' + response.status + ')');
+        }
+
+        if (!response.ok && !payload) {
+            throw new Error('Erreur HTTP ' + response.status);
+        }
+
+        return payload;
+    })
     .then(data => {
         if (data.success) {
             // Fermer le modal
@@ -364,22 +383,18 @@ function saveRole() {
             );
             return;
         } else {
-            // Afficher les erreurs
-            if (data.errors) {
-                if (data.errors.libelle) {
-                    document.getElementById('error_libelle').textContent = data.errors.libelle[0];
-                    document.getElementById('error_libelle').classList.remove('hidden');
-                }
-            } else {
-                AppToast.error('Erreur : ' + (data.message || 'Une erreur est survenue'));
+            if (data.errors?.libelle) {
+                document.getElementById('error_libelle').textContent = data.errors.libelle[0];
+                document.getElementById('error_libelle').classList.remove('hidden');
             }
+            AppToast.error(data.message || 'Une erreur est survenue');
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        AppToast.error('Une erreur est survenue lors de ' + (roleId ? 'la modification' : 'la création') + ' du rôle.');
+        AppToast.error(error.message || ('Une erreur est survenue lors de ' + (roleId ? 'la modification' : 'la création') + ' du rôle.'));
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
     });
