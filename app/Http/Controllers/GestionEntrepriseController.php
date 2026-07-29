@@ -10,6 +10,8 @@ use App\Models\MouvementTresorerie;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class GestionEntrepriseController extends Controller
@@ -19,60 +21,83 @@ class GestionEntrepriseController extends Controller
      */
     public function index(Request $request)
     {
-        $onglet = $request->get('onglet', 'salaires');
+        try {
+            $onglet = $request->get('onglet', 'salaires');
+            $dateDebut = $request->get('date_debut', now()->startOfMonth()->format('Y-m-d'));
+            $dateFin = $request->get('date_fin', now()->endOfMonth()->format('Y-m-d'));
 
-        // Données pour l'onglet Salaires
-        $perPageSalaires = (int) $request->get('per_page_salaires', 15);
-        $perPageSalaires = in_array($perPageSalaires, [10, 15, 25, 50], true) ? $perPageSalaires : 15;
-        $salaires = Salaire::with(['agent.utilisateur', 'parametreSalaire'])
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPageSalaires)
-            ->withQueryString();
+            $perPageSalaires = (int) $request->get('per_page_salaires', 15);
+            $perPageSalaires = in_array($perPageSalaires, [10, 15, 25, 50], true) ? $perPageSalaires : 15;
 
-        // Données pour l'onglet Paramètres
-        $parametres = ParametreSalaire::with('profils')
-            ->orderBy('actif', 'desc')
-            ->orderBy('nom')
-            ->get();
+            $perPageTresorerie = (int) $request->get('per_page_tresorerie', 20);
+            $perPageTresorerie = in_array($perPageTresorerie, [10, 15, 20, 25, 50], true) ? $perPageTresorerie : 20;
 
-        $profils = Profil::ordreParNiveau()->get();
+            $salaires = $this->hasTable('salaires')
+                ? Salaire::with(['agent.utilisateur', 'parametreSalaire'])
+                    ->orderBy('created_at', 'desc')
+                    ->paginate($perPageSalaires)
+                    ->withQueryString()
+                : new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPageSalaires);
 
-        $agents = Agent::with('utilisateur')->where('statut', 'actif')->get();
+            $parametres = $this->hasTable('parametres_salaire')
+                ? ParametreSalaire::with('profils')
+                    ->orderBy('actif', 'desc')
+                    ->orderBy('nom')
+                    ->get()
+                : collect();
 
-        // Données pour l'onglet Trésorerie
-        $dateDebut = $request->get('date_debut', now()->startOfMonth()->format('Y-m-d'));
-        $dateFin = $request->get('date_fin', now()->endOfMonth()->format('Y-m-d'));
+            $profils = Profil::ordreParNiveau()->get();
+            $agents = Agent::with('utilisateur')->where('statut', 'actif')->get();
 
-        $perPageTresorerie = (int) $request->get('per_page_tresorerie', 20);
-        $perPageTresorerie = in_array($perPageTresorerie, [10, 15, 20, 25, 50], true) ? $perPageTresorerie : 20;
-        $mouvements = MouvementTresorerie::with(['agent.utilisateur', 'salaire', 'utilisateur'])
-            ->whereBetween('date_mouvement', [$dateDebut, $dateFin])
-            ->orderBy('date_mouvement', 'desc')
-            ->paginate($perPageTresorerie)
-            ->withQueryString();
+            $mouvements = $this->hasTable('mouvements_tresorerie')
+                ? MouvementTresorerie::with(['agent.utilisateur', 'salaire', 'utilisateur'])
+                    ->whereBetween('date_mouvement', [$dateDebut, $dateFin])
+                    ->orderBy('date_mouvement', 'desc')
+                    ->paginate($perPageTresorerie)
+                    ->withQueryString()
+                : new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPageTresorerie);
 
-        // Statistiques trésorerie
-        $stats = [
-            'entrees' => MouvementTresorerie::where('type', 'entree')
-                ->whereBetween('date_mouvement', [$dateDebut, $dateFin])
-                ->sum('montant'),
-            'sorties' => MouvementTresorerie::where('type', 'sortie')
-                ->whereBetween('date_mouvement', [$dateDebut, $dateFin])
-                ->sum('montant'),
-        ];
-        $stats['solde'] = $stats['entrees'] - $stats['sorties'];
+            $stats = ['entrees' => 0, 'sorties' => 0, 'solde' => 0];
+            if ($this->hasTable('mouvements_tresorerie')) {
+                $stats['entrees'] = MouvementTresorerie::where('type', 'entree')
+                    ->whereBetween('date_mouvement', [$dateDebut, $dateFin])
+                    ->sum('montant');
+                $stats['sorties'] = MouvementTresorerie::where('type', 'sortie')
+                    ->whereBetween('date_mouvement', [$dateDebut, $dateFin])
+                    ->sum('montant');
+                $stats['solde'] = $stats['entrees'] - $stats['sorties'];
+            }
 
-        return view('pages.gestion_entreprise.index', compact(
-            'onglet',
-            'salaires',
-            'parametres',
-            'profils',
-            'agents',
-            'mouvements',
-            'stats',
-            'dateDebut',
-            'dateFin'
-        ));
+            return $this->ajaxView('pages.gestion_entreprise.index', compact(
+                'onglet',
+                'salaires',
+                'parametres',
+                'profils',
+                'agents',
+                'mouvements',
+                'stats',
+                'dateDebut',
+                'dateFin'
+            ));
+        } catch (\Throwable $e) {
+            Log::error('Erreur dans GestionEntrepriseController@index: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Impossible de charger la page salaires: ' . $e->getMessage(),
+                ], 500);
+            }
+
+            abort(500, 'Impossible de charger la page salaires.');
+        }
+    }
+
+    private function hasTable(string $table): bool
+    {
+        return Schema::hasTable($table);
     }
 
     /**

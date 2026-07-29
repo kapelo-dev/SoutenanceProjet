@@ -161,6 +161,36 @@ class Utilisateur extends Authenticatable
             return false;
         }
 
+        if ($this->hasPermissionOnRoute($profilIds, $routeName)) {
+            return true;
+        }
+
+        if ($routeName === 'gestion-entreprise.index') {
+            return $this->hasPermissionOnGestionEntrepriseUrl($profilIds);
+        }
+
+        return false;
+    }
+
+    public function canAccessGestionEntrepriseOnglet(?string $onglet = 'salaires'): bool
+    {
+        $profilIds = $this->effectiveProfilIds();
+
+        if ($profilIds === []) {
+            return false;
+        }
+
+        if ($this->hasPermissionOnRoute($profilIds, 'gestion-entreprise.index')) {
+            return true;
+        }
+
+        $onglet = $onglet ?: 'salaires';
+
+        return $this->hasPermissionOnGestionEntrepriseUrl($profilIds, $onglet);
+    }
+
+    private function hasPermissionOnRoute(array $profilIds, string $routeName): bool
+    {
         return DB::table('profil_liens')
             ->join('liens', 'profil_liens.lien_id', '=', 'liens.id')
             ->whereIn('profil_liens.profil_id', $profilIds)
@@ -169,6 +199,23 @@ class Utilisateur extends Authenticatable
             ->whereNull('liens.deleted_at')
             ->where('liens.visible', true)
             ->exists();
+    }
+
+    private function hasPermissionOnGestionEntrepriseUrl(array $profilIds, ?string $onglet = null): bool
+    {
+        $query = DB::table('profil_liens')
+            ->join('liens', 'profil_liens.lien_id', '=', 'liens.id')
+            ->whereIn('profil_liens.profil_id', $profilIds)
+            ->where('liens.url', 'like', '/gestion-entreprise%')
+            ->whereNull('profil_liens.deleted_at')
+            ->whereNull('liens.deleted_at')
+            ->where('liens.visible', true);
+
+        if ($onglet) {
+            $query->where('liens.url', 'like', '%onglet=' . $onglet . '%');
+        }
+
+        return $query->exists();
     }
 
     /**

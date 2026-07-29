@@ -55,6 +55,7 @@ class DefaultProfilPermissions
                 ['route' => 'gestion-entreprise.index'],
             ],
             'Comptable' => [
+                ['route' => 'gestion-entreprise.index'],
                 ['url' => '/gestion-entreprise?onglet=salaires'],
                 ['url' => '/gestion-entreprise?onglet=parametres'],
                 ['url' => '/gestion-entreprise?onglet=tresorerie'],

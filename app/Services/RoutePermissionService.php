@@ -48,6 +48,10 @@ class RoutePermissionService
             return false;
         }
 
+        if ($permissionRoute === 'gestion-entreprise.index') {
+            return $user->canAccessGestionEntrepriseOnglet($request->get('onglet', 'salaires'));
+        }
+
         return $user->canAccessRoute($permissionRoute);
     }
 

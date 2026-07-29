@@ -86,21 +86,25 @@
                 </thead>
                 <tbody>
                     @forelse($salaires as $salaire)
+                        @php
+                            $utilisateur = $salaire->agent?->utilisateur;
+                            $agentLabel = $utilisateur?->nom_complet ?? ('Agent #' . ($salaire->agent_id ?? '?'));
+                        @endphp
                         <tr>
                             <td>
                                 <div class="flex items-center gap-2">
-                                    @if($salaire->agent->utilisateur->photo_profil)
-                                        <img src="{{ asset('storage/' . $salaire->agent->utilisateur->photo_profil) }}" 
+                                    @if($utilisateur?->photo_profil)
+                                        <img src="{{ asset('storage/' . $utilisateur->photo_profil) }}" 
                                              class="size-8 rounded-full object-cover" 
-                                             alt="{{ $salaire->agent->utilisateur->nom_complet }}">
+                                             alt="{{ $agentLabel }}">
                                     @else
                                         <div class="size-8 rounded-full bg-primary/10 flex items-center justify-center">
                                             <span class="text-xs font-semibold text-primary">
-                                                {{ strtoupper(substr($salaire->agent->utilisateur->prenom ?? $salaire->agent->utilisateur->nom, 0, 1)) }}
+                                                {{ strtoupper(substr($utilisateur?->prenom ?? $utilisateur?->nom ?? 'A', 0, 1)) }}
                                             </span>
                                         </div>
                                     @endif
-                                    <span class="font-medium">{{ $salaire->agent->utilisateur->nom_complet }}</span>
+                                    <span class="font-medium">{{ $agentLabel }}</span>
                                 </div>
                             </td>
                             <td>{{ $salaire->periode }}</td>
@@ -192,7 +196,7 @@
                         <label class="text-sm font-medium">Agents (laissez vide pour tous les agents actifs)</label>
                         <select name="agent_ids[]" class="kt-select" data-kt-select="true" multiple>
                             @foreach($agents as $agent)
-                                <option value="{{ $agent->id }}">{{ $agent->utilisateur->nom_complet }}</option>
+                                <option value="{{ $agent->id }}">{{ $agent->utilisateur?->nom_complet ?? ('Agent #' . $agent->id) }}</option>
                             @endforeach
                         </select>
                     </div>
