@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
 COMPOSE_FILE="docker-compose.vps.yml"
+LOCAL_COMPOSE_FILE="docker-compose.local.yml"
 ENV_FILE=".env"
 
 # --- helpers ---
@@ -54,6 +55,10 @@ prompt() {
   set_env "$key" "$REPLY"
 }
 
+tolower() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
 # --- .env de base ---
 
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -84,7 +89,7 @@ fi
 read -rp "MINIO_ENDPOINT (API S3, port 9000) [$DEFAULT_ENDPOINT]: " MINIO_ENDPOINT
 MINIO_ENDPOINT="${MINIO_ENDPOINT:-$DEFAULT_ENDPOINT}"
 
-if [[ "${MINIO_ENDPOINT,,}" == "skip" ]]; then
+if [[ "$(tolower "$MINIO_ENDPOINT")" == "skip" ]]; then
   set_env "BACKUP_ENABLED" "false"
   set_env "MINIO_ENDPOINT" ""
   echo "→ Sauvegardes MinIO désactivées (BACKUP_ENABLED=false)."
@@ -124,19 +129,18 @@ if [[ "$(get_env DB_PASSWORD)" == change-me* ]]; then
 fi
 
 echo ""
-echo "=== Application mobile (APK) ==="
-if bash scripts/publish-mobile-apk.sh 2>/dev/null; then
-  :
-else
-  echo "→ APK non copié (générez-le : cd android-app && ./build-apk.sh)"
-fi
-
-echo ""
 echo "=== Démarrage Docker ==="
-docker compose -f "$COMPOSE_FILE" up -d --build
+echo "→ Mode dev local : code PHP monté via $LOCAL_COMPOSE_FILE (modifs visibles sans rebuild)"
+docker compose -f "$COMPOSE_FILE" -f "$LOCAL_COMPOSE_FILE" build app scheduler
+docker compose -f "$COMPOSE_FILE" -f "$LOCAL_COMPOSE_FILE" up -d --force-recreate
 
 echo ""
-docker compose -f "$COMPOSE_FILE" ps
+echo "→ Vidage cache Laravel dans le conteneur..."
+docker compose -f "$COMPOSE_FILE" -f "$LOCAL_COMPOSE_FILE" exec -T app \
+  php artisan optimize:clear --no-interaction 2>/dev/null || true
+
+echo ""
+docker compose -f "$COMPOSE_FILE" -f "$LOCAL_COMPOSE_FILE" ps
 
 APP_PORT="$(get_env APP_PORT)"
 APP_URL="$(get_env APP_URL)"
@@ -144,10 +148,8 @@ APP_URL="$(get_env APP_URL)"
 echo ""
 echo "PDV Connect est démarré."
 echo "  App    : ${APP_URL:-http://localhost:${APP_PORT:-80}}"
-echo "  Mobile : ${APP_URL:-http://localhost:${APP_PORT:-80}}/app-mobile"
-echo "  APK    : ${APP_URL:-http://localhost:${APP_PORT:-80}}/downloads/pdv-connect.apk"
 echo "  Login  : admin@pdvconnect.com / password123 (1ère connexion → changer le mot de passe)"
-echo "  Logs   : docker compose -f $COMPOSE_FILE logs -f app"
+echo "  Logs   : docker compose -f $COMPOSE_FILE -f $LOCAL_COMPOSE_FILE logs -f app"
 if [[ "$(get_env BACKUP_ENABLED)" == "true" ]]; then
   echo "  MinIO  : $(get_env MINIO_ENDPOINT) / bucket $(get_env MINIO_BUCKET)"
 fi

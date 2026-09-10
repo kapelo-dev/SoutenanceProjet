@@ -18,8 +18,11 @@ class PermissionController extends Controller
             // Récupérer tous les rôles (profils)
             $roles = Profil::ordreAffichage()->get();
             
-            // Récupérer tous les liens/routes triés par ordre
-            $liens = Lien::orderBy('ordre')->orderBy('libelle')->get();
+            // La matrice de permissions suit la visibilité configurée dans Gestion des routes.
+            $liens = Lien::where('visible', true)
+                ->orderBy('ordre')
+                ->orderBy('libelle')
+                ->get();
             
             // Récupérer toutes les permissions existantes (profil_id, lien_id)
             $permissions = DB::table('profil_liens')

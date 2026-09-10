@@ -1,9 +1,6 @@
 package com.pdvconnect.smsservice.util
 
 import android.content.Context
-import com.pdvconnect.smsservice.data.AppPreferences
-import kotlinx.coroutines.flow.first
-
 object AgentContextProvider {
 
     data class AgentContext(
@@ -12,17 +9,25 @@ object AgentContextProvider {
         val agentTelephone: String?,
     )
 
-    suspend fun resolve(context: Context, smsAgentCode: String?): AgentContext {
-        val prefs = AppPreferences(context)
-        val boundId = prefs.boundAgentId.first()
-        val boundCode = prefs.boundAgentCode.first()
-        val boundPhone = prefs.boundAgentTelephone.first()
+    /**
+     * Rattache la transaction à l'agent dont la SIM a reçu le SMS,
+     * pas à l'agent connecté dans l'espace agent.
+     */
+    suspend fun resolveForSmsTransaction(context: Context, smsAgentCode: String?): AgentContext {
         val simPhone = SimUtils.getSimPhoneNumber(context)
 
+        return smsAgentContext(
+            simPhone = simPhone,
+            smsAgentCode = smsAgentCode,
+        )
+    }
+
+    /** Logique pure : pas d'agent_id session — résolution serveur via téléphone SIM. */
+    internal fun smsAgentContext(simPhone: String?, smsAgentCode: String?): AgentContext {
         return AgentContext(
-            agentId = boundId,
-            agentCode = smsAgentCode?.takeIf { it.isNotBlank() } ?: boundCode,
-            agentTelephone = boundPhone ?: simPhone,
+            agentId = null,
+            agentCode = smsAgentCode?.takeIf { it.isNotBlank() },
+            agentTelephone = simPhone?.takeIf { it.isNotBlank() },
         )
     }
 }

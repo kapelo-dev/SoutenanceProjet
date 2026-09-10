@@ -185,7 +185,7 @@ class OfflineSyncRepository(private val context: Context) {
             txDao.update(item.copy(status = PendingTransactionEntity.STATUS_SYNCING))
             try {
                 val api = ApiClient.create(item.apiBaseUrl, item.apiToken)
-                val agentContext = AgentContextProvider.resolve(context, item.agentCode)
+                val agentContext = AgentContextProvider.resolveForSmsTransaction(context, item.agentCode)
 
                 val request = TransactionFromSmsRequest(
                     montant = item.montant,

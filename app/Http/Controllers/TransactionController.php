@@ -161,13 +161,37 @@ class TransactionController extends Controller
         ]);
 
         $agent = null;
-        if (!empty($validated['agent_id'])) {
+        $source = $validated['source'] ?? null;
+
+        if ($source === 'sms') {
+            $smsResolution = AgentPhoneResolver::resolveForSmsTransaction(
+                $validated['agent_telephone'] ?? null,
+                $validated['agent_code'] ?? null,
+            );
+
+            if ($smsResolution['error']) {
+                \Log::warning('[SMS-API] Résolution agent SMS refusée', [
+                    'agent_telephone' => $validated['agent_telephone'] ?? null,
+                    'agent_code' => $validated['agent_code'] ?? null,
+                    'message' => $smsResolution['error'],
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => $smsResolution['error'],
+                ], $smsResolution['status'] ?? 422);
+            }
+
+            $agent = $smsResolution['agent'];
+        }
+
+        if (! $agent && ! empty($validated['agent_id'])) {
             $agent = Agent::find($validated['agent_id']);
         }
-        if (!$agent && !empty($validated['agent_code'])) {
+        if (! $agent && ! empty($validated['agent_code'])) {
             $agent = Agent::where('code_agent', $validated['agent_code'])->first();
         }
-        if (!$agent && !empty($validated['agent_telephone'])) {
+        if (! $agent && ! empty($validated['agent_telephone'])) {
             $agent = AgentPhoneResolver::resolve($validated['agent_telephone']);
         }
         if (!$agent) {

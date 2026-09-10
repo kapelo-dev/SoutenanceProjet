@@ -1,0 +1,21 @@
+# Override dev local — code monté en direct (pas besoin de rebuild à chaque modif PHP)
+# Utilisé automatiquement par ./docker-start.sh
+#
+# Note : les assets JS/CSS (Vite) nécessitent toujours npm run build ou un rebuild image.
+
+services:
+  app:
+    volumes:
+      - ./app:/var/www/html/app
+      - ./routes:/var/www/html/routes
+      - ./config:/var/www/html/config
+      - ./resources/views:/var/www/html/resources/views
+      - ./database:/var/www/html/database
+      - ./public/downloads:/var/www/html/public/downloads:ro
+
+  scheduler:
+    volumes:
+      - ./app:/var/www/html/app
+      - ./routes:/var/www/html/routes
+      - ./config:/var/www/html/config
+      - ./database:/var/www/html/database
