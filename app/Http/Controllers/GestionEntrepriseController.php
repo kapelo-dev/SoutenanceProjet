@@ -8,7 +8,9 @@ use App\Models\Profil;
 use App\Models\Salaire;
 use App\Models\MouvementTresorerie;
 use App\Models\Transaction;
+use App\Support\FormuleSalaire;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -38,6 +40,18 @@ class GestionEntrepriseController extends Controller
                     ->paginate($perPageSalaires)
                     ->withQueryString()
                 : new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPageSalaires);
+
+            // Statistiques calculées sur tous les salaires (pas seulement la page affichée)
+            $salaireStats = ['total' => 0, 'payes' => 0, 'en_attente' => 0, 'moyenne' => 0];
+            if ($this->hasTable('salaires')) {
+                $nonAnnules = Salaire::where('statut', '!=', 'annule');
+                $salaireStats = [
+                    'total' => (float) (clone $nonAnnules)->sum('montant_total'),
+                    'payes' => Salaire::where('statut', 'paye')->count(),
+                    'en_attente' => Salaire::where('statut', 'en_attente')->count(),
+                    'moyenne' => (float) (clone $nonAnnules)->avg('montant_total'),
+                ];
+            }
 
             $parametres = $this->hasTable('parametres_salaire')
                 ? ParametreSalaire::with('profils')
@@ -71,6 +85,7 @@ class GestionEntrepriseController extends Controller
             return $this->ajaxView('pages.gestion_entreprise.index', compact(
                 'onglet',
                 'salaires',
+                'salaireStats',
                 'parametres',
                 'profils',
                 'agents',
@@ -87,7 +102,7 @@ class GestionEntrepriseController extends Controller
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Impossible de charger la page salaires: ' . $e->getMessage(),
+                    'message' => 'Impossible de charger la page salaires.',
                 ], 500);
             }
 
@@ -105,18 +120,11 @@ class GestionEntrepriseController extends Controller
      */
     public function storeParametre(Request $request)
     {
-        $validated = $request->validate([
-            'nom' => 'required|string|max:255|unique:parametres_salaire,nom',
-            'type' => 'required|in:fixe,commission,mixte',
-            'montant_fixe' => 'nullable|numeric|min:0',
-            'taux_commission' => 'nullable|numeric|min:0|max:100',
-            'base_calcul' => 'nullable|string',
-            'formule' => 'nullable|string',
-            'conditions' => 'nullable|json',
-            'actif' => 'boolean',
-            'profil_ids' => 'nullable|array',
-            'profil_ids.*' => 'exists:profils,id',
-        ]);
+        $validated = $this->validateParametre($request);
+
+        if ($erreur = $this->erreurFormule($validated['formule'] ?? null)) {
+            return $this->retourParametres('error', $erreur);
+        }
 
         $parametre = ParametreSalaire::create($validated);
         $parametre->profils()->sync($request->input('profil_ids', []));
@@ -130,24 +138,55 @@ class GestionEntrepriseController extends Controller
      */
     public function updateParametre(Request $request, ParametreSalaire $parametre)
     {
-        $validated = $request->validate([
-            'nom' => 'required|string|max:255|unique:parametres_salaire,nom,' . $parametre->id,
-            'type' => 'required|in:fixe,commission,mixte',
-            'montant_fixe' => 'nullable|numeric|min:0',
-            'taux_commission' => 'nullable|numeric|min:0|max:100',
-            'base_calcul' => 'nullable|string',
-            'formule' => 'nullable|string',
-            'conditions' => 'nullable|json',
-            'actif' => 'boolean',
-            'profil_ids' => 'nullable|array',
-            'profil_ids.*' => 'exists:profils,id',
-        ]);
+        $validated = $this->validateParametre($request, $parametre);
+
+        if ($erreur = $this->erreurFormule($validated['formule'] ?? null)) {
+            return $this->retourParametres('error', $erreur);
+        }
 
         $parametre->update($validated);
         $parametre->profils()->sync($request->input('profil_ids', []));
 
         return redirect()->route('gestion-entreprise.index', ['onglet' => 'parametres'])
             ->with('success', 'Paramètre mis à jour avec succès.');
+    }
+
+    private function validateParametre(Request $request, ?ParametreSalaire $parametre = null): array
+    {
+        $validated = $request->validate([
+            'nom' => 'required|string|max:255|unique:parametres_salaire,nom' . ($parametre ? ',' . $parametre->id : ''),
+            'type' => 'required|in:fixe,commission,mixte',
+            'montant_fixe' => 'nullable|numeric|min:0',
+            'taux_commission' => 'nullable|numeric|min:0|max:100',
+            'base_calcul' => 'nullable|string',
+            'formule' => 'nullable|string|max:1000',
+            'conditions' => 'nullable|json',
+            'profil_ids' => 'nullable|array',
+            'profil_ids.*' => 'exists:profils,id',
+        ]);
+
+        // Case décochée = champ absent de la requête : sans ceci un paramètre ne pouvait jamais être désactivé
+        $validated['actif'] = $request->boolean('actif');
+
+        return $validated;
+    }
+
+    private function erreurFormule(?string $formule): ?string
+    {
+        if ($formule === null || trim($formule) === '') {
+            return null;
+        }
+
+        $erreur = FormuleSalaire::erreur($formule);
+
+        return $erreur ? "Formule invalide : {$erreur}" : null;
+    }
+
+    private function retourParametres(string $type, string $message)
+    {
+        return redirect()->route('gestion-entreprise.index', ['onglet' => 'parametres'])
+            ->withInput()
+            ->with($type, $message);
     }
 
     /**
@@ -173,52 +212,61 @@ class GestionEntrepriseController extends Controller
             'agent_ids.*' => 'exists:agents,id',
         ]);
 
-        $dateDebut = Carbon::parse($validated['date_debut']);
-        $dateFin = Carbon::parse($validated['date_fin']);
-        $periode = $dateDebut->format('Y-m');
+        // Bornes incluses sur toute la journée : transactions.date est un timestamp
+        $dateDebut = Carbon::parse($validated['date_debut'])->startOfDay();
+        $dateFin = Carbon::parse($validated['date_fin'])->endOfDay();
+        $periode = $this->libellePeriode($dateDebut, $dateFin);
 
-        // Sélectionner les agents (avec profils de l'utilisateur pour le paramètre salaire)
-        $query = Agent::with(['utilisateur.profils'])->where('statut', 'actif');
-        if (!empty($validated['agent_ids'])) {
-            $query->whereIn('id', $validated['agent_ids']);
+        // Empêche deux générations simultanées (double clic) de créer des doublons
+        $lock = Cache::lock('gestion-entreprise:generer-salaires', 120);
+        if (! $lock->get()) {
+            return $this->retourSalaires('error', 'Une génération de salaires est déjà en cours. Réessayez dans un instant.');
+        }
+
+        try {
+            return $this->genererSalairesPourPeriode($validated['agent_ids'] ?? [], $dateDebut, $dateFin, $periode);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function genererSalairesPourPeriode(array $agentIds, Carbon $dateDebut, Carbon $dateFin, string $periode)
+    {
+        // Agents actifs + agents ayant travaillé sur la période (ex. désactivés en cours de mois)
+        $query = Agent::with(['utilisateur.profils']);
+        if (! empty($agentIds)) {
+            $query->whereIn('id', $agentIds);
+        } else {
+            $query->where(function ($q) use ($dateDebut, $dateFin) {
+                $q->where('statut', 'actif')
+                    ->orWhereHas('transactions', function ($t) use ($dateDebut, $dateFin) {
+                        $t->commerciale()->valide()->whereBetween('date', [$dateDebut, $dateFin]);
+                    });
+            });
         }
         $agents = $query->get();
 
         $parametresActifs = ParametreSalaire::where('actif', true)->with('profils')->orderBy('nom')->get();
 
         $salairesCreates = 0;
+        $dejaGeneres = 0;
 
         DB::beginTransaction();
         try {
             foreach ($agents as $agent) {
-                // Vérifier si un salaire existe déjà pour cette période
-                $salaireExistant = Salaire::where('agent_id', $agent->id)
-                    ->where('periode', $periode)
-                    ->first();
+                // Un salaire non annulé qui chevauche déjà la période => on ne le recrée pas
+                $chevauchement = Salaire::where('agent_id', $agent->id)
+                    ->where('statut', '!=', 'annule')
+                    ->whereDate('date_debut', '<=', $dateFin)
+                    ->whereDate('date_fin', '>=', $dateDebut)
+                    ->exists();
 
-                if ($salaireExistant) {
-                    continue; // Skip si déjà créé
+                if ($chevauchement) {
+                    $dejaGeneres++;
+                    continue;
                 }
 
-                // Paramètre de salaire destiné aux profils de l'agent (ou paramètre global si aucun profil)
-                $agentProfilIds = $agent->utilisateur ? $agent->utilisateur->profils->pluck('id')->toArray() : [];
-                $parametre = null;
-                foreach ($parametresActifs as $p) {
-                    if ($p->profils->isEmpty()) {
-                        if ($parametre === null) {
-                            $parametre = $p;
-                        }
-                    } else {
-                        $parametreProfilIds = $p->profils->pluck('id')->toArray();
-                        if (array_intersect($agentProfilIds, $parametreProfilIds)) {
-                            $parametre = $p;
-                            break;
-                        }
-                    }
-                }
-                if ($parametre === null && $parametresActifs->isNotEmpty()) {
-                    $parametre = $parametresActifs->first(fn ($p) => $p->profils->isEmpty());
-                }
+                $parametre = $this->parametrePourAgent($agent, $parametresActifs);
 
                 // Calculer les commissions basées sur les transactions de l'agent
                 $transactions = Transaction::where('agent_id', $agent->id)
@@ -227,26 +275,28 @@ class GestionEntrepriseController extends Controller
                     ->whereBetween('date', [$dateDebut, $dateFin])
                     ->get();
 
-                $totalTransactions = $transactions->sum('montant');
-                $commissions = $transactions->sum('commission'); // Somme des colonnes commission de chaque transaction
+                $totalTransactions = (float) $transactions->sum('montant');
+                $commissions = (float) $transactions->sum('commission'); // Somme des colonnes commission de chaque transaction
 
                 $montantCommission = 0;
                 $montantFixe = $parametre ? (float) $parametre->montant_fixe : 0;
 
                 if ($parametre && ! empty(trim((string) $parametre->formule))) {
-                    // Formule personnalisée : évaluer avec les variables (montant_transactions, commissions, etc.)
-                    $montantTotal = $this->evaluateFormuleSalaire(
-                        $parametre->formule,
-                        [
+                    try {
+                        $montantTotal = FormuleSalaire::evaluer($parametre->formule, [
                             'montant_transactions' => $totalTransactions,
                             'nb_transactions' => $transactions->count(),
                             'commissions' => $commissions,
                             'montant_fixe' => $montantFixe,
-                            'taux_commission' => $parametre ? (float) $parametre->taux_commission : 0,
+                            'taux_commission' => (float) $parametre->taux_commission,
                             'solde_final' => $agent->soldeTotal(),
                             'objectif_atteint' => 0,
-                        ]
-                    );
+                        ]);
+                    } catch (\InvalidArgumentException $e) {
+                        // Ne jamais enregistrer un salaire à 0 en silence : on annule toute la génération
+                        throw new \RuntimeException("Formule du paramètre « {$parametre->nom} » invalide : {$e->getMessage()}");
+                    }
+                    $montantTotal = max(0, $montantTotal);
                     $montantCommission = max(0, $montantTotal - $montantFixe);
                 } else {
                     if ($parametre && $parametre->type !== 'fixe') {
@@ -259,13 +309,12 @@ class GestionEntrepriseController extends Controller
                     $montantTotal = $montantFixe + $montantCommission;
                 }
 
-                // Créer le salaire
                 Salaire::create([
                     'agent_id' => $agent->id,
                     'parametre_salaire_id' => $parametre ? $parametre->id : null,
                     'periode' => $periode,
-                    'date_debut' => $dateDebut,
-                    'date_fin' => $dateFin,
+                    'date_debut' => $dateDebut->toDateString(),
+                    'date_fin' => $dateFin->toDateString(),
                     'montant_fixe' => $montantFixe,
                     'montant_commission' => $montantCommission,
                     'montant_bonus' => 0,
@@ -276,6 +325,9 @@ class GestionEntrepriseController extends Controller
                         'transactions_total' => $totalTransactions,
                         'commissions' => $commissions,
                         'taux_commission' => $parametre ? $parametre->taux_commission : 0,
+                        'formule' => $parametre?->formule,
+                        // Montant avant bonus/déductions, base du recalcul lors d'un ajustement
+                        'montant_base' => $montantTotal,
                     ],
                     'statut' => 'en_attente',
                 ]);
@@ -284,14 +336,107 @@ class GestionEntrepriseController extends Controller
             }
 
             DB::commit();
-
-            return redirect()->route('gestion-entreprise.index', ['onglet' => 'salaires'])
-                ->with('success', "$salairesCreates salaire(s) généré(s) avec succès.");
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
-            return redirect()->route('gestion-entreprise.index', ['onglet' => 'salaires'])
-                ->with('error', 'Erreur lors de la génération des salaires: ' . $e->getMessage());
+            Log::error('Erreur génération salaires: ' . $e->getMessage());
+
+            $message = $e instanceof \RuntimeException ? $e->getMessage() : 'Erreur lors de la génération des salaires.';
+
+            return $this->retourSalaires('error', $message . ' Aucun salaire n\'a été généré.');
         }
+
+        $message = "$salairesCreates salaire(s) généré(s) pour la période $periode.";
+        if ($dejaGeneres > 0) {
+            $message .= " $dejaGeneres agent(s) ignoré(s) : salaire déjà généré sur une période qui chevauche celle-ci.";
+        }
+
+        return $this->retourSalaires('success', $message);
+    }
+
+    /**
+     * Paramètre destiné à l'un des profils de l'agent, sinon paramètre global (sans profil).
+     */
+    private function parametrePourAgent(Agent $agent, $parametresActifs): ?ParametreSalaire
+    {
+        $agentProfilIds = $agent->utilisateur ? $agent->utilisateur->profils->pluck('id')->all() : [];
+
+        $specifique = $parametresActifs->first(
+            fn ($p) => $p->profils->isNotEmpty() && array_intersect($agentProfilIds, $p->profils->pluck('id')->all())
+        );
+
+        return $specifique ?? $parametresActifs->first(fn ($p) => $p->profils->isEmpty());
+    }
+
+    /**
+     * "2026-01" pour un mois calendaire complet, sinon "01/01/2026 - 15/01/2026".
+     */
+    private function libellePeriode(Carbon $dateDebut, Carbon $dateFin): string
+    {
+        $moisComplet = $dateDebut->isSameDay($dateDebut->copy()->startOfMonth())
+            && $dateFin->isSameDay($dateDebut->copy()->endOfMonth());
+
+        return $moisComplet
+            ? $dateDebut->format('Y-m')
+            : $dateDebut->format('d/m/Y') . ' - ' . $dateFin->format('d/m/Y');
+    }
+
+    /**
+     * Ajuster un salaire en attente (bonus, déduction, notes)
+     */
+    public function updateSalaire(Request $request, Salaire $salaire)
+    {
+        $validated = $request->validate([
+            'montant_bonus' => 'required|numeric|min:0',
+            'montant_deduction' => 'required|numeric|min:0',
+            'notes' => 'nullable|string|max:2000',
+        ]);
+
+        return DB::transaction(function () use ($salaire, $validated) {
+            $salaire = Salaire::whereKey($salaire->id)->lockForUpdate()->first();
+
+            if ($salaire->statut !== 'en_attente') {
+                return $this->retourSalaires('error', 'Seul un salaire en attente peut être modifié.');
+            }
+
+            $base = (float) ($salaire->details_calcul['montant_base']
+                ?? ($salaire->montant_fixe + $salaire->montant_commission));
+            $total = $base + (float) $validated['montant_bonus'] - (float) $validated['montant_deduction'];
+
+            if ($total < 0) {
+                return $this->retourSalaires('error', 'La déduction ne peut pas dépasser le salaire brut (' . number_format($base, 0, ',', ' ') . ' FCFA).');
+            }
+
+            $details = $salaire->details_calcul ?? [];
+            $details['montant_base'] = $base;
+
+            $salaire->update([
+                'montant_bonus' => $validated['montant_bonus'],
+                'montant_deduction' => $validated['montant_deduction'],
+                'montant_total' => $total,
+                'details_calcul' => $details,
+                'notes' => $validated['notes'] ?? $salaire->notes,
+            ]);
+
+            return $this->retourSalaires('success', 'Salaire mis à jour.');
+        });
+    }
+
+    /**
+     * Annuler un salaire en attente (généré par erreur) : la période pourra être régénérée
+     */
+    public function annulerSalaire(Salaire $salaire)
+    {
+        return DB::transaction(function () use ($salaire) {
+            $salaire = Salaire::whereKey($salaire->id)->lockForUpdate()->first();
+
+            if ($salaire->statut !== 'en_attente') {
+                return $this->retourSalaires('error', 'Seul un salaire en attente peut être annulé.');
+            }
+
+            $salaire->update(['statut' => 'annule']);
+
+            return $this->retourSalaires('success', 'Salaire annulé.');
+        });
     }
 
     /**
@@ -305,70 +450,49 @@ class GestionEntrepriseController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        DB::beginTransaction();
         try {
-            // Mettre à jour le salaire
-            $salaire->update([
-                'statut' => 'paye',
-                'date_paiement' => $validated['date_paiement'],
-                'notes' => $validated['notes'] ?? $salaire->notes,
-            ]);
+            return DB::transaction(function () use ($salaire, $validated) {
+                // Verrou + revérification : empêche un double paiement (double clic, renvoi du formulaire)
+                $salaire = Salaire::with('agent.utilisateur')->whereKey($salaire->id)->lockForUpdate()->first();
 
-            // Créer un mouvement de trésorerie
-            MouvementTresorerie::create([
-                'type' => 'sortie',
-                'categorie' => 'salaire',
-                'montant' => $salaire->montant_total,
-                'date_mouvement' => $validated['date_paiement'],
-                'agent_id' => $salaire->agent_id,
-                'salaire_id' => $salaire->id,
-                'description' => "Paiement salaire {$salaire->periode} - {$salaire->agent->utilisateur->nom_complet}",
-                'mode_paiement' => $validated['mode_paiement'],
-                'utilisateur_id' => auth()->id(),
-            ]);
+                if ($salaire->statut !== 'en_attente') {
+                    return $this->retourSalaires('error', $salaire->statut === 'paye'
+                        ? 'Ce salaire a déjà été payé.'
+                        : 'Ce salaire ne peut pas être payé (statut : ' . $salaire->statut . ').');
+                }
 
-            DB::commit();
+                $salaire->update([
+                    'statut' => 'paye',
+                    'date_paiement' => $validated['date_paiement'],
+                    'notes' => $validated['notes'] ?? $salaire->notes,
+                ]);
 
-            return redirect()->route('gestion-entreprise.index', ['onglet' => 'salaires'])
-                ->with('success', 'Salaire marqué comme payé.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->route('gestion-entreprise.index', ['onglet' => 'salaires'])
-                ->with('error', 'Erreur lors du paiement: ' . $e->getMessage());
+                $nomAgent = $salaire->agent?->utilisateur?->nom_complet ?? ('Agent #' . $salaire->agent_id);
+
+                MouvementTresorerie::create([
+                    'type' => 'sortie',
+                    'categorie' => 'salaire',
+                    'montant' => $salaire->montant_total,
+                    'date_mouvement' => $validated['date_paiement'],
+                    'agent_id' => $salaire->agent_id,
+                    'salaire_id' => $salaire->id,
+                    'description' => "Paiement salaire {$salaire->periode} - {$nomAgent}",
+                    'mode_paiement' => $validated['mode_paiement'],
+                    'utilisateur_id' => auth()->id(),
+                ]);
+
+                return $this->retourSalaires('success', 'Salaire marqué comme payé.');
+            });
+        } catch (\Throwable $e) {
+            Log::error('Erreur paiement salaire #' . $salaire->id . ': ' . $e->getMessage());
+
+            return $this->retourSalaires('error', 'Erreur lors du paiement du salaire.');
         }
     }
 
-    /**
-     * Évalue la formule personnalisée du salaire avec les variables fournies.
-     * Variables autorisées : montant_transactions, nb_transactions, commissions,
-     * montant_fixe, taux_commission, solde_final, objectif_atteint.
-     */
-    private function evaluateFormuleSalaire(string $formule, array $variables): float
+    private function retourSalaires(string $type, string $message)
     {
-        $expr = trim(preg_replace('/\s+/', ' ', $formule));
-        if ($expr === '') {
-            return 0.0;
-        }
-
-        foreach ($variables as $name => $value) {
-            $num = is_numeric($value) ? (float) $value : 0;
-            $expr = preg_replace('/\b' . preg_quote($name, '/') . '\b/', (string) $num, $expr);
-        }
-
-        // Remplacer × (unicode) par * si présent dans la formule
-        $expr = str_replace(['×', '−'], ['*', '-'], $expr);
-
-        // Ne garder que chiffres, ., +, -, *, /, (, ), espaces
-        if (preg_match('/[^0-9.\s+\-*\/()]/', $expr)) {
-            return 0.0;
-        }
-
-        try {
-            $result = @eval('return (' . $expr . ');');
-            return is_numeric($result) ? (float) $result : 0.0;
-        } catch (\Throwable $e) {
-            return 0.0;
-        }
+        return redirect()->route('gestion-entreprise.index', ['onglet' => 'salaires'])->with($type, $message);
     }
 
     /**

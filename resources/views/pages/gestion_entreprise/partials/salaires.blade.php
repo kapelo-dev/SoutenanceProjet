@@ -16,7 +16,7 @@
                 </div>
                 <div>
                     <div class="text-sm text-muted-foreground">Total Salaires</div>
-                    <div class="text-xl font-bold text-mono">{{ number_format($salaires->sum('montant_total'), 0, ',', ' ') }} FCFA</div>
+                    <div class="text-xl font-bold text-mono">{{ number_format($salaireStats['total'], 0, ',', ' ') }} FCFA</div>
                 </div>
             </div>
         </div>
@@ -30,7 +30,7 @@
                 </div>
                 <div>
                     <div class="text-sm text-muted-foreground">Payés</div>
-                    <div class="text-xl font-bold text-mono">{{ $salaires->where('statut', 'paye')->count() }}</div>
+                    <div class="text-xl font-bold text-mono">{{ $salaireStats['payes'] }}</div>
                 </div>
             </div>
         </div>
@@ -44,7 +44,7 @@
                 </div>
                 <div>
                     <div class="text-sm text-muted-foreground">En Attente</div>
-                    <div class="text-xl font-bold text-mono">{{ $salaires->where('statut', 'en_attente')->count() }}</div>
+                    <div class="text-xl font-bold text-mono">{{ $salaireStats['en_attente'] }}</div>
                 </div>
             </div>
         </div>
@@ -59,7 +59,7 @@
                 <div>
                     <div class="text-sm text-muted-foreground">Moyenne</div>
                     <div class="text-xl font-bold text-mono">
-                        {{ $salaires->count() > 0 ? number_format($salaires->avg('montant_total'), 0, ',', ' ') : '0' }} FCFA
+                        {{ number_format($salaireStats['moyenne'], 0, ',', ' ') }} FCFA
                     </div>
                 </div>
             </div>
@@ -78,6 +78,7 @@
                         <th>Période</th>
                         <th>Fixe</th>
                         <th>Commission</th>
+                        <th>Bonus / Déduction</th>
                         <th>Total</th>
                         <th>Statut</th>
                         <th>Date Paiement</th>
@@ -89,6 +90,14 @@
                         @php
                             $utilisateur = $salaire->agent?->utilisateur;
                             $agentLabel = $utilisateur?->nom_complet ?? ('Agent #' . ($salaire->agent_id ?? '?'));
+                            $ajusterData = [
+                                'id' => $salaire->id,
+                                'agent' => $agentLabel,
+                                'base' => (float) ($salaire->details_calcul['montant_base'] ?? ($salaire->montant_fixe + $salaire->montant_commission)),
+                                'bonus' => (float) $salaire->montant_bonus,
+                                'deduction' => (float) $salaire->montant_deduction,
+                                'notes' => $salaire->notes,
+                            ];
                         @endphp
                         <tr>
                             <td>
@@ -110,12 +119,25 @@
                             <td>{{ $salaire->periode }}</td>
                             <td>{{ number_format($salaire->montant_fixe, 0, ',', ' ') }} FCFA</td>
                             <td>{{ number_format($salaire->montant_commission, 0, ',', ' ') }} FCFA</td>
+                            <td>
+                                @if($salaire->montant_bonus > 0)
+                                    <span class="text-success">+{{ number_format($salaire->montant_bonus, 0, ',', ' ') }}</span>
+                                @endif
+                                @if($salaire->montant_deduction > 0)
+                                    <span class="text-destructive">-{{ number_format($salaire->montant_deduction, 0, ',', ' ') }}</span>
+                                @endif
+                                @if($salaire->montant_bonus <= 0 && $salaire->montant_deduction <= 0)
+                                    -
+                                @endif
+                            </td>
                             <td class="font-bold">{{ number_format($salaire->montant_total, 0, ',', ' ') }} FCFA</td>
                             <td>
                                 @if($salaire->statut === 'paye')
                                     <span class="kt-badge kt-badge-success">Payé</span>
                                 @elseif($salaire->statut === 'en_attente')
                                     <span class="kt-badge kt-badge-warning">En attente</span>
+                                @elseif($salaire->statut === 'annule')
+                                    <span class="kt-badge kt-badge-secondary">Annulé</span>
                                 @else
                                     <span class="kt-badge kt-badge-secondary">{{ $salaire->statut }}</span>
                                 @endif
@@ -123,18 +145,34 @@
                             <td>{{ $salaire->date_paiement ? $salaire->date_paiement->format('d/m/Y') : '-' }}</td>
                             <td>
                                 @if($salaire->statut === 'en_attente')
-                                    <button type="button" 
-                                            class="kt-btn kt-btn-xs kt-btn-success"
-                                            onclick="openPayerModal({{ $salaire->id }})">
-                                        <i class="ki-filled ki-check-circle me-1"></i>
-                                        Payer
-                                    </button>
+                                    <div class="flex items-center gap-1.5">
+                                        <button type="button" 
+                                                class="kt-btn kt-btn-xs kt-btn-success"
+                                                onclick="openPayerModal({{ $salaire->id }})">
+                                            <i class="ki-filled ki-check-circle me-1"></i>
+                                            Payer
+                                        </button>
+                                        <button type="button"
+                                                class="kt-btn kt-btn-xs kt-btn-outline"
+                                                title="Bonus, déduction, notes"
+                                                onclick='openAjusterModal(@json($ajusterData))'>
+                                            <i class="ki-filled ki-notepad-edit me-1"></i>
+                                            Ajuster
+                                        </button>
+                                        <form action="{{ route('gestion-entreprise.salaires.annuler', $salaire) }}" method="POST" class="inline"
+                                              onsubmit="return confirm('Annuler ce salaire ? La période pourra être régénérée pour cet agent.')">
+                                            @csrf
+                                            <button type="submit" class="kt-btn kt-btn-xs kt-btn-outline kt-btn-destructive" title="Annuler ce salaire">
+                                                <i class="ki-filled ki-cross-circle"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted-foreground py-10">
+                            <td colspan="9" class="text-center text-muted-foreground py-10">
                                 Aucun salaire trouvé
                             </td>
                         </tr>
@@ -269,7 +307,91 @@
     </div>
 </div>
 
+<!-- Modal: Ajuster Salaire (bonus / déduction) -->
+<div class="kt-modal" data-kt-modal="true" id="modal_ajuster_salaire">
+    <div class="kt-modal-content max-w-xl">
+        <div class="kt-modal-header">
+            <h3 class="kt-modal-title">Ajuster le salaire</h3>
+            <button class="kt-modal-close" data-kt-modal-dismiss="true">
+                <i class="ki-filled ki-cross"></i>
+            </button>
+        </div>
+
+        <form id="form_ajuster_salaire" method="POST">
+            @csrf
+            @method('PUT')
+            <div class="kt-modal-body">
+                <div class="flex flex-col gap-5">
+                    <div class="text-sm text-secondary-foreground">
+                        <span id="ajuster_agent" class="font-medium text-foreground"></span>
+                        — salaire calculé : <span id="ajuster_base" class="font-medium text-foreground"></span> FCFA
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-medium">Bonus (FCFA)</label>
+                            <input type="number" name="montant_bonus" id="ajuster_bonus" class="kt-input" min="0" step="1" required>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-medium">Déduction (FCFA)</label>
+                            <input type="number" name="montant_deduction" id="ajuster_deduction" class="kt-input" min="0" step="1" required>
+                        </div>
+                    </div>
+
+                    <div class="rounded-lg bg-muted/50 border border-border px-4 py-3 text-sm">
+                        Nouveau total : <span id="ajuster_total" class="font-bold text-mono"></span> FCFA
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-medium">Notes (motif du bonus / de la déduction)</label>
+                        <textarea name="notes" id="ajuster_notes" class="kt-textarea" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kt-modal-footer">
+                <button type="button" class="kt-btn kt-btn-outline" data-kt-modal-dismiss="true">
+                    Annuler
+                </button>
+                <button type="submit" class="kt-btn kt-btn-primary">
+                    <i class="ki-filled ki-check me-1"></i>
+                    Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
+function openAjusterModal(salaire) {
+    const modal = document.getElementById('modal_ajuster_salaire');
+    const form = document.getElementById('form_ajuster_salaire');
+    const bonus = document.getElementById('ajuster_bonus');
+    const deduction = document.getElementById('ajuster_deduction');
+    const total = document.getElementById('ajuster_total');
+    const fmt = (n) => Math.round(n).toLocaleString('fr-FR');
+
+    form.action = `/gestion-entreprise/salaires/${salaire.id}`;
+    document.getElementById('ajuster_agent').textContent = salaire.agent;
+    document.getElementById('ajuster_base').textContent = fmt(salaire.base);
+    document.getElementById('ajuster_notes').value = salaire.notes || '';
+    bonus.value = salaire.bonus;
+    deduction.value = salaire.deduction;
+
+    const refresh = () => {
+        const t = salaire.base + (parseFloat(bonus.value) || 0) - (parseFloat(deduction.value) || 0);
+        total.textContent = fmt(t);
+        total.classList.toggle('text-destructive', t < 0);
+    };
+    bonus.oninput = deduction.oninput = refresh;
+    refresh();
+
+    if (window.KTModal) {
+        const modalInstance = KTModal.getInstance(modal) || new KTModal(modal);
+        modalInstance.show();
+    }
+}
+
 function openPayerModal(salaireId) {
     const modal = document.getElementById('modal_payer_salaire');
     const form = document.getElementById('form_payer_salaire');

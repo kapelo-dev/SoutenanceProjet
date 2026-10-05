@@ -49,10 +49,27 @@ class RoutePermissionService
         }
 
         if ($permissionRoute === 'gestion-entreprise.index') {
-            return $user->canAccessGestionEntrepriseOnglet($request->get('onglet', 'salaires'));
+            return $user->canAccessGestionEntrepriseOnglet($this->gestionEntrepriseOnglet($request));
         }
 
         return $user->canAccessRoute($permissionRoute);
+    }
+
+    /**
+     * Onglet concerné par la requête : déduit du nom de route pour les actions (POST/PUT/DELETE),
+     * afin qu'un droit sur un onglet ne donne pas accès aux actions d'un autre onglet.
+     */
+    private function gestionEntrepriseOnglet(Request $request): string
+    {
+        $routeName = (string) $request->route()?->getName();
+
+        return match (true) {
+            str_starts_with($routeName, 'gestion-entreprise.parametres.') => 'parametres',
+            str_starts_with($routeName, 'gestion-entreprise.mouvements.') => 'tresorerie',
+            str_starts_with($routeName, 'gestion-entreprise.salaires.'),
+            $routeName === 'gestion-entreprise.generer-salaires' => 'salaires',
+            default => (string) $request->get('onglet', 'salaires'),
+        };
     }
 
     private function isExempt(string $routeName): bool

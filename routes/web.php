@@ -233,6 +233,8 @@ Route::middleware(['auth', 'require.password.change', 'route.permission'])->grou
     // Salaires
     Route::post('/gestion-entreprise/salaires/generer', [GestionEntrepriseController::class, 'genererSalaires'])->name('gestion-entreprise.generer-salaires');
     Route::post('/gestion-entreprise/salaires/{salaire}/payer', [GestionEntrepriseController::class, 'payerSalaire'])->name('gestion-entreprise.salaires.payer');
+    Route::put('/gestion-entreprise/salaires/{salaire}', [GestionEntrepriseController::class, 'updateSalaire'])->name('gestion-entreprise.salaires.update');
+    Route::post('/gestion-entreprise/salaires/{salaire}/annuler', [GestionEntrepriseController::class, 'annulerSalaire'])->name('gestion-entreprise.salaires.annuler');
     
     // Mouvements de trésorerie
     Route::post('/gestion-entreprise/mouvements', [GestionEntrepriseController::class, 'storeMouvement'])->name('gestion-entreprise.mouvements.store');
