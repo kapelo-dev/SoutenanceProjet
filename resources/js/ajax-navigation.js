@@ -63,7 +63,8 @@ const AjaxNavigation = {
             });
             
             if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
+                await this.handleErrorResponse(response);
+                return;
             }
             
             const contentType = response.headers.get('content-type');
@@ -726,7 +727,8 @@ const AjaxNavigation = {
             });
             
             if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
+                await this.handleErrorResponse(response);
+                return;
             }
             
             const contentType = response.headers.get('content-type');
@@ -782,6 +784,23 @@ const AjaxNavigation = {
         if (this.loadingIndicator) {
             this.loadingIndicator.classList.add('hidden');
         }
+    },
+    
+    // Gérer une réponse HTTP en erreur (JSON renvoyé par bootstrap/app.php)
+    async handleErrorResponse(response) {
+        let data = null;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            try { data = await response.json(); } catch (e) {}
+        }
+
+        // Session expirée / non authentifié : retour à la page de connexion
+        if ((response.status === 401 || response.status === 419) && data && data.redirect) {
+            window.location.href = data.redirect;
+            return;
+        }
+
+        this.showError((data && data.message) || `Erreur HTTP: ${response.status}`);
     },
     
     // Afficher une erreur

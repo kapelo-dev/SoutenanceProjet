@@ -3,7 +3,10 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -40,5 +43,43 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Navigation AJAX (ajax-navigation.js) : renvoyer l'erreur en JSON plutôt qu'une page HTML complète
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Votre session a expiré. Veuillez vous reconnecter.',
+                    'redirect' => route('login'),
+                ], 401);
+            }
+        });
+
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            if (! $request->ajax() && ! $request->expectsJson()) {
+                return null;
+            }
+
+            $status = $e->getStatusCode();
+            $isExplicitAbort = get_class($e) === HttpException::class && $e->getPrevious() === null;
+
+            $defaults = [
+                401 => 'Vous devez être connecté pour accéder à cette ressource.',
+                403 => "Vous n'avez pas les autorisations nécessaires.",
+                404 => 'Ressource introuvable.',
+                419 => 'Votre session a expiré. Veuillez actualiser la page.',
+                429 => 'Trop de requêtes. Veuillez patienter avant de réessayer.',
+                503 => 'Service momentanément indisponible.',
+            ];
+
+            $message = $isExplicitAbort && $e->getMessage() !== ''
+                ? $e->getMessage()
+                : ($defaults[$status] ?? 'Une erreur inattendue est survenue.');
+
+            $payload = ['success' => false, 'message' => $message];
+            if (in_array($status, [401, 419], true)) {
+                $payload['redirect'] = route('login');
+            }
+
+            return response()->json($payload, $status, $e->getHeaders());
+        });
     })->create();
