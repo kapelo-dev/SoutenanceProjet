@@ -68,6 +68,8 @@ return [
         'agents' => 'agents.index',
         'agent/dashboard' => 'agent.dashboard',
         'kiosques-carte' => 'kiosques.carte',
+        // Appelé depuis la création d'agent (liste agents) pour pré-remplir le code kiosque
+        'api/kiosques/next-code' => 'agents.index',
         'api/kiosques' => 'kiosques.index',
         'kiosques' => 'kiosques.index',
         'transactions' => 'transactions.index',

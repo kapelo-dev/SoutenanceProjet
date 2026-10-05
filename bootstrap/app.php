@@ -36,7 +36,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'route.permission' => \App\Http\Middleware\CheckRoutePermission::class,
             'sms.api.token' => \App\Http\Middleware\ValidateSmsApiToken::class,
             'check.blocked.ip' => \App\Http\Middleware\CheckBlockedIp::class,
+            'auth.mobile' => \App\Http\Middleware\AuthenticateMobileToken::class,
         ]);
+
+        // Vérifier le token mobile AVANT la résolution des modèles ({kiosque}, {agent}...)
+        // pour ne pas révéler l'existence d'un enregistrement à un client non authentifié
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            prepend: \App\Http\Middleware\AuthenticateMobileToken::class,
+        );
 
         $middleware->web(append: [
             \App\Http\Middleware\CheckBlockedIp::class,

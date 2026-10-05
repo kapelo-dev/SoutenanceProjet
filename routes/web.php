@@ -164,6 +164,7 @@ Route::middleware(['auth', 'require.password.change', 'route.permission'])->grou
     Route::get('/kiosques-carte', [KiosqueController::class, 'carte'])->name('kiosques.carte');
     Route::get('/api/kiosques/proximite', [KiosqueController::class, 'proximite']);
     Route::get('/api/kiosques/carte-data', [KiosqueController::class, 'carteData']);
+    Route::get('/api/kiosques/next-code', [KiosqueController::class, 'getNextCode']);
     Route::post('/kiosques/{kiosque}/assigner-agent', [KiosqueController::class, 'assignerAgent'])->name('kiosques.assigner-agent');
     Route::delete('/kiosques/{kiosque}/agents/{agent}', [KiosqueController::class, 'retirerAgent'])->name('kiosques.retirer-agent');
 
