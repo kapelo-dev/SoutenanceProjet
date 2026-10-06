@@ -28,57 +28,65 @@ class GestionEntrepriseController extends Controller
             $dateDebut = $request->get('date_debut', now()->startOfMonth()->format('Y-m-d'));
             $dateFin = $request->get('date_fin', now()->endOfMonth()->format('Y-m-d'));
 
-            $perPageSalaires = (int) $request->get('per_page_salaires', 15);
-            $perPageSalaires = in_array($perPageSalaires, [10, 15, 25, 50], true) ? $perPageSalaires : 15;
+            // Valeurs par défaut : seules les données de l'onglet affiché sont chargées
+            $salaires = $mouvements = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15);
+            $salaireStats = ['total' => 0, 'payes' => 0, 'en_attente' => 0, 'moyenne' => 0];
+            $stats = ['entrees' => 0, 'sorties' => 0, 'solde' => 0];
+            $parametres = $profils = $agents = collect();
 
-            $perPageTresorerie = (int) $request->get('per_page_tresorerie', 20);
-            $perPageTresorerie = in_array($perPageTresorerie, [10, 15, 20, 25, 50], true) ? $perPageTresorerie : 20;
+            if ($onglet === 'salaires' && $this->hasTable('salaires')) {
+                $perPageSalaires = (int) $request->get('per_page_salaires', 15);
+                $perPageSalaires = in_array($perPageSalaires, [10, 15, 25, 50], true) ? $perPageSalaires : 15;
 
-            $salaires = $this->hasTable('salaires')
-                ? Salaire::with(['agent.utilisateur', 'parametreSalaire'])
+                $salaires = Salaire::with(['agent.utilisateur', 'parametreSalaire'])
                     ->orderBy('created_at', 'desc')
                     ->paginate($perPageSalaires)
-                    ->withQueryString()
-                : new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPageSalaires);
+                    ->withQueryString();
 
-            // Statistiques calculées sur tous les salaires (pas seulement la page affichée)
-            $salaireStats = ['total' => 0, 'payes' => 0, 'en_attente' => 0, 'moyenne' => 0];
-            if ($this->hasTable('salaires')) {
-                $nonAnnules = Salaire::where('statut', '!=', 'annule');
+                // Statistiques sur tous les salaires (pas seulement la page affichée), en une requête
+                $row = Salaire::query()
+                    ->selectRaw("COALESCE(SUM(CASE WHEN statut != 'annule' THEN montant_total END), 0) as total")
+                    ->selectRaw("AVG(CASE WHEN statut != 'annule' THEN montant_total END) as moyenne")
+                    ->selectRaw("COUNT(CASE WHEN statut = 'paye' THEN 1 END) as payes")
+                    ->selectRaw("COUNT(CASE WHEN statut = 'en_attente' THEN 1 END) as en_attente")
+                    ->toBase()
+                    ->first();
                 $salaireStats = [
-                    'total' => (float) (clone $nonAnnules)->sum('montant_total'),
-                    'payes' => Salaire::where('statut', 'paye')->count(),
-                    'en_attente' => Salaire::where('statut', 'en_attente')->count(),
-                    'moyenne' => (float) (clone $nonAnnules)->avg('montant_total'),
+                    'total' => (float) $row->total,
+                    'payes' => (int) $row->payes,
+                    'en_attente' => (int) $row->en_attente,
+                    'moyenne' => (float) $row->moyenne,
                 ];
+
+                $agents = Agent::with('utilisateur')->where('statut', 'actif')->get();
             }
 
-            $parametres = $this->hasTable('parametres_salaire')
-                ? ParametreSalaire::with('profils')
+            if ($onglet === 'parametres' && $this->hasTable('parametres_salaire')) {
+                $parametres = ParametreSalaire::with('profils')
                     ->orderBy('actif', 'desc')
                     ->orderBy('nom')
-                    ->get()
-                : collect();
+                    ->get();
+                $profils = Profil::ordreParNiveau()->get();
+            }
 
-            $profils = Profil::ordreParNiveau()->get();
-            $agents = Agent::with('utilisateur')->where('statut', 'actif')->get();
+            if ($onglet === 'tresorerie' && $this->hasTable('mouvements_tresorerie')) {
+                $perPageTresorerie = (int) $request->get('per_page_tresorerie', 20);
+                $perPageTresorerie = in_array($perPageTresorerie, [10, 15, 20, 25, 50], true) ? $perPageTresorerie : 20;
 
-            $mouvements = $this->hasTable('mouvements_tresorerie')
-                ? MouvementTresorerie::with(['agent.utilisateur', 'salaire', 'utilisateur'])
+                $mouvements = MouvementTresorerie::with(['agent.utilisateur', 'salaire', 'utilisateur'])
                     ->whereBetween('date_mouvement', [$dateDebut, $dateFin])
                     ->orderBy('date_mouvement', 'desc')
                     ->paginate($perPageTresorerie)
-                    ->withQueryString()
-                : new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPageTresorerie);
+                    ->withQueryString();
 
-            $stats = ['entrees' => 0, 'sorties' => 0, 'solde' => 0];
-            if ($this->hasTable('mouvements_tresorerie')) {
-                $stats['entrees'] = MouvementTresorerie::where('type', 'entree')
+                $row = MouvementTresorerie::query()
                     ->whereBetween('date_mouvement', [$dateDebut, $dateFin])
-                    ->sum('montant');
-                $stats['sorties'] = MouvementTresorerie::where('type', 'sortie')
-                    ->whereBetween('date_mouvement', [$dateDebut, $dateFin])
-                    ->sum('montant');
+                    ->selectRaw("COALESCE(SUM(CASE WHEN type = 'entree' THEN montant END), 0) as entrees")
+                    ->selectRaw("COALESCE(SUM(CASE WHEN type = 'sortie' THEN montant END), 0) as sorties")
+                    ->toBase()
+                    ->first();
+                $stats['entrees'] = (float) $row->entrees;
+                $stats['sorties'] = (float) $row->sorties;
                 $stats['solde'] = $stats['entrees'] - $stats['sorties'];
             }
 
@@ -110,9 +118,11 @@ class GestionEntrepriseController extends Controller
         }
     }
 
+    private array $tablesExistantes = [];
+
     private function hasTable(string $table): bool
     {
-        return Schema::hasTable($table);
+        return $this->tablesExistantes[$table] ??= Schema::hasTable($table);
     }
 
     /**
@@ -248,35 +258,43 @@ class GestionEntrepriseController extends Controller
 
         $parametresActifs = ParametreSalaire::where('actif', true)->with('profils')->orderBy('nom')->get();
 
+        // Agents ayant déjà un salaire non annulé qui chevauche la période (une seule requête)
+        $agentsDejaPayes = Salaire::whereIn('agent_id', $agents->pluck('id'))
+            ->where('statut', '!=', 'annule')
+            ->where('date_debut', '<=', $dateFin->toDateString())
+            ->where('date_fin', '>=', $dateDebut->toDateString())
+            ->distinct()
+            ->pluck('agent_id')
+            ->flip();
+
+        // Totaux des transactions agrégés par agent en base (une seule requête, aucune ligne chargée)
+        $totauxParAgent = Transaction::query()
+            ->whereIn('agent_id', $agents->pluck('id'))
+            ->commerciale()
+            ->valide()
+            ->whereBetween('date', [$dateDebut, $dateFin])
+            ->groupBy('agent_id')
+            ->selectRaw('agent_id, COUNT(*) as nb, COALESCE(SUM(montant), 0) as total, COALESCE(SUM(commission), 0) as commissions')
+            ->get()
+            ->keyBy('agent_id');
+
         $salairesCreates = 0;
         $dejaGeneres = 0;
 
         DB::beginTransaction();
         try {
             foreach ($agents as $agent) {
-                // Un salaire non annulé qui chevauche déjà la période => on ne le recrée pas
-                $chevauchement = Salaire::where('agent_id', $agent->id)
-                    ->where('statut', '!=', 'annule')
-                    ->whereDate('date_debut', '<=', $dateFin)
-                    ->whereDate('date_fin', '>=', $dateDebut)
-                    ->exists();
-
-                if ($chevauchement) {
+                if ($agentsDejaPayes->has($agent->id)) {
                     $dejaGeneres++;
                     continue;
                 }
 
                 $parametre = $this->parametrePourAgent($agent, $parametresActifs);
 
-                // Calculer les commissions basées sur les transactions de l'agent
-                $transactions = Transaction::where('agent_id', $agent->id)
-                    ->commerciale()
-                    ->valide()
-                    ->whereBetween('date', [$dateDebut, $dateFin])
-                    ->get();
-
-                $totalTransactions = (float) $transactions->sum('montant');
-                $commissions = (float) $transactions->sum('commission'); // Somme des colonnes commission de chaque transaction
+                $totaux = $totauxParAgent->get($agent->id);
+                $nbTransactions = (int) ($totaux->nb ?? 0);
+                $totalTransactions = (float) ($totaux->total ?? 0);
+                $commissions = (float) ($totaux->commissions ?? 0); // Somme des colonnes commission de chaque transaction
 
                 $montantCommission = 0;
                 $montantFixe = $parametre ? (float) $parametre->montant_fixe : 0;
@@ -285,11 +303,12 @@ class GestionEntrepriseController extends Controller
                     try {
                         $montantTotal = FormuleSalaire::evaluer($parametre->formule, [
                             'montant_transactions' => $totalTransactions,
-                            'nb_transactions' => $transactions->count(),
+                            'nb_transactions' => $nbTransactions,
                             'commissions' => $commissions,
                             'montant_fixe' => $montantFixe,
                             'taux_commission' => (float) $parametre->taux_commission,
-                            'solde_final' => $agent->soldeTotal(),
+                            // Calcul coûteux : uniquement si la formule l'utilise
+                            'solde_final' => FormuleSalaire::utilise($parametre->formule, 'solde_final') ? $agent->soldeTotal() : 0,
                             'objectif_atteint' => 0,
                         ]);
                     } catch (\InvalidArgumentException $e) {
@@ -321,7 +340,7 @@ class GestionEntrepriseController extends Controller
                     'montant_deduction' => 0,
                     'montant_total' => $montantTotal,
                     'details_calcul' => [
-                        'transactions_count' => $transactions->count(),
+                        'transactions_count' => $nbTransactions,
                         'transactions_total' => $totalTransactions,
                         'commissions' => $commissions,
                         'taux_commission' => $parametre ? $parametre->taux_commission : 0,

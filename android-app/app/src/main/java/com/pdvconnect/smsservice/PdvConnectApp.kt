@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import com.pdvconnect.smsservice.sync.NetworkMonitor
+import com.pdvconnect.smsservice.sync.SmsFilterSync
 import com.pdvconnect.smsservice.sync.SyncScheduler
 import com.pdvconnect.smsservice.sms.ServiceStarter
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +22,8 @@ class PdvConnectApp : Application() {
         SyncScheduler.schedulePeriodic(this)
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             ServiceStarter.ensureRunningIfConfigured(this@PdvConnectApp)
+            // Expéditeurs SMS autorisés à jour dès le démarrage (sinon : dernière liste reçue)
+            SmsFilterSync.refresh(this@PdvConnectApp)
         }
     }
 

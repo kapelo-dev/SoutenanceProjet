@@ -387,7 +387,7 @@
             {{-- Liste des Transactions --}}
             <div class="kt-card">
                 <div class="kt-card-header">
-                    <h3 class="kt-card-title">Détail des Transactions ({{ count($transactions) }} transaction{{ count($transactions) > 1 ? 's' : '' }})</h3>
+                    <h3 class="kt-card-title">Détail des Transactions ({{ number_format($transactions->total(), 0, ',', ' ') }} transaction{{ $transactions->total() > 1 ? 's' : '' }})</h3>
                 </div>
                 <div class="kt-card-content">
                     <div class="overflow-x-auto">
@@ -449,6 +449,14 @@
                             </tbody>
                         </table>
                     </div>
+                    @if($transactions->hasPages())
+                        <div class="flex flex-col md:flex-row justify-between items-center gap-4 pt-5 text-sm text-secondary-foreground">
+                            <span>{{ $transactions->firstItem() }}-{{ $transactions->lastItem() }} sur {{ number_format($transactions->total(), 0, ',', ' ') }}</span>
+                            <div class="flex items-center gap-1">
+                                {{ $transactions->links() }}
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

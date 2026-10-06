@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\SystemLog;
 use App\Models\Utilisateur;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use App\Traits\Exportable;
 
@@ -18,26 +20,7 @@ class SystemLogController extends Controller
     {
         $query = SystemLog::with('utilisateur')->latest();
 
-        // Filtres
-        if ($request->filled('user_id')) {
-            $query->where('user_id', $request->user_id);
-        }
-
-        if ($request->filled('action')) {
-            $query->where('action', $request->action);
-        }
-
-        if ($request->filled('model_type')) {
-            $query->where('model_type', $request->model_type);
-        }
-
-        if ($request->filled('date_debut')) {
-            $query->whereDate('created_at', '>=', $request->date_debut);
-        }
-
-        if ($request->filled('date_fin')) {
-            $query->whereDate('created_at', '<=', $request->date_fin);
-        }
+        $this->appliquerFiltres($query, $request);
 
         if ($request->filled('search')) {
             $query->where('description', 'like', '%' . $request->search . '%');
@@ -47,11 +30,19 @@ class SystemLogController extends Controller
         $logs = $query->paginate(50);
 
         // Statistiques
+        // Compteurs en une requête (au lieu de 4)
+        $compteurs = SystemLog::query()
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw('COUNT(CASE WHEN created_at >= ? THEN 1 END) as today', [now()->startOfDay()])
+            ->selectRaw('COUNT(CASE WHEN created_at BETWEEN ? AND ? THEN 1 END) as this_week', [now()->startOfWeek(), now()->endOfWeek()])
+            ->selectRaw('COUNT(CASE WHEN created_at >= ? THEN 1 END) as this_month', [now()->startOfMonth()])
+            ->toBase()
+            ->first();
         $stats = [
-            'total' => SystemLog::count(),
-            'today' => SystemLog::today()->count(),
-            'this_week' => SystemLog::thisWeek()->count(),
-            'this_month' => SystemLog::thisMonth()->count(),
+            'total' => (int) $compteurs->total,
+            'today' => (int) $compteurs->today,
+            'this_week' => (int) $compteurs->this_week,
+            'this_month' => (int) $compteurs->this_month,
         ];
 
         // Utilisateurs pour le filtre
@@ -109,32 +100,12 @@ class SystemLogController extends Controller
     {
         $query = SystemLog::with('utilisateur')->latest();
 
-        // Appliquer les mêmes filtres que l'index
-        if ($request->filled('user_id')) {
-            $query->where('user_id', $request->user_id);
-        }
-
-        if ($request->filled('action')) {
-            $query->where('action', $request->action);
-        }
-
-        if ($request->filled('model_type')) {
-            $query->where('model_type', $request->model_type);
-        }
-
-        if ($request->filled('date_debut')) {
-            $query->whereDate('created_at', '>=', $request->date_debut);
-        }
-
-        if ($request->filled('date_fin')) {
-            $query->whereDate('created_at', '<=', $request->date_fin);
-        }
-
-        $logs = $query->get();
+        $this->appliquerFiltres($query, $request);
 
         $headers = ['Date/Heure', 'Utilisateur', 'Action', 'Entité', 'Description', 'IP'];
 
-        $data = $logs->map(function ($log) {
+        // lazy() : logs hydratés par lots (le journal peut contenir des centaines de milliers de lignes)
+        $data = $query->latest('id')->lazy(1000)->map(function ($log) { // id : ordre stable entre les lots
             return [
                 $log->created_at->format('d/m/Y H:i:s'),
                 $log->utilisateur ? $log->utilisateur->nom . ' ' . $log->utilisateur->prenom : 'Système',
@@ -145,7 +116,7 @@ class SystemLogController extends Controller
             ];
         });
 
-        return $this->exportToExcel($headers, $data->toArray(), $this->excelFilename('logs_systeme_' . now()->format('Y-m-d_His')), 'Journal système', 'Historique des actions et événements');
+        return $this->exportToExcel($headers, $data->all(), $this->excelFilename('logs_systeme_' . now()->format('Y-m-d_His')), 'Journal système', 'Historique des actions et événements');
     }
 
     /**
@@ -155,26 +126,7 @@ class SystemLogController extends Controller
     {
         $query = SystemLog::with('utilisateur')->latest();
 
-        // Appliquer les mêmes filtres
-        if ($request->filled('user_id')) {
-            $query->where('user_id', $request->user_id);
-        }
-
-        if ($request->filled('action')) {
-            $query->where('action', $request->action);
-        }
-
-        if ($request->filled('model_type')) {
-            $query->where('model_type', $request->model_type);
-        }
-
-        if ($request->filled('date_debut')) {
-            $query->whereDate('created_at', '>=', $request->date_debut);
-        }
-
-        if ($request->filled('date_fin')) {
-            $query->whereDate('created_at', '<=', $request->date_fin);
-        }
+        $this->appliquerFiltres($query, $request);
 
         $logs = $query->limit(500)->get(); // Limiter pour le PDF
 
@@ -202,6 +154,27 @@ class SystemLogController extends Controller
                 'filtersText' => $this->buildLogExportFilters($request),
             ]
         );
+    }
+
+    /**
+     * Filtres communs à la liste et aux exports.
+     * Dates en bornes explicites (et non whereDate) pour que MySQL utilise l'index sur created_at.
+     */
+    private function appliquerFiltres(Builder $query, Request $request): void
+    {
+        foreach (['user_id', 'action', 'model_type'] as $champ) {
+            if ($request->filled($champ)) {
+                $query->where($champ, $request->input($champ));
+            }
+        }
+
+        if ($request->filled('date_debut')) {
+            $query->where('created_at', '>=', Carbon::parse($request->date_debut)->startOfDay());
+        }
+
+        if ($request->filled('date_fin')) {
+            $query->where('created_at', '<=', Carbon::parse($request->date_fin)->endOfDay());
+        }
     }
 
     private function buildLogExportFilters(Request $request): ?string

@@ -32,11 +32,12 @@ class AuthenticationSecurityTest extends TestCase
         ]);
 
         $response = $this->post('/login', [
-            'email' => 'test@example.com',
+            'identifiant' => 'test@example.com',
             'password' => 'password123',
         ]);
 
         $this->assertAuthenticatedAs($utilisateur);
+        // Sans profil, la page d'accueil est le dashboard
         $response->assertRedirect('/dashboard');
     }
 
@@ -51,12 +52,12 @@ class AuthenticationSecurityTest extends TestCase
         ]);
 
         $response = $this->post('/login', [
-            'email' => 'test@example.com',
+            'identifiant' => 'test@example.com',
             'password' => 'mauvais_mot_de_passe',
         ]);
 
         $this->assertGuest();
-        $response->assertSessionHasErrors();
+        $response->assertSessionHasErrors('identifiant');
     }
 
     /**
@@ -72,14 +73,14 @@ class AuthenticationSecurityTest extends TestCase
         // Faire plusieurs tentatives de connexion échouées
         for ($i = 0; $i < 6; $i++) {
             $this->post('/login', [
-                'email' => 'test@example.com',
+                'identifiant' => 'test@example.com',
                 'password' => 'mauvais_mot_de_passe',
             ]);
         }
 
         // La 6ème tentative devrait être bloquée (si rate limiting configuré)
         $response = $this->post('/login', [
-            'email' => 'test@example.com',
+            'identifiant' => 'test@example.com',
             'password' => 'password123',
         ]);
 
@@ -100,7 +101,7 @@ class AuthenticationSecurityTest extends TestCase
         $response = $this->post('/logout');
 
         $this->assertGuest();
-        $response->assertRedirect('/');
+        $response->assertRedirect('/login');
     }
 
     /**
@@ -118,16 +119,16 @@ class AuthenticationSecurityTest extends TestCase
     }
 
     /**
-     * Test de validation de l'email
+     * Test de validation de l'identifiant (email, téléphone ou code agent)
      */
-    public function test_email_invalide_est_refuse()
+    public function test_identifiant_manquant_est_refuse()
     {
         $response = $this->post('/login', [
-            'email' => 'email_invalide',
             'password' => 'password123',
         ]);
 
-        $response->assertSessionHasErrors('email');
+        $this->assertGuest();
+        $response->assertSessionHasErrors('identifiant');
     }
 
     /**
@@ -158,7 +159,7 @@ class AuthenticationSecurityTest extends TestCase
         $sessionIdAvant = session()->getId();
 
         $this->post('/login', [
-            'email' => 'test@example.com',
+            'identifiant' => 'test@example.com',
             'password' => 'password123',
         ]);
 

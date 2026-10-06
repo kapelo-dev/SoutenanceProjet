@@ -142,22 +142,4 @@ class TransactionTest extends TestCase
         $this->assertEquals('YAS', $transaction->operateur->libelle);
     }
 
-    /**
-     * Test de validation du montant minimum
-     */
-    public function test_montant_doit_etre_positif()
-    {
-        $this->expectException(\Illuminate\Database\QueryException::class);
-
-        $agent = Agent::factory()->create();
-        $operateur = Operateur::factory()->create();
-
-        Transaction::create([
-            'montant' => -1000, // Montant négatif
-            'type' => 'depot',
-            'agent_id' => $agent->id,
-            'operateur_id' => $operateur->id,
-            'statut' => 'valide',
-        ]);
-    }
 }

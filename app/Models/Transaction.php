@@ -114,17 +114,15 @@ class Transaction extends Model
         return $query->whereBetween("{$table}.date", [$dateDebut, $dateFin]);
     }
 
+    // Bornes explicites plutôt que whereDate/whereMonth : MySQL peut alors utiliser l'index sur date
     public function scopeDuJour($query)
     {
-        return $query->whereDate($query->getModel()->getTable().'.date', today());
+        return $query->whereBetween($query->getModel()->getTable().'.date', [now()->startOfDay(), now()->endOfDay()]);
     }
 
     public function scopeDuMois($query)
     {
-        $table = $query->getModel()->getTable();
-
-        return $query->whereYear("{$table}.date", now()->year)
-            ->whereMonth("{$table}.date", now()->month);
+        return $query->whereBetween($query->getModel()->getTable().'.date', [now()->startOfMonth(), now()->endOfMonth()]);
     }
 
     /**

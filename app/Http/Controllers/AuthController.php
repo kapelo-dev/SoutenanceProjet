@@ -66,22 +66,22 @@ class AuthController extends Controller
             ])->withInput($request->only('identifiant'));
         }
 
-        if (! Hash::check($password, $utilisateur->mot_de_passe)) {
-            if ($utilisateur->mot_de_passe === $password) {
-                $utilisateur->mot_de_passe = Hash::make($password);
-                $utilisateur->save();
-            } else {
-                $this->logLoginFailed(
-                    $request,
-                    "Tentative de connexion échouée (mot de passe incorrect) : {$utilisateur->nom} {$utilisateur->prenom}",
-                    $utilisateur->id,
-                    ['raison' => 'mot_de_passe_incorrect', 'identifiant' => $identifiant]
-                );
+        // Uniquement des mots de passe hachés (les anciens mots de passe en clair sont hachés par migration) :
+        // comparer en clair permettrait de se connecter en envoyant le hash stocké lui-même.
+        // rescue : une valeur stockée qui n'est pas un hash fait lever une exception à Hash::check → refus simple
+        $motDePasseValide = rescue(fn () => Hash::check($password, (string) $utilisateur->mot_de_passe), false, false);
 
-                return back()->withErrors([
-                    'identifiant' => 'Les identifiants fournis sont incorrects.',
-                ])->withInput($request->only('identifiant'));
-            }
+        if (! $motDePasseValide) {
+            $this->logLoginFailed(
+                $request,
+                "Tentative de connexion échouée (mot de passe incorrect) : {$utilisateur->nom} {$utilisateur->prenom}",
+                $utilisateur->id,
+                ['raison' => 'mot_de_passe_incorrect', 'identifiant' => $identifiant]
+            );
+
+            return back()->withErrors([
+                'identifiant' => 'Les identifiants fournis sont incorrects.',
+            ])->withInput($request->only('identifiant'));
         }
 
         Auth::login($utilisateur, $request->boolean('remember'));
@@ -131,6 +131,14 @@ class AuthController extends Controller
         ]);
 
         $utilisateur = Auth::user();
+
+        // Garder le mot de passe temporaire reviendrait à ne pas le changer
+        if (Hash::check($request->password, $utilisateur->mot_de_passe)) {
+            return back()->withErrors([
+                'password' => 'Le nouveau mot de passe doit être différent du mot de passe temporaire.',
+            ]);
+        }
+
         $utilisateur->mot_de_passe = Hash::make($request->password);
         $utilisateur->dernier_connexion = now();
         $utilisateur->save();

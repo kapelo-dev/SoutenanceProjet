@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\PermissionCache;
 use App\Models\Agent;
 use App\Models\Kiosque;
 use App\Models\Utilisateur;
 use App\Models\Solde;
+use App\Rules\TelephoneValide;
+use App\Support\MotDePasseTemporaire;
 use App\Models\Operateur;
 use App\Models\Profil;
 use App\Models\Transaction;
@@ -90,10 +93,23 @@ class AgentController extends Controller
 
             $agents = $query->actif()->orderBy('nom')->get();
             $operateurs = Operateur::actif()->get();
-            
-            // Calculer les commissions pour chaque agent (sera fait dans la vue pour éviter N+1)
 
-            return $this->ajaxView('pages.agents.solde.index', compact('agents', 'operateurs'));
+            // Données par agent chargées en 3 requêtes au total (au lieu de 3 requêtes par agent dans la vue)
+            $agentIds = $agents->pluck('id');
+            $soldesParAgent = Solde::courantsParAgent($agentIds, ['operateur']);
+            $derniereMajParAgent = Solde::whereIn('agent_id', $agentIds)
+                ->groupBy('agent_id')
+                ->selectRaw('agent_id, MAX(date) as derniere_maj')
+                ->pluck('derniere_maj', 'agent_id');
+            $commissionsParAgent = Transaction::commerciale()->valide()
+                ->whereIn('agent_id', $agentIds)
+                ->groupBy('agent_id')
+                ->selectRaw('agent_id, COALESCE(SUM(commission), 0) as total')
+                ->pluck('total', 'agent_id');
+
+            return $this->ajaxView('pages.agents.solde.index', compact(
+                'agents', 'operateurs', 'soldesParAgent', 'derniereMajParAgent', 'commissionsParAgent'
+            ));
         } catch (\Exception $e) {
             \Log::error('Erreur dans AgentController@soldes: ' . $e->getMessage());
             return $this->ajaxView('pages.agents.solde.index', [
@@ -135,7 +151,7 @@ class AgentController extends Controller
             'code_agent' => 'nullable|string|max:50|unique:agents,code_agent',
             'nom' => 'required|string|max:100',
             'prenom' => 'required|string|max:100',
-            'telephone' => 'required|string|max:20|unique:agents,telephone',
+            'telephone' => ['required', 'string', 'max:20', new TelephoneValide, 'unique:agents,telephone'],
             'montant_initial_total' => 'nullable|numeric|min:0',
             'espece_initiale' => 'nullable|numeric|min:0',
             'kiosque_id' => 'nullable|exists:kiosques,id',
@@ -183,7 +199,7 @@ class AgentController extends Controller
                 'code_agent' => 'required|string|max:50|unique:agents,code_agent',
                 'nom' => 'required|string|max:100',
                 'prenom' => 'required|string|max:100',
-                'telephone' => 'required|string|max:20|unique:agents,telephone',
+                'telephone' => ['required', 'string', 'max:20', new TelephoneValide, 'unique:agents,telephone'],
                 'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'espece_initiale' => 'nullable|numeric|min:0',
                 'kiosque_id' => 'nullable|exists:kiosques,id',
@@ -272,8 +288,9 @@ class AgentController extends Controller
                 }
             }
 
-            // Créer l'utilisateur automatiquement
-            $motDePasse = 'changeMe';
+            // Créer l'utilisateur automatiquement, avec un mot de passe temporaire unique
+            // (affiché une seule fois à l'administrateur, à changer à la première connexion)
+            $motDePasse = MotDePasseTemporaire::generer();
             
             // Upload de la photo de profil si fournie
             $photoProfil = null;
@@ -289,12 +306,15 @@ class AgentController extends Controller
                 'mot_de_passe' => Hash::make($motDePasse),
                 'photo_profil' => $photoProfil,
                 'statut' => 'actif',
+                // null = mot de passe à changer à la première connexion (web et mobile)
+                'dernier_connexion' => null,
             ]);
 
             // Assigner le profil "Agent" par défaut
             $profilAgent = Profil::where('libelle', 'Agent')->first();
             if ($profilAgent) {
                 $utilisateur->profils()->attach($profilAgent->id);
+                PermissionCache::flush();
             } else {
                 // Si le profil Agent n'existe pas, créer un log d'erreur
                 \Log::warning('Le profil "Agent" n\'existe pas dans la base de données. L\'utilisateur ' . $utilisateur->id . ' n\'a pas de profil assigné.');
@@ -546,7 +566,7 @@ class AgentController extends Controller
                 'code_agent' => 'nullable|string|max:50|unique:agents,code_agent,' . $agent->id,
                 'nom' => 'required|string|max:100',
                 'prenom' => 'required|string|max:100',
-                'telephone' => 'required|string|max:20|unique:agents,telephone,' . $agent->id,
+                'telephone' => ['required', 'string', 'max:20', new TelephoneValide, 'unique:agents,telephone,' . $agent->id],
                 'kiosque_id' => 'nullable|exists:kiosques,id',
                 'user_id' => 'nullable|exists:utilisateurs,id',
                 'statut' => 'required|in:actif,inactif,suspendu,en_attente',
@@ -842,11 +862,10 @@ class AgentController extends Controller
 
         ExportSelection::apply($query, $request);
 
-        $agents = $query->orderBy('nom')->orderBy('prenom')->get();
-
         $headers = ['Code Agent', 'Nom', 'Prénom', 'Téléphone', 'Email', 'Kiosque', 'Statut', 'Montant Total Initial'];
-        
-        $data = $agents->map(function($agent) {
+
+        // lazy() : agents hydratés par lots
+        $data = $query->orderBy('nom')->orderBy('prenom')->orderBy('id')->lazy(1000)->map(function($agent) {
             return [
                 $agent->code_agent ?? '-',
                 $agent->nom ?? '-',
@@ -857,7 +876,7 @@ class AgentController extends Controller
                 ucfirst($agent->statut ?? 'inactif'),
                 number_format((float)($agent->montant_initial_total ?? 0), 0, ',', ' ') . ' XOF',
             ];
-        })->toArray();
+        })->all();
 
         $filename = 'agents_' . now()->format('Y-m-d_His');
 
@@ -906,9 +925,12 @@ class AgentController extends Controller
         }
         $headers[] = 'Solde Total';
 
+        // Soldes courants de tous les agents en une requête (au lieu de soldesActuels() par agent)
+        $soldesParAgent = Solde::courantsParAgent($agents->pluck('id'));
+
         $data = [];
         foreach ($agents as $agent) {
-            $soldesCourants = $agent->soldesActuels(['operateur']);
+            $soldesCourants = $soldesParAgent->get($agent->id, collect());
             $soldeEspece = $soldesCourants->where('type', 'espece')->first();
             $montantEspece = $soldeEspece ? $soldeEspece->montant : 0;
             $soldesVirtuels = $soldesCourants->where('type', 'virtuel');

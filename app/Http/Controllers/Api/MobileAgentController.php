@@ -45,11 +45,20 @@ class MobileAgentController extends Controller
             'user_id' => $utilisateur->id,
         ], now()->addDays(30));
 
+        // Mot de passe temporaire : le token ne sert qu'à le changer (les autres routes répondent 403),
+        // et aucune donnée de l'agent n'est renvoyée tant que ce n'est pas fait.
+        $doitChanger = $utilisateur->doitChangerMotDePasse();
+
+        if (! $doitChanger) {
+            $utilisateur->forceFill(['dernier_connexion' => now()])->save();
+        }
+
         return response()->json([
             'success' => true,
             'token' => $token,
+            'doit_changer_mot_de_passe' => $doitChanger,
             'agent' => $this->formatAgent($agent),
-            'dashboard' => $this->buildDashboardPayload($agent),
+            'dashboard' => $doitChanger ? null : $this->buildDashboardPayload($agent),
         ]);
     }
 
@@ -124,7 +133,9 @@ class MobileAgentController extends Controller
 
         $request->validate([
             'current_password' => 'required|string',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => 'required|string|min:8|confirmed|different:current_password',
+        ], [
+            'password.different' => 'Le nouveau mot de passe doit être différent du mot de passe actuel.',
         ]);
 
         $utilisateur = $agent->utilisateur;
@@ -137,12 +148,19 @@ class MobileAgentController extends Controller
             return response()->json(['success' => false, 'message' => 'Mot de passe actuel incorrect.'], 422);
         }
 
+        $premierChangement = $utilisateur->doitChangerMotDePasse();
+
         $utilisateur->mot_de_passe = Hash::make($request->password);
+        // Même marqueur que le web : le mot de passe temporaire est remplacé, l'accès est débloqué
+        $utilisateur->dernier_connexion = now();
         $utilisateur->save();
 
         return response()->json([
             'success' => true,
             'message' => 'Mot de passe modifié avec succès.',
+            'doit_changer_mot_de_passe' => false,
+            // Premier changement : l'application reçoit directement les données à afficher
+            'dashboard' => $premierChangement ? $this->buildDashboardPayload($agent->fresh()) : null,
         ]);
     }
 

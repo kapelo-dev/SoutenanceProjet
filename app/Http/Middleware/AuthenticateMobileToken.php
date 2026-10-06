@@ -34,6 +34,15 @@ class AuthenticateMobileToken
             return $this->unauthorized('Compte désactivé ou introuvable.');
         }
 
+        // Mot de passe temporaire : seul le changement de mot de passe est autorisé
+        if ($utilisateur->doitChangerMotDePasse() && ! $request->is('api/mobile/agent/change-password')) {
+            return response()->json([
+                'success' => false,
+                'code' => 'MOT_DE_PASSE_A_CHANGER',
+                'message' => 'Vous devez changer votre mot de passe avant de continuer.',
+            ], 403);
+        }
+
         // Utilisateur disponible via auth()->user() pour la durée de la requête (sans session)
         Auth::setUser($utilisateur);
         $request->attributes->set('mobile_agent_id', $payload['agent_id'] ?? null);

@@ -210,7 +210,6 @@ class OperationsAgenceController extends Controller
 
         ExportSelection::apply($query, $request);
 
-        $transactions = $query->latest('date')->get();
 
         $headers = [
             'Référence',
@@ -225,7 +224,8 @@ class OperationsAgenceController extends Controller
             'Note',
         ];
 
-        $data = $transactions->map(function (Transaction $transaction) {
+        // lazy() : transactions hydratées par lots au lieu d'être toutes chargées en modèles
+        $data = $query->latest('date')->latest('id')->lazy(1000)->map(function (Transaction $transaction) {
             $agent = $transaction->agent;
 
             return [
@@ -240,7 +240,7 @@ class OperationsAgenceController extends Controller
                 ucfirst(str_replace('_', ' ', $transaction->statut ?? '-')),
                 $transaction->description ?? '-',
             ];
-        })->toArray();
+        })->all();
 
         $filename = 'operations_agence_'.now()->format('Y-m-d_His');
         $filters = $this->buildExportFilters($request);

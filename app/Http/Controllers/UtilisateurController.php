@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\PermissionCache;
+use App\Support\UserMenuPermissions;
 use App\Models\Utilisateur;
 use App\Models\Profil;
 use Illuminate\Http\Request;
@@ -96,6 +98,7 @@ class UtilisateurController extends Controller
         $utilisateur = Utilisateur::create($validated);
         
         $utilisateur->profils()->attach([$profilId]);
+        PermissionCache::flush();
 
         return redirect()->route('utilisateurs.index')
             ->with('success', 'Utilisateur créé avec succès !');
@@ -211,6 +214,7 @@ class UtilisateurController extends Controller
         
         // Synchroniser les profils
         $utilisateur->profils()->sync($profils);
+        PermissionCache::flush();
 
         return redirect()->route('utilisateurs.index')
             ->with('success', 'Utilisateur mis à jour avec succès !');
@@ -266,7 +270,7 @@ class UtilisateurController extends Controller
                 ], 401);
             }
 
-            return response()->json(\App\Support\UserMenuPermissions::forUser($user));
+            return response()->json(UserMenuPermissions::forUser($user));
 
         } catch (\Exception $e) {
             \Log::error('Erreur dans UtilisateurController@getMyPermissions: ' . $e->getMessage());
@@ -307,13 +311,15 @@ class UtilisateurController extends Controller
             'nouveau_mot_de_passe' => 'required|string|min:8|confirmed',
         ]);
 
-        $utilisateur->update([
-            'mot_de_passe' => Hash::make($request->nouveau_mot_de_passe)
-        ]);
+        // Le mot de passe choisi par l'administrateur est temporaire : à changer à la prochaine connexion
+        $utilisateur->forceFill([
+            'mot_de_passe' => Hash::make($request->nouveau_mot_de_passe),
+            'dernier_connexion' => null,
+        ])->save();
 
         return response()->json([
             'success' => true,
-            'message' => 'Mot de passe réinitialisé avec succès !'
+            'message' => 'Mot de passe réinitialisé. L\'utilisateur devra le changer à sa prochaine connexion.'
         ]);
     }
 }

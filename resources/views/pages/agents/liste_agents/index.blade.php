@@ -666,6 +666,45 @@
 </div>
 <!-- End Modal Nouvel Agent avec Kiosque -->
 
+<!-- Modal Identifiants du nouvel agent (affichés une seule fois) -->
+<div class="kt-modal" data-kt-modal="true" data-kt-modal-backdrop-static="true" id="modal_identifiants_agent">
+    <div class="kt-modal-content w-full max-w-[480px]">
+        <div class="kt-modal-header">
+            <h3 class="kt-modal-title">Identifiants de connexion de l'agent</h3>
+        </div>
+        <div class="kt-modal-body flex flex-col gap-4">
+            <div class="kt-alert kt-alert-warning">
+                <div class="kt-alert-title">
+                    Notez ces identifiants maintenant : le mot de passe ne sera plus jamais affiché.
+                </div>
+            </div>
+            <div class="flex flex-col gap-1">
+                <span class="text-sm text-secondary-foreground">Identifiant (code agent)</span>
+                <span class="text-lg font-semibold text-mono" id="identifiant_agent_code"></span>
+            </div>
+            <div class="flex flex-col gap-1">
+                <span class="text-sm text-secondary-foreground">Mot de passe temporaire</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-lg font-semibold text-mono font-mono tracking-wider" id="identifiant_agent_mdp"></span>
+                    <button type="button" class="kt-btn kt-btn-sm kt-btn-outline" id="btn_copier_identifiants">
+                        <i class="ki-filled ki-copy"></i> Copier
+                    </button>
+                </div>
+            </div>
+            <p class="text-sm text-secondary-foreground">
+                Communiquez-les à l'agent. À sa première connexion (application mobile ou web),
+                il devra choisir son propre mot de passe.
+            </p>
+        </div>
+        <div class="kt-modal-footer">
+            <button type="button" class="kt-btn kt-btn-primary" id="btn_identifiants_notes">
+                <i class="ki-filled ki-check"></i> J'ai noté les identifiants
+            </button>
+        </div>
+    </div>
+</div>
+<!-- End Modal Identifiants -->
+
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <!-- Leaflet JS -->
@@ -1000,7 +1039,36 @@ window.resetAgentModal = function resetAgentModal() {
     });
 }
 
-window.saveAgentWithKiosque = function saveAgentWithKiosque() {
+window.saveAgentWithKiosque = /**
+ * Identifiants du nouvel agent : fenêtre qui reste ouverte jusqu'à confirmation
+ * (le mot de passe temporaire n'est affiché qu'une fois), puis rechargement de la liste.
+ */
+function afficherIdentifiantsAgent(codeAgent, motDePasse) {
+    const modal = document.getElementById('modal_identifiants_agent');
+    document.getElementById('identifiant_agent_code').textContent = codeAgent;
+    document.getElementById('identifiant_agent_mdp').textContent = motDePasse;
+
+    const boutonCopier = document.getElementById('btn_copier_identifiants');
+    boutonCopier.onclick = function () {
+        const texte = 'Identifiant : ' + codeAgent + '\nMot de passe temporaire : ' + motDePasse;
+        navigator.clipboard?.writeText(texte).then(function () {
+            boutonCopier.innerHTML = '<i class="ki-filled ki-check"></i> Copié';
+        });
+    };
+
+    document.getElementById('btn_identifiants_notes').onclick = function () {
+        AppToast.reload('Agent créé avec succès.', 'success');
+    };
+
+    if (typeof KTModal !== 'undefined') {
+        (KTModal.getInstance(modal) || new KTModal(modal)).show();
+    } else {
+        modal.classList.add('show');
+        modal.style.display = 'block';
+    }
+}
+
+function saveAgentWithKiosque() {
     console.log('saveAgentWithKiosque appelée');
     const form = document.getElementById('form_nouvel_agent_kiosque');
     const formData = new FormData(form);
@@ -1214,10 +1282,7 @@ window.saveAgentWithKiosque = function saveAgentWithKiosque() {
             resetAgentModal();
             
             if (data.utilisateur) {
-                const message = 'Agent créé. Code agent : ' + data.utilisateur.code_agent +
-                    ' — Mot de passe : ' + data.utilisateur.mot_de_passe +
-                    '. Communiquez ces informations à l\'agent.';
-                AppToast.reload(message, 'success', { duration: 12000 });
+                afficherIdentifiantsAgent(data.utilisateur.code_agent, data.utilisateur.mot_de_passe);
             } else {
                 AppToast.reload(data.message || 'Agent créé avec succès.', 'success');
             }

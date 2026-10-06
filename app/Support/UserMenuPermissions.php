@@ -8,7 +8,19 @@ use Illuminate\Support\Facades\Route;
 
 class UserMenuPermissions
 {
+    /**
+     * Permissions de menu de l'utilisateur, mises en cache (invalidées par PermissionCache::flush()).
+     */
     public static function forUser(?Utilisateur $user): array
+    {
+        if (! $user) {
+            return self::calculer(null);
+        }
+
+        return PermissionCache::remember("menu:{$user->id}", fn () => self::calculer($user));
+    }
+
+    private static function calculer(?Utilisateur $user): array
     {
         if (! $user) {
             return [

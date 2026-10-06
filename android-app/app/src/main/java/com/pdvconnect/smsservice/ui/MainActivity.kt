@@ -42,12 +42,15 @@ import com.pdvconnect.smsservice.databinding.ActivityMainBinding
 import com.pdvconnect.smsservice.sms.ServiceStarter
 import com.pdvconnect.smsservice.sms.SmsForwarderService
 import com.pdvconnect.smsservice.sync.OfflineSyncRepository
+import com.pdvconnect.smsservice.sync.SmsFilterSync
 import com.pdvconnect.smsservice.sync.SyncScheduler
 import com.pdvconnect.smsservice.util.AppUpdateChecker
 import com.pdvconnect.smsservice.util.NetworkUtils
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.IOException
+import retrofit2.HttpException
+import com.google.gson.JsonParser
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -547,10 +550,19 @@ class MainActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            prefs.saveAll(consent = true, serviceEnabled, apiUrl, apiToken, filterList = emptyList())
+            prefs.saveAll(consent = true, serviceEnabled, apiUrl, apiToken)
+            // Expéditeurs autorisés définis sur le web : récupérés dès l'enregistrement
+            val detailFiltres = when (val filtres = SmsFilterSync.refresh(this@MainActivity)) {
+                is SmsFilterSync.Result.Ok -> if (filtres.count > 0) {
+                    " ${filtres.count} expéditeur(s) autorisé(s)."
+                } else {
+                    " Aucun expéditeur défini sur le web : expéditeurs par défaut (FLOOZ, MOOV, MIX, MIXX, YAS)."
+                }
+                is SmsFilterSync.Result.Error -> " ${filtres.message}"
+            }
             if (serviceEnabled) {
                 startForegroundServiceIfNeeded()
-                Toast.makeText(this@MainActivity, "Paramètres enregistrés. Le transfert SMS est actif.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "Paramètres enregistrés. Le transfert SMS est actif.$detailFiltres", Toast.LENGTH_LONG).show()
             } else {
                 stopService(Intent(this@MainActivity, SmsForwarderService::class.java))
                 Toast.makeText(this@MainActivity, "Paramètres enregistrés. Service désactivé.", Toast.LENGTH_SHORT).show()
@@ -585,24 +597,64 @@ class MainActivity : AppCompatActivity() {
             try {
                 val api = AgentApiClient.create(apiUrl)
                 val response = api.login(AgentLoginRequest(identifiant, password))
-                if (response.success && !response.token.isNullOrBlank()) {
-                    agentToken = response.token
-                    currentAgent = response.agent
-                    prefs.setAgentSessionToken(response.token)
-                    response.agent?.let { agent ->
-                        prefs.setBoundAgent(agent.id, agent.codeAgent, agent.telephone)
+                if (response.success && !response.token.isNullOrBlank() && response.doitChangerMotDePasse) {
+                    // Mot de passe temporaire : la session n'est enregistrée qu'après le changement
+                    showChangePasswordDialog(
+                        token = response.token,
+                        obligatoire = true,
+                        motDePasseActuel = password,
+                    ) { apresChangement ->
+                        ouvrirSessionAgent(response.token, response.agent, apresChangement.dashboard)
+                        Toast.makeText(this@MainActivity, R.string.agent_first_password_done, Toast.LENGTH_SHORT).show()
                     }
-                    dashboardCache.save(response)
-                    showingOfflineCache = false
-                    renderDashboard(response.dashboard, response.agent, offline = false)
+                } else if (response.success && !response.token.isNullOrBlank()) {
+                    ouvrirSessionAgent(response.token, response.agent, response.dashboard)
                     Toast.makeText(this@MainActivity, "Connexion réussie.", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this@MainActivity, response.message ?: "Connexion échouée.", Toast.LENGTH_LONG).show()
                 }
+            } catch (e: HttpException) {
+                Toast.makeText(this@MainActivity, messageErreurApi(e) ?: "Connexion échouée.", Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Erreur réseau : ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    private suspend fun ouvrirSessionAgent(token: String, agent: AgentInfo?, dashboard: AgentDashboard?) {
+        agentToken = token
+        currentAgent = agent
+        prefs.setAgentSessionToken(token)
+        agent?.let { prefs.setBoundAgent(it.id, it.codeAgent, it.telephone) }
+        dashboardCache.save(AgentLoginResponse(success = true, token = token, agent = agent, dashboard = dashboard))
+        showingOfflineCache = false
+        renderDashboard(dashboard, agent, offline = false)
+    }
+
+    /** Message renvoyé par l'API Laravel (« message », sinon première erreur de validation). */
+    private fun messageErreurApi(e: HttpException): String? {
+        val corps = try {
+            e.response()?.errorBody()?.string()
+        } catch (_: Exception) {
+            null
+        } ?: return null
+        return try {
+            val json = JsonParser.parseString(corps).asJsonObject
+            json.getAsJsonObject("errors")?.entrySet()?.firstOrNull()?.value?.asJsonArray?.firstOrNull()?.asString
+                ?: json.get("message")?.asString
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun estMotDePasseAChanger(e: HttpException): Boolean {
+        if (e.code() != 403) return false
+        val corps = try {
+            e.response()?.errorBody()?.string()
+        } catch (_: Exception) {
+            null
+        }
+        return corps?.contains("MOT_DE_PASSE_A_CHANGER") == true
     }
 
     private fun refreshAgentDashboard() {
@@ -642,6 +694,16 @@ class MainActivity : AppCompatActivity() {
                     agentToken = null
                     dashboardCache.clear()
                     updateAgentUi()
+                }
+            } catch (e: HttpException) {
+                if (estMotDePasseAChanger(e)) {
+                    // Session ouverte avant la réinitialisation du mot de passe (ou par une ancienne version)
+                    showChangePasswordDialog(token = token, obligatoire = true) { apresChangement ->
+                        ouvrirSessionAgent(token, currentAgent, apresChangement.dashboard)
+                        Toast.makeText(this@MainActivity, R.string.agent_first_password_done, Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    loadCachedDashboard(serverUnreachable = true)
                 }
             } catch (e: IOException) {
                 loadCachedDashboard(serverUnreachable = true)
@@ -921,8 +983,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showChangePasswordDialog() {
-        val token = agentToken
+    /**
+     * Changement de mot de passe.
+     * obligatoire = mot de passe temporaire (première connexion ou réinitialisation) : la fenêtre ne peut
+     * pas être fermée, seulement validée ou quittée par « Se déconnecter ». motDePasseActuel : saisi à
+     * l'instant pour se connecter, donc pas redemandé.
+     */
+    private fun showChangePasswordDialog(
+        token: String? = agentToken,
+        obligatoire: Boolean = false,
+        motDePasseActuel: String? = null,
+        onSuccess: suspend (AgentLoginResponse) -> Unit = {},
+    ) {
         if (token.isNullOrBlank()) {
             Toast.makeText(this, "Connectez-vous d'abord.", Toast.LENGTH_SHORT).show()
             return
@@ -933,14 +1005,33 @@ class MainActivity : AppCompatActivity() {
         val editNew = view.findViewById<TextInputEditText>(R.id.edit_new_password)
         val editConfirm = view.findViewById<TextInputEditText>(R.id.edit_confirm_password)
 
+        if (obligatoire) {
+            view.findViewById<TextView>(R.id.text_change_password_intro).visibility = View.VISIBLE
+        }
+        if (motDePasseActuel != null) {
+            editCurrent.setText(motDePasseActuel)
+            view.findViewById<View>(R.id.layout_current_password).visibility = View.GONE
+        }
+
         val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.dialog_change_password_title)
+            .setTitle(if (obligatoire) R.string.dialog_first_password_title else R.string.dialog_change_password_title)
             .setView(view)
             .setPositiveButton(R.string.save, null)
-            .setNegativeButton(android.R.string.cancel, null)
+            .setNegativeButton(if (obligatoire) R.string.agent_first_password_logout else android.R.string.cancel, null)
+            .setCancelable(!obligatoire)
             .create()
+        dialog.setCanceledOnTouchOutside(!obligatoire)
 
         dialog.setOnShowListener {
+            if (obligatoire) {
+                // « Se déconnecter » : abandonne la session (le mot de passe temporaire reste à changer)
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                    dialog.dismiss()
+                    agentToken = token
+                    performAgentLogout()
+                }
+            }
+
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val current = editCurrent.text?.toString().orEmpty()
                 val newPass = editNew.text?.toString().orEmpty()
@@ -976,7 +1067,10 @@ class MainActivity : AppCompatActivity() {
                         )
                         if (response.success) {
                             dialog.dismiss()
-                            Toast.makeText(this@MainActivity, R.string.agent_password_changed, Toast.LENGTH_SHORT).show()
+                            if (!obligatoire) {
+                                Toast.makeText(this@MainActivity, R.string.agent_password_changed, Toast.LENGTH_SHORT).show()
+                            }
+                            onSuccess(response)
                         } else {
                             Toast.makeText(
                                 this@MainActivity,
@@ -984,6 +1078,12 @@ class MainActivity : AppCompatActivity() {
                                 Toast.LENGTH_LONG,
                             ).show()
                         }
+                    } catch (e: HttpException) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            messageErreurApi(e) ?: "Échec du changement (erreur ${e.code()}).",
+                            Toast.LENGTH_LONG,
+                        ).show()
                     } catch (e: Exception) {
                         Toast.makeText(this@MainActivity, "Erreur : ${e.message}", Toast.LENGTH_LONG).show()
                     }

@@ -56,6 +56,10 @@ Route::prefix('mobile/agent')->group(function () {
 Route::post('/transactions/from-sms', [TransactionController::class, 'storeFromSms'])
     ->middleware('sms.api.token');
 
+// Expéditeurs SMS autorisés (définis sur la page Configuration app mobile) — même token API SMS
+Route::get('/mobile/sms-config', [MobileConfigController::class, 'smsConfig'])
+    ->middleware('sms.api.token');
+
 /*
 |--------------------------------------------------------------------------
 | Routes protégées — token obtenu via POST /api/mobile/agent/login

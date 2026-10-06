@@ -10,6 +10,8 @@ use App\Support\AgentPhoneResolver;
 use App\Models\Operateur;
 use App\Models\Solde;
 use App\Traits\Exportable;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -23,50 +25,22 @@ class TransactionController extends Controller
     {
         $query = Transaction::commerciale()->with(['agent.utilisateur', 'operateur']);
 
-        // Filtres
-        if ($request->filled('statut')) {
-            $query->where('statut', $request->statut);
-        }
-
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
-        if ($request->filled('operateur_id')) {
-            $query->where('operateur_id', $request->operateur_id);
-        }
-
-        if ($request->filled('agent_id')) {
-            $query->where('agent_id', $request->agent_id);
-        }
-
-        if ($request->filled('date_debut')) {
-            $query->whereDate('date', '>=', $request->date_debut);
-        }
-
-        if ($request->filled('date_fin')) {
-            $query->whereDate('date', '<=', $request->date_fin);
-        }
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('reference', 'like', "%{$search}%")
-                  ->orWhere('client_nom', 'like', "%{$search}%")
-                  ->orWhere('client_telephone', 'like', "%{$search}%");
-            });
-        }
+        $this->appliquerFiltres($query, $request);
 
         $transactions = $query->latest('date')->paginate(20);
         
         $operateurs = Operateur::actif()->get();
         $agents = Agent::actif()->orderBy('nom')->get();
 
-        // Statistiques pour la période affichée
+        // Statistiques pour la période affichée (une requête)
+        $totaux = (clone $query)->valide()
+            ->selectRaw('COUNT(*) as nb, COALESCE(SUM(montant), 0) as montant, COALESCE(SUM(commission), 0) as commission')
+            ->toBase()
+            ->first();
         $stats = [
-            'total' => $query->valide()->sum('montant'),
-            'count' => $query->valide()->count(),
-            'commission' => $query->valide()->sum('commission'),
+            'total' => (float) $totaux->montant,
+            'count' => (int) $totaux->nb,
+            'commission' => (float) $totaux->commission,
         ];
 
         return $this->ajaxView('pages.transactions.index', compact('transactions', 'operateurs', 'agents', 'stats'));
@@ -80,7 +54,7 @@ class TransactionController extends Controller
         $operateurs = Operateur::actif()->get();
         $agents = Agent::actif()->with('kiosque')->orderBy('nom')->get();
 
-        return view('pages.transactions.create', compact('operateurs', 'agents'));
+        return $this->ajaxView('pages.transactions.create', compact('operateurs', 'agents'));
     }
 
     /**
@@ -330,7 +304,7 @@ class TransactionController extends Controller
     {
         $transaction->load(['agent.kiosque', 'operateur', 'audits.utilisateur']);
 
-        return view('pages.transactions.show', compact('transaction'));
+        return $this->ajaxView('pages.transactions.show', compact('transaction'));
     }
 
     /**
@@ -347,7 +321,7 @@ class TransactionController extends Controller
         $operateurs = Operateur::actif()->get();
         $agents = Agent::actif()->with('kiosque')->orderBy('nom')->get();
 
-        return view('pages.transactions.edit', compact('transaction', 'operateurs', 'agents'));
+        return $this->ajaxView('pages.transactions.edit', compact('transaction', 'operateurs', 'agents'));
     }
 
     /**
@@ -480,40 +454,42 @@ class TransactionController extends Controller
                 $query->duMois();
                 break;
             case 'annee':
-                $query->whereYear('date', now()->year);
+                $query->whereBetween('date', [now()->startOfYear(), now()->endOfYear()]);
                 break;
         }
 
+        // Totaux et répartition par type en une requête, par opérateur en une autre
+        $totaux = (clone $query)
+            ->selectRaw('COUNT(*) as nb, COALESCE(SUM(montant), 0) as montant, COALESCE(SUM(commission), 0) as commission')
+            ->toBase()
+            ->first();
+        $parType = (clone $query)
+            ->groupBy('type')
+            ->selectRaw('type, COUNT(*) as nb, COALESCE(SUM(montant), 0) as montant')
+            ->toBase()
+            ->get()
+            ->keyBy('type');
+        $parOperateur = (clone $query)
+            ->whereNotNull('operateur_id')
+            ->groupBy('operateur_id')
+            ->selectRaw('operateur_id, COUNT(*) as nb, COALESCE(SUM(montant), 0) as montant')
+            ->toBase()
+            ->get()
+            ->keyBy('operateur_id');
+
         $stats = [
-            'total_transactions' => $query->count(),
-            'montant_total' => $query->sum('montant'),
-            'commission_total' => $query->sum('commission'),
-            'par_type' => [
-                'depot' => [
-                    'count' => (clone $query)->depot()->count(),
-                    'montant' => (clone $query)->depot()->sum('montant'),
-                ],
-                'retrait' => [
-                    'count' => (clone $query)->retrait()->count(),
-                    'montant' => (clone $query)->retrait()->sum('montant'),
-                ],
-                'transfert' => [
-                    'count' => (clone $query)->where('type', 'transfert')->count(),
-                    'montant' => (clone $query)->where('type', 'transfert')->sum('montant'),
-                ],
-                'paiement' => [
-                    'count' => (clone $query)->where('type', 'paiement')->count(),
-                    'montant' => (clone $query)->where('type', 'paiement')->sum('montant'),
-                ],
-            ],
-            'par_operateur' => Operateur::actif()->get()->map(function($operateur) use ($query) {
-                $opQuery = clone $query;
-                return [
-                    'operateur' => $operateur->only(['id', 'code', 'libelle', 'couleur']),
-                    'count' => $opQuery->where('operateur_id', $operateur->id)->count(),
-                    'montant' => $opQuery->where('operateur_id', $operateur->id)->sum('montant'),
-                ];
-            }),
+            'total_transactions' => (int) $totaux->nb,
+            'montant_total' => (float) $totaux->montant,
+            'commission_total' => (float) $totaux->commission,
+            'par_type' => collect(['depot', 'retrait', 'transfert', 'paiement'])->mapWithKeys(fn ($type) => [$type => [
+                'count' => (int) ($parType[$type]->nb ?? 0),
+                'montant' => (float) ($parType[$type]->montant ?? 0),
+            ]])->all(),
+            'par_operateur' => Operateur::actif()->get()->map(fn ($operateur) => [
+                'operateur' => $operateur->only(['id', 'code', 'libelle', 'couleur']),
+                'count' => (int) ($parOperateur[$operateur->id]->nb ?? 0),
+                'montant' => (float) ($parOperateur[$operateur->id]->montant ?? 0),
+            ]),
         ];
 
         return response()->json($stats);
@@ -526,92 +502,38 @@ class TransactionController extends Controller
     {
         $query = Transaction::commerciale()->with(['agent', 'operateur']);
 
-        // Appliquer les mêmes filtres que l'index
-        if ($request->filled('statut')) {
-            $query->where('statut', $request->statut);
-        }
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-        if ($request->filled('operateur_id')) {
-            $query->where('operateur_id', $request->operateur_id);
-        }
-        if ($request->filled('agent_id')) {
-            $query->where('agent_id', $request->agent_id);
-        }
-        if ($request->filled('date_debut')) {
-            $query->whereDate('date', '>=', $request->date_debut);
-        }
-        if ($request->filled('date_fin')) {
-            $query->whereDate('date', '<=', $request->date_fin);
-        }
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('reference', 'like', "%{$search}%")
-                  ->orWhere('client_nom', 'like', "%{$search}%")
-                  ->orWhere('client_telephone', 'like', "%{$search}%");
-            });
-        }
+        $this->appliquerFiltres($query, $request);
 
         ExportSelection::apply($query, $request);
 
-        $transactions = $query->latest('date')->get();
-
         $headers = ['Référence', 'Date', 'Type', 'Montant (XOF)', 'Opérateur', 'Agent', 'Client', 'Téléphone Client', 'Commission (XOF)', 'Statut'];
-        
-        $data = $transactions->map(function($transaction) {
-            // Préparer le logo de l'opérateur pour le PDF
-            $operateurCell = '-';
-            if ($transaction->operateur) {
-                $operateurLibelle = $transaction->operateur->libelle ?? '-';
-                $operateurLogo = null;
-                
-                if ($transaction->operateur->logo) {
-                    // Le logo est stocké dans storage/app/public/
-                    $logoPath = storage_path('app/public/' . $transaction->operateur->logo);
-                    if (file_exists($logoPath)) {
-                        // Convertir l'image en base64 pour le PDF
-                        $imageData = file_get_contents($logoPath);
-                        $imageInfo = getimagesize($logoPath);
-                        $mimeType = $imageInfo['mime'] ?? 'image/png';
-                        $base64 = base64_encode($imageData);
-                        
-                        $operateurLogo = [
-                            'base64' => 'data:' . $mimeType . ';base64,' . $base64,
-                            'libelle' => $operateurLibelle,
-                        ];
-                    }
+
+        // Cellule opérateur (logo en base64) calculée une fois par opérateur, et non une fois par ligne
+        $cellulesOperateur = [];
+
+        // lazy() : transactions hydratées par lots au lieu d'être toutes chargées en modèles
+        $data = $query->latest('date')->latest('id')->lazy(1000)
+            ->map(function ($transaction) use (&$cellulesOperateur) {
+                $operateurCell = '-';
+                if ($transaction->operateur) {
+                    $operateurCell = $cellulesOperateur[$transaction->operateur->id]
+                        ??= $this->celluleOperateurExport($transaction->operateur);
                 }
-                
-                // Si pas de logo, utiliser la couleur avec les initiales
-                if (!$operateurLogo && $transaction->operateur->couleur) {
-                    $operateurLogo = [
-                        'couleur' => $transaction->operateur->couleur,
-                        'code' => strtoupper(substr($transaction->operateur->code ?? 'OP', 0, 2)),
-                        'libelle' => $operateurLibelle,
-                    ];
-                }
-                
-                $operateurCell = [
-                    'libelle' => $operateurLibelle,
-                    'logo' => $operateurLogo,
+
+                return [
+                    $transaction->reference ?? '-',
+                    $transaction->date ? $transaction->date->format('d/m/Y H:i') : '-',
+                    ucfirst($transaction->type ?? '-'),
+                    number_format($transaction->montant ?? 0, 0, ',', ' ') . ' XOF',
+                    $operateurCell,
+                    ($transaction->agent) ? (($transaction->agent->prenom ?? '') . ' ' . ($transaction->agent->nom ?? '')) : '-',
+                    $transaction->client_nom ?? '-',
+                    $transaction->client_telephone ?? '-',
+                    number_format($transaction->commission ?? 0, 0, ',', ' ') . ' XOF',
+                    ucfirst($transaction->statut ?? '-'),
                 ];
-            }
-            
-            return [
-                $transaction->reference ?? '-',
-                $transaction->date ? $transaction->date->format('d/m/Y H:i') : '-',
-                ucfirst($transaction->type ?? '-'),
-                number_format($transaction->montant ?? 0, 0, ',', ' ') . ' XOF',
-                $operateurCell,
-                ($transaction->agent) ? (($transaction->agent->prenom ?? '') . ' ' . ($transaction->agent->nom ?? '')) : '-',
-                $transaction->client_nom ?? '-',
-                $transaction->client_telephone ?? '-',
-                number_format($transaction->commission ?? 0, 0, ',', ' ') . ' XOF',
-                ucfirst($transaction->statut ?? '-'),
-            ];
-        })->toArray();
+            })
+            ->all();
 
         $filename = 'transactions_' . now()->format('Y-m-d_His');
 
@@ -623,6 +545,71 @@ class TransactionController extends Controller
             'subtitle' => 'Historique des opérations Mobile Money',
             'filtersText' => $this->buildTransactionExportFilters($request),
         ]);
+    }
+
+    /**
+     * Filtres communs à la liste et à l'export.
+     * Dates en bornes explicites (et non whereDate) pour que MySQL utilise l'index sur date.
+     */
+    private function appliquerFiltres(Builder $query, Request $request): void
+    {
+        foreach (['statut', 'type', 'operateur_id', 'agent_id'] as $champ) {
+            if ($request->filled($champ)) {
+                $query->where($champ, $request->input($champ));
+            }
+        }
+
+        if ($request->filled('date_debut')) {
+            $query->where('date', '>=', Carbon::parse($request->date_debut)->startOfDay());
+        }
+
+        if ($request->filled('date_fin')) {
+            $query->where('date', '<=', Carbon::parse($request->date_fin)->endOfDay());
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('reference', 'like', "%{$search}%")
+                    ->orWhere('client_nom', 'like', "%{$search}%")
+                    ->orWhere('client_telephone', 'like', "%{$search}%");
+            });
+        }
+    }
+
+    /**
+     * Cellule « Opérateur » de l'export : libellé + logo base64, sinon pastille couleur + initiales.
+     */
+    private function celluleOperateurExport(Operateur $operateur): array
+    {
+        $libelle = $operateur->libelle ?? '-';
+        $logo = null;
+
+        if ($operateur->logo) {
+            // Le logo est stocké dans storage/app/public/
+            $logoPath = storage_path('app/public/' . $operateur->logo);
+            if (file_exists($logoPath)) {
+                $mimeType = getimagesize($logoPath)['mime'] ?? 'image/png';
+                $logo = [
+                    'base64' => 'data:' . $mimeType . ';base64,' . base64_encode(file_get_contents($logoPath)),
+                    'libelle' => $libelle,
+                ];
+            }
+        }
+
+        // Si pas de logo, utiliser la couleur avec les initiales
+        if (! $logo && $operateur->couleur) {
+            $logo = [
+                'couleur' => $operateur->couleur,
+                'code' => strtoupper(substr($operateur->code ?? 'OP', 0, 2)),
+                'libelle' => $libelle,
+            ];
+        }
+
+        return [
+            'libelle' => $libelle,
+            'logo' => $logo,
+        ];
     }
 
     private function buildTransactionExportFilters(Request $request): ?string

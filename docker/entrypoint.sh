@@ -109,9 +109,17 @@ fi
 
 php artisan config:clear --no-interaction 2>/dev/null || true
 php artisan route:clear --no-interaction 2>/dev/null || true
+php artisan event:clear --no-interaction 2>/dev/null || true
 php artisan view:clear --no-interaction 2>/dev/null || true
 
+# Caches de production : config, routes, événements et vues compilées
+# (évite de relire config/, routes/ et de découvrir les listeners à chaque requête)
 php artisan config:cache --no-interaction 2>/dev/null || echo "WARN: config:cache ignoré"
+# Pas de cache des routes/événements quand le code est monté en direct (docker-compose.local.yml)
+if [ "$SKIP_ROUTE_CACHE" != "true" ]; then
+  php artisan route:cache --no-interaction 2>/dev/null || echo "WARN: route:cache ignoré"
+  php artisan event:cache --no-interaction 2>/dev/null || echo "WARN: event:cache ignoré"
+fi
 php artisan view:cache --no-interaction 2>/dev/null || true
 php artisan storage:link 2>/dev/null || true
 

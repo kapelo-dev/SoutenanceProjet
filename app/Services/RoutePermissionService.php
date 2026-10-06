@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Lien;
 use App\Models\Utilisateur;
+use App\Support\PermissionCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -79,7 +80,9 @@ class RoutePermissionService
 
     private function lienExists(string $routeName): bool
     {
-        return Lien::where('route', $routeName)->whereNull('deleted_at')->exists();
+        $routes = PermissionCache::remember('liens-routes', fn () => Lien::whereNotNull('route')->whereNull('deleted_at')->pluck('route')->flip()->all());
+
+        return isset($routes[$routeName]);
     }
 
     /**

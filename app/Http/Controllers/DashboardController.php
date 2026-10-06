@@ -6,8 +6,9 @@ use App\Models\Agent;
 use App\Models\Transaction;
 use App\Models\Operateur;
 use App\Models\Kiosque;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
@@ -17,79 +18,50 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        // Statistiques globales
+        $debutJour = now()->startOfDay();
+        $debutMois = now()->startOfMonth();
+
+        // Statistiques du jour et du mois en une seule requête (le jour est inclus dans le mois)
+        $totaux = Transaction::commerciale()->valide()
+            ->whereBetween('date', [$debutMois, now()->endOfMonth()])
+            ->selectRaw('COUNT(*) as transactions_mois')
+            ->selectRaw('COALESCE(SUM(montant), 0) as montant_mois')
+            ->selectRaw('COALESCE(SUM(commission), 0) as commission_mois')
+            ->selectRaw('COUNT(CASE WHEN date >= ? THEN 1 END) as transactions_jour', [$debutJour])
+            ->selectRaw('COALESCE(SUM(CASE WHEN date >= ? THEN montant END), 0) as montant_jour', [$debutJour])
+            ->selectRaw('COALESCE(SUM(CASE WHEN date >= ? THEN commission END), 0) as commission_jour', [$debutJour])
+            ->selectRaw("COALESCE(SUM(CASE WHEN date >= ? AND type = 'depot' THEN montant END), 0) as depot_jour", [$debutJour])
+            ->selectRaw("COALESCE(SUM(CASE WHEN date >= ? AND type = 'retrait' THEN montant END), 0) as retrait_jour", [$debutJour])
+            ->selectRaw("COALESCE(SUM(CASE WHEN date >= ? AND type = 'transfert' THEN montant END), 0) as transfert_jour", [$debutJour])
+            ->selectRaw("COALESCE(SUM(CASE WHEN date >= ? AND type = 'paiement' THEN montant END), 0) as paiement_jour", [$debutJour])
+            ->toBase()
+            ->first();
+
         $stats = [
-            // Transactions du jour
-            'transactions_jour' => Transaction::commerciale()->valide()->duJour()->count(),
-            'montant_jour' => Transaction::commerciale()->valide()->duJour()->sum('montant'),
-            'commission_jour' => Transaction::commerciale()->valide()->duJour()->sum('commission'),
-            
-            // Transactions du mois
-            'transactions_mois' => Transaction::commerciale()->valide()->duMois()->count(),
-            'montant_mois' => Transaction::commerciale()->valide()->duMois()->sum('montant'),
-            'commission_mois' => Transaction::commerciale()->valide()->duMois()->sum('commission'),
-            
-            // Agents et kiosques
+            'transactions_jour' => (int) $totaux->transactions_jour,
+            'montant_jour' => (float) $totaux->montant_jour,
+            'commission_jour' => (float) $totaux->commission_jour,
+            'transactions_mois' => (int) $totaux->transactions_mois,
+            'montant_mois' => (float) $totaux->montant_mois,
+            'commission_mois' => (float) $totaux->commission_mois,
             'agents_actifs' => Agent::actif()->count(),
-            'agents_total' => Agent::count(),
             'kiosques_actifs' => Kiosque::actif()->count(),
-            'kiosques_satures' => Kiosque::actif()->get()->filter(fn($k) => $k->estSature())->count(),
         ];
 
-        // Transactions par type (du jour)
         $transactionsParType = [
-            'depot' => Transaction::commerciale()->valide()->depot()->duJour()->sum('montant'),
-            'retrait' => Transaction::commerciale()->valide()->retrait()->duJour()->sum('montant'),
-            'transfert' => Transaction::commerciale()->valide()->where('type', 'transfert')->duJour()->sum('montant'),
-            'paiement' => Transaction::commerciale()->valide()->where('type', 'paiement')->duJour()->sum('montant'),
+            'depot' => (float) $totaux->depot_jour,
+            'retrait' => (float) $totaux->retrait_jour,
+            'transfert' => (float) $totaux->transfert_jour,
+            'paiement' => (float) $totaux->paiement_jour,
         ];
 
         // Transactions par opérateur (du mois)
-        $operateurs = Operateur::actif()->get()->map(function($operateur) {
-            return [
-                'operateur' => $operateur,
-                'transactions' => Transaction::commerciale()->valide()
-                    ->where('operateur_id', $operateur->id)
-                    ->duMois()
-                    ->count(),
-                'montant' => Transaction::commerciale()->valide()
-                    ->where('operateur_id', $operateur->id)
-                    ->duMois()
-                    ->sum('montant'),
-            ];
-        });
-
-        // Top 10 agents du mois
-        $topAgents = Agent::select([
-                'agents.id',
-                'agents.uid',
-                'agents.code_agent',
-                'agents.nom',
-                'agents.prenom',
-                'agents.telephone',
-                'agents.kiosque_id',
-                'agents.user_id',
-                DB::raw('SUM(transactions.montant) as total_montant'),
-                DB::raw('COUNT(transactions.id) as total_transactions')
-            ])
-            ->join('transactions', 'agents.id', '=', 'transactions.agent_id')
-            ->where('transactions.statut', 'valide')
-            ->whereNull('transactions.type_operation_id')
-            ->whereMonth('transactions.date', now()->month)
-            ->groupBy([
-                'agents.id',
-                'agents.uid',
-                'agents.code_agent',
-                'agents.nom',
-                'agents.prenom',
-                'agents.telephone',
-                'agents.kiosque_id',
-                'agents.user_id'
-            ])
-            ->with('kiosque', 'utilisateur')
-            ->orderBy('total_montant', 'desc')
-            ->limit(10)
-            ->get();
+        $parOperateur = $this->totauxParOperateur($debutMois, now()->endOfMonth());
+        $operateurs = Operateur::actif()->get()->map(fn ($operateur) => [
+            'operateur' => $operateur,
+            'transactions' => (int) ($parOperateur[$operateur->id]->nb ?? 0),
+            'montant' => (float) ($parOperateur[$operateur->id]->montant ?? 0),
+        ]);
 
         // Dernières transactions
         $dernieresTransactions = Transaction::commerciale()->with(['agent', 'operateur'])
@@ -98,32 +70,19 @@ class DashboardController extends Controller
             ->get();
 
         // Évolution des transactions (7 derniers jours)
-        $evolutionTransactions = collect(range(6, 0))->map(function($daysAgo) {
-            $date = now()->subDays($daysAgo);
-            return [
-                'date' => $date->format('Y-m-d'),
-                'jour' => $date->locale('fr')->isoFormat('dddd'),
-                'count' => Transaction::commerciale()->valide()->whereDate('date', $date)->count(),
-                'montant' => Transaction::commerciale()->valide()->whereDate('date', $date)->sum('montant'),
-            ];
-        });
-
-        // Kiosques nécessitant attention (sans agent ou saturés)
-        $kiosquesAttention = Kiosque::actif()
-            ->with(['agentsActifs'])
-            ->get()
-            ->filter(function($kiosque) {
-                return $kiosque->agentsActifs->count() === 0 || $kiosque->estSature();
-            });
+        $evolutionTransactions = $this->serieJournaliere(7)->map(fn (array $jour) => [
+            'date' => $jour['date']->format('Y-m-d'),
+            'jour' => $jour['date']->locale('fr')->isoFormat('dddd'),
+            'count' => $jour['count'],
+            'montant' => $jour['montant'],
+        ]);
 
         return $this->ajaxView('pages.dashboard.index', compact(
             'stats',
             'transactionsParType',
             'operateurs',
-            'topAgents',
             'dernieresTransactions',
-            'evolutionTransactions',
-            'kiosquesAttention'
+            'evolutionTransactions'
         ));
     }
 
@@ -132,9 +91,14 @@ class DashboardController extends Controller
      */
     public function statsTempsReel()
     {
+        $jour = Transaction::commerciale()->valide()->duJour()
+            ->selectRaw('COUNT(*) as nb, COALESCE(SUM(montant), 0) as montant')
+            ->toBase()
+            ->first();
+
         $stats = [
-            'transactions_jour' => Transaction::commerciale()->valide()->duJour()->count(),
-            'montant_jour' => Transaction::commerciale()->valide()->duJour()->sum('montant'),
+            'transactions_jour' => (int) $jour->nb,
+            'montant_jour' => (float) $jour->montant,
             'agents_en_ligne' => Agent::actif()->count(),
             'derniere_transaction' => Transaction::commerciale()->with(['agent', 'operateur'])
                 ->latest('date')
@@ -153,45 +117,30 @@ class DashboardController extends Controller
 
         switch ($periode) {
             case '7jours':
-                $data = collect(range(6, 0))->map(function($daysAgo) {
-                    $date = now()->subDays($daysAgo);
-                    return [
-                        'label' => $date->locale('fr')->isoFormat('DD MMM'),
-                        'date' => $date->format('Y-m-d'),
-                        'montant' => Transaction::commerciale()->valide()->whereDate('date', $date)->sum('montant'),
-                        'count' => Transaction::commerciale()->valide()->whereDate('date', $date)->count(),
-                    ];
-                });
+                $data = $this->serieJournaliere(7)->map(fn (array $jour) => [
+                    'label' => $jour['date']->locale('fr')->isoFormat('DD MMM'),
+                    'date' => $jour['date']->format('Y-m-d'),
+                    'montant' => $jour['montant'],
+                    'count' => $jour['count'],
+                ]);
                 break;
 
             case '30jours':
-                $data = collect(range(29, 0))->map(function($daysAgo) {
-                    $date = now()->subDays($daysAgo);
-                    return [
-                        'label' => $date->format('d/m'),
-                        'date' => $date->format('Y-m-d'),
-                        'montant' => Transaction::commerciale()->valide()->whereDate('date', $date)->sum('montant'),
-                        'count' => Transaction::commerciale()->valide()->whereDate('date', $date)->count(),
-                    ];
-                });
+                $data = $this->serieJournaliere(30)->map(fn (array $jour) => [
+                    'label' => $jour['date']->format('d/m'),
+                    'date' => $jour['date']->format('Y-m-d'),
+                    'montant' => $jour['montant'],
+                    'count' => $jour['count'],
+                ]);
                 break;
 
             case '12mois':
-                $data = collect(range(11, 0))->map(function($monthsAgo) {
-                    $date = now()->subMonths($monthsAgo);
-                    return [
-                        'label' => $date->locale('fr')->isoFormat('MMM YYYY'),
-                        'date' => $date->format('Y-m'),
-                        'montant' => Transaction::commerciale()->valide()
-                            ->whereYear('date', $date->year)
-                            ->whereMonth('date', $date->month)
-                            ->sum('montant'),
-                        'count' => Transaction::commerciale()->valide()
-                            ->whereYear('date', $date->year)
-                            ->whereMonth('date', $date->month)
-                            ->count(),
-                    ];
-                });
+                $data = $this->serieMensuelle(12)->map(fn (array $mois) => [
+                    'label' => $mois['date']->locale('fr')->isoFormat('MMM YYYY'),
+                    'date' => $mois['date']->format('Y-m'),
+                    'montant' => $mois['montant'],
+                    'count' => $mois['count'],
+                ]);
                 break;
 
             default:
@@ -206,33 +155,96 @@ class DashboardController extends Controller
      */
     public function statsParOperateur()
     {
-        $stats = Operateur::actif()->get()->map(function($operateur) {
-            return [
-                'operateur' => $operateur->only(['id', 'code', 'libelle', 'couleur']),
-                'jour' => [
-                    'count' => Transaction::commerciale()->valide()
-                        ->where('operateur_id', $operateur->id)
-                        ->duJour()
-                        ->count(),
-                    'montant' => Transaction::commerciale()->valide()
-                        ->where('operateur_id', $operateur->id)
-                        ->duJour()
-                        ->sum('montant'),
-                ],
-                'mois' => [
-                    'count' => Transaction::commerciale()->valide()
-                        ->where('operateur_id', $operateur->id)
-                        ->duMois()
-                        ->count(),
-                    'montant' => Transaction::commerciale()->valide()
-                        ->where('operateur_id', $operateur->id)
-                        ->duMois()
-                        ->sum('montant'),
-                ],
-            ];
-        });
+        $jour = $this->totauxParOperateur(now()->startOfDay(), now()->endOfDay());
+        $mois = $this->totauxParOperateur(now()->startOfMonth(), now()->endOfMonth());
+
+        $stats = Operateur::actif()->get()->map(fn ($operateur) => [
+            'operateur' => $operateur->only(['id', 'code', 'libelle', 'couleur']),
+            'jour' => [
+                'count' => (int) ($jour[$operateur->id]->nb ?? 0),
+                'montant' => (float) ($jour[$operateur->id]->montant ?? 0),
+            ],
+            'mois' => [
+                'count' => (int) ($mois[$operateur->id]->nb ?? 0),
+                'montant' => (float) ($mois[$operateur->id]->montant ?? 0),
+            ],
+        ]);
 
         return response()->json($stats);
+    }
+
+    /**
+     * Nombre et montant des transactions valides par opérateur sur une période (une requête).
+     */
+    private function totauxParOperateur(Carbon $debut, Carbon $fin): Collection
+    {
+        return Transaction::commerciale()->valide()
+            ->whereBetween('date', [$debut, $fin])
+            ->whereNotNull('operateur_id')
+            ->groupBy('operateur_id')
+            ->selectRaw('operateur_id, COUNT(*) as nb, COALESCE(SUM(montant), 0) as montant')
+            ->toBase()
+            ->get()
+            ->keyBy('operateur_id');
+    }
+
+    /**
+     * Nombre et montant des transactions valides pour chacun des $jours derniers jours (une requête),
+     * jours sans transaction inclus.
+     *
+     * @return Collection<int, array{date: Carbon, count: int, montant: float}>
+     */
+    private function serieJournaliere(int $jours): Collection
+    {
+        $debut = now()->subDays($jours - 1)->startOfDay();
+
+        $parJour = Transaction::commerciale()->valide()
+            ->whereBetween('date', [$debut, now()->endOfDay()])
+            ->groupByRaw('DATE(date)')
+            ->selectRaw('DATE(date) as jour, COUNT(*) as nb, COALESCE(SUM(montant), 0) as montant')
+            ->toBase()
+            ->get()
+            ->keyBy('jour');
+
+        return collect(range($jours - 1, 0))->map(function (int $joursAvant) use ($parJour) {
+            $date = now()->subDays($joursAvant);
+            $ligne = $parJour[$date->format('Y-m-d')] ?? null;
+
+            return [
+                'date' => $date,
+                'count' => (int) ($ligne->nb ?? 0),
+                'montant' => (float) ($ligne->montant ?? 0),
+            ];
+        });
+    }
+
+    /**
+     * Même chose par mois, sur les $mois derniers mois (mois en cours inclus).
+     *
+     * @return Collection<int, array{date: Carbon, count: int, montant: float}>
+     */
+    private function serieMensuelle(int $mois): Collection
+    {
+        $debut = now()->startOfMonth()->subMonths($mois - 1);
+
+        $parMois = Transaction::commerciale()->valide()
+            ->whereBetween('date', [$debut, now()->endOfMonth()])
+            ->groupByRaw('YEAR(date), MONTH(date)')
+            ->selectRaw('YEAR(date) as annee, MONTH(date) as mois, COUNT(*) as nb, COALESCE(SUM(montant), 0) as montant')
+            ->toBase()
+            ->get()
+            ->keyBy(fn ($ligne) => sprintf('%04d-%02d', $ligne->annee, $ligne->mois));
+
+        return collect(range($mois - 1, 0))->map(function (int $moisAvant) use ($parMois) {
+            $date = now()->startOfMonth()->subMonths($moisAvant);
+            $ligne = $parMois[$date->format('Y-m')] ?? null;
+
+            return [
+                'date' => $date,
+                'count' => (int) ($ligne->nb ?? 0),
+                'montant' => (float) ($ligne->montant ?? 0),
+            ];
+        });
     }
 
     /**
@@ -241,21 +253,24 @@ class DashboardController extends Controller
     public function cartePerformanceMois()
     {
         try {
-            $transactions = Transaction::query()
+            // Totaux du mois par kiosque calculés en base (au lieu de charger toutes les transactions)
+            $parKiosque = Transaction::query()
                 ->commerciale()
                 ->valide()
                 ->duMois()
-                ->with(['agent.kiosque'])
+                ->join('agents', 'agents.id', '=', 'transactions.agent_id')
+                ->join('kiosques', 'kiosques.id', '=', 'agents.kiosque_id')
+                ->whereNull('agents.deleted_at')
+                ->whereNull('kiosques.deleted_at')
+                ->groupBy('kiosques.id', 'kiosques.quartier', 'kiosques.ville', 'kiosques.latitude', 'kiosques.longitude')
+                ->select('kiosques.id', 'kiosques.quartier', 'kiosques.ville', 'kiosques.latitude', 'kiosques.longitude')
+                ->selectRaw('COUNT(*) as nb, COALESCE(SUM(transactions.montant), 0) as montant')
+                ->toBase()
                 ->get();
 
             $groups = [];
 
-            foreach ($transactions as $transaction) {
-                $kiosque = $transaction->agent?->kiosque;
-                if (! $kiosque) {
-                    continue;
-                }
-
+            foreach ($parKiosque as $kiosque) {
                 $zone = trim((string) ($kiosque->quartier ?? '')) ?: 'Non renseignée';
                 $ville = trim((string) ($kiosque->ville ?? '')) ?: 'Lomé';
                 $key = $zone.'|'.$ville;
@@ -265,20 +280,24 @@ class DashboardController extends Controller
                         'zone' => $zone,
                         'ville' => $ville,
                         'kiosque_ids' => [],
-                        'latitudes' => [],
-                        'longitudes' => [],
+                        'lat_somme' => 0.0,
+                        'lng_somme' => 0.0,
+                        'nb_geolocalisees' => 0,
                         'montant' => 0.0,
                         'transactions' => 0,
                     ];
                 }
 
+                $nb = (int) $kiosque->nb;
                 $groups[$key]['kiosque_ids'][$kiosque->id] = true;
+                // Position moyenne pondérée par le nombre de transactions (comme le calcul transaction par transaction)
                 if ($kiosque->latitude !== null && $kiosque->longitude !== null) {
-                    $groups[$key]['latitudes'][] = (float) $kiosque->latitude;
-                    $groups[$key]['longitudes'][] = (float) $kiosque->longitude;
+                    $groups[$key]['lat_somme'] += (float) $kiosque->latitude * $nb;
+                    $groups[$key]['lng_somme'] += (float) $kiosque->longitude * $nb;
+                    $groups[$key]['nb_geolocalisees'] += $nb;
                 }
-                $groups[$key]['montant'] += (float) $transaction->montant;
-                $groups[$key]['transactions']++;
+                $groups[$key]['montant'] += (float) $kiosque->montant;
+                $groups[$key]['transactions'] += $nb;
             }
 
             $rows = collect($groups)
@@ -292,8 +311,8 @@ class DashboardController extends Controller
                 $montant = (float) $row['montant'];
                 $zone = $row['zone'];
                 $ville = $row['ville'];
-                $lat = $row['latitudes'] !== [] ? array_sum($row['latitudes']) / count($row['latitudes']) : null;
-                $lng = $row['longitudes'] !== [] ? array_sum($row['longitudes']) / count($row['longitudes']) : null;
+                $lat = $row['nb_geolocalisees'] > 0 ? $row['lat_somme'] / $row['nb_geolocalisees'] : null;
+                $lng = $row['nb_geolocalisees'] > 0 ? $row['lng_somme'] / $row['nb_geolocalisees'] : null;
                 $coords = $this->resolveZoneCoordinates($zone, $ville, $lat, $lng);
 
                 return [

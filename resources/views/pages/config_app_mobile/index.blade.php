@@ -92,7 +92,7 @@
                                    name="filtres_sms[]"
                                    class="kt-input flex-1"
                                    value="{{ old('filtres_sms.'.$index, $valeur) }}"
-                                   placeholder="Ex: FLOOZ, +22507123456, 1234">
+                                   placeholder="Ex : FLOOZ, MIXX">
                             <button type="button" class="kt-btn kt-btn-icon kt-btn-outline kt-btn-sm filtre-sms-remove" title="Supprimer" aria-label="Supprimer">
                                 <i class="ki-filled ki-trash"></i>
                             </button>
@@ -104,7 +104,10 @@
                         Ajouter une ligne
                     </button>
                     <span class="text-xs text-muted-foreground">
-                        Numéro de téléphone (ex: +22507123456) ou nom de discussion (ex: FLOOZ). L'app ne traitera que les SMS provenant de ces numéros ou discussions.
+                        Expéditeurs Mobile Money tels qu'ils s'affichent sur le téléphone de l'agent : numéro court ou nom
+                        (ex : FLOOZ, MIXX). Les téléphones récupèrent cette liste automatiquement (au plus tard 15 minutes
+                        après l'enregistrement) et ne transforment en transactions que les SMS de ces expéditeurs.
+                        Liste vide : l'application utilise des expéditeurs par défaut (FLOOZ, MOOV, MIX, MIXX, YAS).
                     </span>
                 </div>
 
@@ -310,7 +313,7 @@
     btnPlus.addEventListener('click', function() {
         var row = document.createElement('div');
         row.className = 'filtre-sms-row flex items-center gap-2';
-        row.innerHTML = '<input type="text" name="filtres_sms[]" class="kt-input flex-1" placeholder="Ex: FLOOZ, +22507123456">' +
+        row.innerHTML = '<input type="text" name="filtres_sms[]" class="kt-input flex-1" placeholder="Ex : FLOOZ, MIXX">' +
             '<button type="button" class="kt-btn kt-btn-icon kt-btn-outline kt-btn-sm filtre-sms-remove" title="Supprimer" aria-label="Supprimer">' +
             '<i class="ki-filled ki-trash"></i></button>';
         container.appendChild(row);

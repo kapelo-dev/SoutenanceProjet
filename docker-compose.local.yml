@@ -5,6 +5,10 @@
 
 services:
   app:
+    environment:
+      # Code monté en direct : OPcache revérifie les fichiers, pas de cache des routes/événements
+      PHP_OPCACHE_VALIDATE_TIMESTAMPS: "1"
+      SKIP_ROUTE_CACHE: "true"
     volumes:
       - ./app:/var/www/html/app
       - ./routes:/var/www/html/routes
@@ -14,6 +18,9 @@ services:
       - ./public/downloads:/var/www/html/public/downloads:ro
 
   scheduler:
+    environment:
+      PHP_OPCACHE_VALIDATE_TIMESTAMPS: "1"
+      SKIP_ROUTE_CACHE: "true"
     volumes:
       - ./app:/var/www/html/app
       - ./routes:/var/www/html/routes

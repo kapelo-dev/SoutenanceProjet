@@ -20,9 +20,9 @@ class CheckBlockedIp
         }
 
         $ip = $request->clientIp();
-        $block = $this->ipBlockService->getActiveBlock($ip);
+        $reason = $this->ipBlockService->activeBlockReason($ip);
 
-        if (! $block) {
+        if ($reason === null) {
             return $next($request);
         }
 
@@ -31,7 +31,7 @@ class CheckBlockedIp
             return $next($request);
         }
 
-        $message = 'Votre adresse IP (' . $ip . ') est bloquée. Raison : ' . $block->reason;
+        $message = 'Votre adresse IP (' . $ip . ') est bloquée. Raison : ' . $reason;
 
         if ($request->expectsJson()) {
             return response()->json(['success' => false, 'message' => $message], 403);
@@ -40,7 +40,7 @@ class CheckBlockedIp
         if ($request->routeIs('login') || $request->is('login')) {
             return response()->view('auth.blocked-ip', [
                 'ip' => $ip,
-                'reason' => $block->reason,
+                'reason' => $reason,
             ], 403);
         }
 

@@ -22,6 +22,8 @@ data class AgentLoginResponse(
     val success: Boolean,
     val message: String? = null,
     val token: String? = null,
+    /** Mot de passe temporaire : le token ne sert qu'à le changer (dashboard = null en attendant). */
+    @SerializedName("doit_changer_mot_de_passe") val doitChangerMotDePasse: Boolean = false,
     val agent: AgentInfo? = null,
     val dashboard: AgentDashboard? = null,
 )

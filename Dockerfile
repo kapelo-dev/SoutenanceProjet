@@ -29,7 +29,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     default-mysql-client \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip opcache \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && rm -rf /tmp/pear \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# OPcache (production) : bytecode PHP gardé en mémoire, fichiers non revérifiés
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache-prod.ini
 
 # Apache : DocumentRoot vers public/ et AllowOverride pour Laravel
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public

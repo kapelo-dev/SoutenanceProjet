@@ -32,6 +32,7 @@ class AppPreferences(private val context: Context) {
         prefs[KEY_API_TOKEN]?.takeIf { it.isNotBlank() }
     }
 
+    /** Expéditeurs autorisés reçus du serveur (vide = expéditeurs par défaut, voir SmsFilter). */
     val filterList: Flow<List<String>> = context.dataStore.data.map { prefs ->
         val listValue = prefs[KEY_FILTER_LIST].orEmpty()
         if (listValue.isNotBlank()) {
@@ -125,16 +126,13 @@ class AppPreferences(private val context: Context) {
         serviceEnabled: Boolean,
         apiUrl: String,
         apiToken: String,
-        filterList: List<String>,
     ) {
+        // Les filtres SMS ne sont pas saisis ici : ils viennent du serveur (SmsFilterSync)
         context.dataStore.edit { prefs ->
             prefs[KEY_CONSENT] = consent
             prefs[KEY_SERVICE_ENABLED] = serviceEnabled
             prefs[KEY_API_URL] = apiUrl.trim()
             prefs[KEY_API_TOKEN] = apiToken
-            val filterValue = filterList.map { it.trim() }.filter { it.isNotBlank() }.joinToString(FILTER_DELIMITER)
-            if (filterValue.isEmpty()) prefs.remove(KEY_FILTER_LIST)
-            else prefs[KEY_FILTER_LIST] = filterValue
         }
     }
 

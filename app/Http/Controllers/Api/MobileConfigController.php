@@ -38,6 +38,24 @@ class MobileConfigController extends Controller
     }
 
     /**
+     * Expéditeurs SMS autorisés (page « Configuration app mobile »), lus par l'application Android :
+     * seuls les SMS de ces expéditeurs sont transformés en transactions.
+     * Protégé par le token API SMS, comme l'envoi des transactions.
+     */
+    public function smsConfig(): JsonResponse
+    {
+        $config = ConfigAppMobile::getActive();
+
+        return response()->json([
+            'filtres_sms' => array_values(array_filter(
+                array_map('trim', (array) ($config?->filtres_sms ?? [])),
+                fn ($filtre) => $filtre !== ''
+            )),
+            'updated_at' => $config?->updated_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
      * Version de l'APK publiée — lue depuis pdv-connect.version.json (automatique au push).
      */
     public function appVersion(): JsonResponse

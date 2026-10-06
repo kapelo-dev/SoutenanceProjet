@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\PermissionCache;
 use App\Models\Profil;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -66,6 +67,7 @@ class RoleController extends Controller
             }
 
             $role = Profil::create($attributes);
+            PermissionCache::flush();
 
             return response()->json([
                 'success' => true,
@@ -116,6 +118,7 @@ class RoleController extends Controller
             }
 
             $role->update($payload);
+            PermissionCache::flush();
 
             return response()->json([
                 'success' => true,
@@ -153,6 +156,7 @@ class RoleController extends Controller
             }
 
             $role->delete();
+            PermissionCache::flush();
 
             return response()->json([
                 'success' => true,

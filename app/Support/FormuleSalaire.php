@@ -52,6 +52,14 @@ class FormuleSalaire
         }
     }
 
+    /**
+     * La formule fait-elle référence à cette variable ? (évite de calculer une valeur coûteuse inutilement)
+     */
+    public static function utilise(string $formule, string $variable): bool
+    {
+        return preg_match('/(?<![a-z_])' . preg_quote($variable, '/') . '(?![a-z_])/i', $formule) === 1;
+    }
+
     private function run(string $formule, array $variables): float
     {
         $this->variables = $variables;

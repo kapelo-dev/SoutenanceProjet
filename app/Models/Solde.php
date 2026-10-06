@@ -46,6 +46,29 @@ class Solde extends Model
      */
     
     // Un solde appartient à un agent
+    /**
+     * Soldes courants (dernier solde par opérateur et type) de plusieurs agents en une requête,
+     * groupés par agent_id. Équivalent groupé de Agent::soldesActuels().
+     */
+    public static function courantsParAgent(iterable $agentIds, array $with = []): \Illuminate\Support\Collection
+    {
+        $agentIds = collect($agentIds)->values();
+
+        if ($agentIds->isEmpty()) {
+            return collect();
+        }
+
+        return static::with($with)
+            ->whereIn('id', function ($query) use ($agentIds) {
+                $query->selectRaw('MAX(id)')
+                    ->from('soldes')
+                    ->whereIn('agent_id', $agentIds)
+                    ->groupBy('agent_id', 'operateur_id', 'type');
+            })
+            ->get()
+            ->groupBy('agent_id');
+    }
+
     public function agent()
     {
         return $this->belongsTo(Agent::class, 'agent_id');

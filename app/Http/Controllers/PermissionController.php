@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\PermissionCache;
 use App\Models\Profil;
 use App\Models\Lien;
 use Illuminate\Http\Request;
@@ -101,6 +102,8 @@ class PermissionController extends Controller
                 $action = 'added';
             }
 
+            PermissionCache::flush();
+
             return response()->json([
                 'success' => true,
                 'action' => $action,
@@ -170,6 +173,7 @@ class PermissionController extends Controller
             }
 
             DB::commit();
+            PermissionCache::flush();
 
             return response()->json([
                 'success' => true,

@@ -3,6 +3,7 @@ package com.pdvconnect.smsservice.api
 import com.google.gson.annotations.SerializedName
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 
@@ -45,8 +46,17 @@ data class TransactionDto(
     @SerializedName("statut") val statut: String?
 )
 
+/** Expéditeurs SMS autorisés, définis sur la page web « Configuration app mobile ». */
+data class SmsConfigResponse(
+    @SerializedName("filtres_sms") val filtresSms: List<String>? = null,
+    @SerializedName("updated_at") val updatedAt: String? = null,
+)
+
 interface TransactionApi {
 
     @POST("api/transactions/from-sms")
     suspend fun sendTransactionFromSms(@Body body: TransactionFromSmsRequest): Response<TransactionFromSmsResponse>
+
+    @GET("api/mobile/sms-config")
+    suspend fun smsConfig(): Response<SmsConfigResponse>
 }

@@ -78,24 +78,11 @@ class SmsReceiver : BroadcastReceiver() {
         apiUrl: String,
         apiToken: String,
     ) {
-        if (filterList.isNotEmpty()) {
-            val normalizedSender = sender.replace(" ", "").replace("+", "")
-            val matches = filterList.any { filter ->
-                val f = filter.trim().replace(" ", "").replace("+", "")
-                when {
-                    f.all { c -> c.isDigit() || c == '+' } -> {
-                        normalizedSender.contains(f) || f.contains(normalizedSender.takeLast(8))
-                    }
-                    else -> {
-                        body.contains(filter, ignoreCase = true) ||
-                            normalizedSender.contains(filter, ignoreCase = true)
-                    }
-                }
-            }
-            if (!matches) {
-                Log.d(TAG, "SMS de $sender ignoré (filtres: $filterList)")
-                return
-            }
+        // Expéditeurs définis sur le web ; à défaut, noms génériques Mobile Money (jamais « tous les SMS »)
+        val allowedSenders = SmsFilter.effectiveFilters(filterList)
+        if (!SmsFilter.isAllowed(sender, body, allowedSenders)) {
+            Log.d(TAG, "SMS de $sender ignoré (expéditeurs autorisés : $allowedSenders)")
+            return
         }
 
         val parsed = SmsParser.parse(body, sender)

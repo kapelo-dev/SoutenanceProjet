@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\PermissionCache;
 use App\Models\Lien;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -78,6 +79,7 @@ class RouteController extends Controller
                 'ordre' => $request->ordre ?? 0,
                 'visible' => $request->visible == 1 || $request->visible === true || $request->visible === '1',
             ]);
+            PermissionCache::flush();
 
             return response()->json([
                 'success' => true,
@@ -128,6 +130,8 @@ class RouteController extends Controller
                     $updated++;
                 }
             }
+
+            PermissionCache::flush();
 
             return response()->json([
                 'success' => true,

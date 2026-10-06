@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use App\Support\PermissionCache;
 use App\Traits\LogsActivity;
 
 class Utilisateur extends Authenticatable
@@ -153,20 +154,25 @@ class Utilisateur extends Authenticatable
         return $this->profils()->where('libelle', $profilLibelle)->exists();
     }
 
+    /**
+     * Mot de passe temporaire (création du compte ou réinitialisation par un administrateur) :
+     * il doit être changé avant d'utiliser l'application, sur le web comme sur le mobile.
+     */
+    public function doitChangerMotDePasse(): bool
+    {
+        return $this->dernier_connexion === null;
+    }
+
     public function canAccessRoute(string $routeName): bool
     {
-        $profilIds = $this->effectiveProfilIds();
+        $acces = $this->accesPermissions();
 
-        if ($profilIds === []) {
-            return false;
-        }
-
-        if ($this->hasPermissionOnRoute($profilIds, $routeName)) {
+        if (in_array($routeName, $acces['routes'], true)) {
             return true;
         }
 
         if ($routeName === 'gestion-entreprise.index') {
-            return $this->hasPermissionOnGestionEntrepriseUrl($profilIds);
+            return $this->hasPermissionOnGestionEntrepriseUrl($acces['urls']);
         }
 
         return false;
@@ -174,48 +180,30 @@ class Utilisateur extends Authenticatable
 
     public function canAccessGestionEntrepriseOnglet(?string $onglet = 'salaires'): bool
     {
-        $profilIds = $this->effectiveProfilIds();
+        $acces = $this->accesPermissions();
 
-        if ($profilIds === []) {
-            return false;
-        }
-
-        if ($this->hasPermissionOnRoute($profilIds, 'gestion-entreprise.index')) {
+        if (in_array('gestion-entreprise.index', $acces['routes'], true)) {
             return true;
         }
 
-        $onglet = $onglet ?: 'salaires';
-
-        return $this->hasPermissionOnGestionEntrepriseUrl($profilIds, $onglet);
+        return $this->hasPermissionOnGestionEntrepriseUrl($acces['urls'], $onglet ?: 'salaires');
     }
 
-    private function hasPermissionOnRoute(array $profilIds, string $routeName): bool
+    /**
+     * Équivalent des anciens LIKE '/gestion-entreprise%' et '%onglet=xxx%' (insensibles à la casse en MySQL).
+     */
+    private function hasPermissionOnGestionEntrepriseUrl(array $urls, ?string $onglet = null): bool
     {
-        return DB::table('profil_liens')
-            ->join('liens', 'profil_liens.lien_id', '=', 'liens.id')
-            ->whereIn('profil_liens.profil_id', $profilIds)
-            ->where('liens.route', $routeName)
-            ->whereNull('profil_liens.deleted_at')
-            ->whereNull('liens.deleted_at')
-            ->where('liens.visible', true)
-            ->exists();
-    }
+        foreach ($urls as $url) {
+            $url = mb_strtolower($url);
 
-    private function hasPermissionOnGestionEntrepriseUrl(array $profilIds, ?string $onglet = null): bool
-    {
-        $query = DB::table('profil_liens')
-            ->join('liens', 'profil_liens.lien_id', '=', 'liens.id')
-            ->whereIn('profil_liens.profil_id', $profilIds)
-            ->where('liens.url', 'like', '/gestion-entreprise%')
-            ->whereNull('profil_liens.deleted_at')
-            ->whereNull('liens.deleted_at')
-            ->where('liens.visible', true);
-
-        if ($onglet) {
-            $query->where('liens.url', 'like', '%onglet=' . $onglet . '%');
+            if (str_starts_with($url, '/gestion-entreprise')
+                && ($onglet === null || str_contains($url, 'onglet=' . mb_strtolower($onglet)))) {
+                return true;
+            }
         }
 
-        return $query->exists();
+        return false;
     }
 
     /**
@@ -223,24 +211,66 @@ class Utilisateur extends Authenticatable
      */
     public function effectiveProfilIds(): array
     {
-        if (! \Illuminate\Support\Facades\Schema::hasColumn('profils', 'parent_id')) {
-            return $this->profils()
-                ->whereNull('user_profils.deleted_at')
-                ->pluck('profils.id')
-                ->all();
+        return $this->accesPermissions()['profils'];
+    }
+
+    /**
+     * Profils effectifs et liens autorisés (routes + URLs) de l'utilisateur, en cache.
+     * Invalidé par PermissionCache::flush() à chaque modification des rôles, permissions, liens ou profils.
+     *
+     * @return array{profils: int[], routes: string[], urls: string[]}
+     */
+    private function accesPermissions(): array
+    {
+        return PermissionCache::remember("acces:{$this->id}", function () {
+            $profilIds = $this->calculerProfilIdsEffectifs();
+
+            if ($profilIds === []) {
+                return ['profils' => [], 'routes' => [], 'urls' => []];
+            }
+
+            $liens = DB::table('profil_liens')
+                ->join('liens', 'profil_liens.lien_id', '=', 'liens.id')
+                ->whereIn('profil_liens.profil_id', $profilIds)
+                ->whereNull('profil_liens.deleted_at')
+                ->whereNull('liens.deleted_at')
+                ->where('liens.visible', true)
+                ->select('liens.route', 'liens.url')
+                ->distinct()
+                ->get();
+
+            return [
+                'profils' => $profilIds,
+                'routes' => $liens->pluck('route')->filter()->unique()->values()->all(),
+                'urls' => $liens->pluck('url')->filter()->unique()->values()->all(),
+            ];
+        });
+    }
+
+    private function calculerProfilIdsEffectifs(): array
+    {
+        $directs = $this->profils()
+            ->whereNull('user_profils.deleted_at')
+            ->pluck('profils.id')
+            ->all();
+
+        if ($directs === []) {
+            return [];
         }
 
-        $profils = $this->profils()
-            ->whereNull('user_profils.deleted_at')
-            ->with('parent')
-            ->get();
+        // Hiérarchie complète chargée en une requête, puis remontée des parents en PHP
+        $parents = Profil::query()->pluck('parent_id', 'id')->all();
 
         $ids = [];
-
-        foreach ($profils as $profil) {
-            $ids = array_merge($ids, $profil->ancestorIdsIncludingSelf());
+        foreach ($directs as $id) {
+            while ($id && ! in_array($id, $ids, true)) {
+                $ids[] = $id;
+                $parent = $parents[$id] ?? null;
+                // Un parent supprimé (soft delete) n'est pas dans $parents : l'héritage s'arrête là
+                $id = $parent !== null && array_key_exists($parent, $parents) ? $parent : null;
+            }
         }
 
-        return array_values(array_unique($ids));
+        return $ids;
     }
 }

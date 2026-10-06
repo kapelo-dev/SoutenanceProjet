@@ -105,6 +105,8 @@ class DefaultProfilPermissions
                     ->update(['deleted_at' => now(), 'updated_at' => now()]);
             }
         }
+
+        PermissionCache::flush();
     }
 
     private static function resolveLienId(array $ref): ?int

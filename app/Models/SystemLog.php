@@ -91,7 +91,7 @@ class SystemLog extends Model
 
     public function scopeToday($query)
     {
-        return $query->whereDate('created_at', today());
+        return $query->whereBetween('created_at', [now()->startOfDay(), now()->endOfDay()]);
     }
 
     public function scopeThisWeek($query)
@@ -101,8 +101,7 @@ class SystemLog extends Model
 
     public function scopeThisMonth($query)
     {
-        return $query->whereMonth('created_at', now()->month)
-                     ->whereYear('created_at', now()->year);
+        return $query->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]);
     }
 
     /**

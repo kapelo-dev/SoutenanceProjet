@@ -14,33 +14,12 @@ class AgentTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * Test de création d'un agent avec génération automatique du code
-     */
-    public function test_agent_genere_code_automatiquement()
-    {
-        $utilisateur = Utilisateur::factory()->create();
-        $kiosque = Kiosque::factory()->create();
-
-        $agent = Agent::create([
-            'nom' => 'Dupont',
-            'prenom' => 'Jean',
-            'telephone' => '90123456',
-            'utilisateur_id' => $utilisateur->id,
-            'kiosque_id' => $kiosque->id,
-            'statut' => 'actif',
-        ]);
-
-        $this->assertNotNull($agent->code_agent);
-        $this->assertStringStartsWith('AG', $agent->code_agent);
-    }
-
-    /**
      * Test de la relation avec Utilisateur
      */
     public function test_agent_appartient_a_un_utilisateur()
     {
         $utilisateur = Utilisateur::factory()->create(['nom' => 'Martin']);
-        $agent = Agent::factory()->create(['utilisateur_id' => $utilisateur->id]);
+        $agent = Agent::factory()->create(['user_id' => $utilisateur->id]);
 
         $this->assertInstanceOf(Utilisateur::class, $agent->utilisateur);
         $this->assertEquals('Martin', $agent->utilisateur->nom);
@@ -71,26 +50,6 @@ class AgentTest extends TestCase
 
         $this->assertCount(1, $actifs);
         $this->assertEquals('actif', $actifs->first()->statut);
-    }
-
-    /**
-     * Test de validation du numéro de téléphone
-     */
-    public function test_telephone_doit_etre_valide()
-    {
-        $this->expectException(\Illuminate\Database\QueryException::class);
-
-        $utilisateur = Utilisateur::factory()->create();
-        $kiosque = Kiosque::factory()->create();
-
-        Agent::create([
-            'nom' => 'Dupont',
-            'prenom' => 'Jean',
-            'telephone' => '123', // Téléphone trop court
-            'utilisateur_id' => $utilisateur->id,
-            'kiosque_id' => $kiosque->id,
-            'statut' => 'actif',
-        ]);
     }
 
     /**

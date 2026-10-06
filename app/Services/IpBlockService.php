@@ -5,26 +5,62 @@ namespace App\Services;
 use App\Models\BlockedIp;
 use App\Models\SystemLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class IpBlockService
 {
+    private const CACHE_KEY = 'blocked-ips:actifs';
+
+    // Filet de sécurité si la table est modifiée hors de ce service (block/unblock vident le cache)
+    private const CACHE_TTL_SECONDES = 600;
+
     public function isBlocked(?string $ip): bool
     {
-        if (! $ip) {
-            return false;
-        }
-
-        return BlockedIp::where('ip_address', $ip)->active()->exists();
+        return $this->activeBlockReason($ip) !== null;
     }
 
-    public function getActiveBlock(?string $ip): ?BlockedIp
+    /**
+     * Raison du blocage actif de cette IP, null si elle n'est pas bloquée.
+     * Lu depuis le cache : le middleware est exécuté sur chaque requête web.
+     */
+    public function activeBlockReason(?string $ip): ?string
     {
         if (! $ip) {
             return null;
         }
 
-        return BlockedIp::where('ip_address', $ip)->active()->first();
+        $block = $this->activeBlocks()[$ip] ?? null;
+
+        if (! $block) {
+            return null;
+        }
+
+        // L'expiration est vérifiée ici : une entrée en cache peut avoir expiré depuis
+        if ($block['expires_at'] !== null && $block['expires_at'] <= now()->getTimestamp()) {
+            return null;
+        }
+
+        return $block['reason'];
+    }
+
+    /**
+     * @return array<string, array{reason: string, expires_at: int|null}>
+     */
+    private function activeBlocks(): array
+    {
+        return Cache::memo()->remember(self::CACHE_KEY, self::CACHE_TTL_SECONDES, fn () => BlockedIp::active()
+            ->get(['ip_address', 'reason', 'expires_at'])
+            ->mapWithKeys(fn (BlockedIp $b) => [$b->ip_address => [
+                'reason' => $b->reason,
+                'expires_at' => $b->expires_at?->getTimestamp(),
+            ]])
+            ->all());
+    }
+
+    private function flushCache(): void
+    {
+        Cache::memo()->forget(self::CACHE_KEY);
     }
 
     public function recordLoginFailure(Request $request, ?int $userId = null): void
@@ -87,6 +123,7 @@ class IpBlockService
                 'expires_at' => $expiresAt,
             ]
         );
+        $this->flushCache();
 
         if ($source === 'manual') {
             SystemLog::create([
@@ -113,6 +150,7 @@ class IpBlockService
             'unblocked_at' => now(),
             'unblocked_by' => $unblockedBy,
         ]);
+        $this->flushCache();
 
         SystemLog::create([
             'user_id' => $unblockedBy,

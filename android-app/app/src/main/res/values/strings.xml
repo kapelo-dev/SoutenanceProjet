@@ -79,6 +79,10 @@
     <string name="dialog_sms_config_title">Accès configuration SMS</string>
     <string name="dialog_first_setup_title">Configuration Service SMS</string>
     <string name="dialog_change_password_title">Modifier le mot de passe</string>
+    <string name="dialog_first_password_title">Choisissez votre mot de passe</string>
+    <string name="agent_first_password_intro">Pour votre sécurité, remplacez le mot de passe temporaire qui vous a été remis par un mot de passe personnel (8 caractères minimum).</string>
+    <string name="agent_first_password_logout">Se déconnecter</string>
+    <string name="agent_first_password_done">Mot de passe enregistré. Bienvenue !</string>
 
     <string name="faq_intro">Questions fréquentes sur l\'utilisation de PDV Connect sur mobile.</string>
     <string name="faq_search_hint">Rechercher une question…</string>

@@ -11,6 +11,9 @@ class TransactionSyncWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        // Toutes les 15 min : prend en compte les expéditeurs modifiés sur le web (sans bloquer la synchro)
+        SmsFilterSync.refresh(applicationContext)
+
         val repo = OfflineSyncRepository.get(applicationContext)
         val result = repo.syncAll()
 
