@@ -27,13 +27,17 @@ class TransactionController extends Controller
 
         $this->appliquerFiltres($query, $request);
 
+        // Copie prise avant paginate(), qui ajoute tri, LIMIT et OFFSET à la requête elle-même :
+        // avec l'OFFSET de la page 2, la requête de totaux (une seule ligne) ne renverrait rien.
+        $requeteStats = clone $query;
+
         $transactions = $query->latest('date')->paginate(20);
         
         $operateurs = Operateur::actif()->get();
         $agents = Agent::actif()->orderBy('nom')->get();
 
         // Statistiques pour la période affichée (une requête)
-        $totaux = (clone $query)->valide()
+        $totaux = $requeteStats->valide()
             ->selectRaw('COUNT(*) as nb, COALESCE(SUM(montant), 0) as montant, COALESCE(SUM(commission), 0) as commission')
             ->toBase()
             ->first();

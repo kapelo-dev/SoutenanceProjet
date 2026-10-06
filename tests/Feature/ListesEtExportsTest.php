@@ -91,6 +91,23 @@ class ListesEtExportsTest extends TestCase
         $this->assertEquals(['total' => 23000, 'count' => 4, 'commission' => 230], $response->viewData('stats'));
     }
 
+    public function test_pages_suivantes_et_statistiques_identiques(): void
+    {
+        for ($i = 0; $i < 25; $i++) {
+            $this->tx($this->agentA, $this->yas, 'depot', 100, 1, '2026-10-12 10:00:00');
+        }
+
+        $page1 = $this->get(route('transactions.index'))->assertOk();
+        $page2 = $this->get(route('transactions.index', ['page' => 2]))->assertOk();
+
+        $this->assertCount(10, $page2->viewData('transactions')->items()); // 30 transactions, 20 par page
+        $this->assertEquals($page1->viewData('stats'), $page2->viewData('stats'));
+        $this->assertEquals(['total' => 25500, 'count' => 29, 'commission' => 255], $page2->viewData('stats'));
+
+        $this->get(route('rapports.index', ['page' => 2, 'date_debut' => '2026-09-01']))->assertOk();
+        $this->get(route('system-logs.index', ['page' => 2]))->assertOk();
+    }
+
     public function test_api_statistiques_par_periode(): void
     {
         $mois = $this->getJson('/api/transactions/statistiques?periode=mois')->assertOk()->json();
