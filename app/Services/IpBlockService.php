@@ -49,18 +49,31 @@ class IpBlockService
      */
     private function activeBlocks(): array
     {
-        return Cache::memo()->remember(self::CACHE_KEY, self::CACHE_TTL_SECONDES, fn () => BlockedIp::active()
+        $charger = fn () => BlockedIp::active()
             ->get(['ip_address', 'reason', 'expires_at'])
             ->mapWithKeys(fn (BlockedIp $b) => [$b->ip_address => [
                 'reason' => $b->reason,
                 'expires_at' => $b->expires_at?->getTimestamp(),
             ]])
-            ->all());
+            ->all();
+
+        try {
+            return Cache::memo()->remember(self::CACHE_KEY, self::CACHE_TTL_SECONDES, $charger);
+        } catch (\Throwable $e) {
+            // Cache inaccessible : vérification directe en base plutôt qu'une erreur sur chaque page
+            report($e);
+
+            return $charger();
+        }
     }
 
     private function flushCache(): void
     {
-        Cache::memo()->forget(self::CACHE_KEY);
+        try {
+            Cache::memo()->forget(self::CACHE_KEY);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public function recordLoginFailure(Request $request, ?int $userId = null): void

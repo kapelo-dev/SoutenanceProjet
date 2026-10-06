@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Closure;
+use Throwable;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -20,11 +21,18 @@ class PermissionCache
 
     public static function remember(string $cle, Closure $callback): mixed
     {
-        return Cache::memo()->remember(
-            'permissions:' . self::version() . ':' . $cle,
-            self::TTL_SECONDES,
-            $callback
-        );
+        try {
+            return Cache::memo()->remember(
+                'permissions:' . self::version() . ':' . $cle,
+                self::TTL_SECONDES,
+                $callback
+            );
+        } catch (Throwable $e) {
+            // Cache inaccessible (droits sur storage/, Redis arrêté…) : la page reste utilisable, sans cache
+            report($e);
+
+            return $callback();
+        }
     }
 
     /**
@@ -32,7 +40,12 @@ class PermissionCache
      */
     public static function flush(): void
     {
-        Cache::memo()->forever(self::VERSION_KEY, self::version() + 1);
+        try {
+            Cache::memo()->forever(self::VERSION_KEY, self::version() + 1);
+        } catch (Throwable $e) {
+            // Sans invalidation possible, les entrées en cache expirent d'elles-mêmes (TTL)
+            report($e);
+        }
     }
 
     private static function version(): int

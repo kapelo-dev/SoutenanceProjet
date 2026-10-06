@@ -123,4 +123,8 @@ fi
 php artisan view:cache --no-interaction 2>/dev/null || true
 php artisan storage:link 2>/dev/null || true
 
+# Les commandes artisan ci-dessus tournent en root (migrate, db:seed, caches) et peuvent créer des fichiers
+# dans storage/ (cache « file », vues compilées) qu'Apache (www-data) doit ensuite pouvoir modifier.
+chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
+
 exec "$@"
