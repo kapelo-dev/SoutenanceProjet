@@ -38,7 +38,8 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 
-docker run --rm --network "$NETWORK" -v "$PWD":/app -w /app \
+# --user : les fichiers créés pendant les tests (vues compilées, cache) restent à l'utilisateur courant
+docker run --rm --network "$NETWORK" --user "$(id -u):$(id -g)" -v "$PWD":/app -w /app \
   -e DB_CONNECTION=mysql -e DB_HOST="$DB" -e DB_DATABASE=testing \
   -e DB_USERNAME=root -e DB_PASSWORD=root \
   "$IMAGE" php artisan test "$@"
