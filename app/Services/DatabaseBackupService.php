@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\DatabaseBackup;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
@@ -23,18 +24,31 @@ class DatabaseBackupService
             && filled(config('filesystems.disks.backups.endpoint'));
     }
 
+    /**
+     * Test réseau vers MinIO, gardé 5 minutes : il est fait à chaque affichage du tableau de bord technique,
+     * et un MinIO injoignable faisait attendre la page plusieurs secondes.
+     */
     public function minioReachable(): bool
     {
         if (! $this->minioConfigured()) {
             return false;
         }
 
-        try {
-            Storage::disk(config('backup.disk', 'backups'))->files('', true);
+        $tester = function (): bool {
+            try {
+                // Simple listage de la racine (le listage récursif de tout le bucket n'est pas nécessaire)
+                Storage::disk(config('backup.disk', 'backups'))->directories('');
 
-            return true;
+                return true;
+            } catch (\Throwable) {
+                return false;
+            }
+        };
+
+        try {
+            return Cache::remember('backup:minio-reachable', 300, $tester);
         } catch (\Throwable) {
-            return false;
+            return $tester();
         }
     }
 

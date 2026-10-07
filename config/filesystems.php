@@ -69,6 +69,9 @@ return [
             'url' => env('MINIO_URL'),
             'endpoint' => env('MINIO_ENDPOINT'),
             'use_path_style_endpoint' => filter_var(env('MINIO_USE_PATH_STYLE', true), FILTER_VALIDATE_BOOLEAN),
+            // MinIO injoignable : échec rapide au lieu de plusieurs secondes d'attente (et pas de nouvelles tentatives)
+            'http' => ['connect_timeout' => 3, 'timeout' => 300],
+            'retries' => 1,
             'throw' => true,
             'report' => false,
         ],

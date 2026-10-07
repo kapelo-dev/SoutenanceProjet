@@ -16,8 +16,9 @@ class ServerMetrics
         $ram = self::ram();
         $disk = self::disk();
         $phpMemory = self::phpMemory();
-        $services = self::services();
+        // Calculé une seule fois : sert aux services, aux alertes et au bloc « Sauvegardes »
         $backups = app(DatabaseBackupService::class)->metrics();
+        $services = self::services($backups);
         $alerts = self::buildAlerts($cpu, $ram, $disk, $phpMemory, $services, $backups);
         $health = self::health($alerts);
 
@@ -231,7 +232,7 @@ class ServerMetrics
         return self::gauge('PHP', $percent, $status, self::formatBytes($usage), 'Pic ' . self::formatBytes($peak) . ' · max ' . $limit, 'ki-code');
     }
 
-    protected static function services(): array
+    protected static function services(array $backupMetrics): array
     {
         $services = [];
 
@@ -276,7 +277,6 @@ class ServerMetrics
             $services[] = self::service('public_disk', 'Disque public', 'error', 'Erreur', $e->getMessage());
         }
 
-        $backupMetrics = app(DatabaseBackupService::class)->metrics();
         $backupStatus = match ($backupMetrics['status'] ?? 'warning') {
             'ok' => 'ok',
             'error' => 'error',

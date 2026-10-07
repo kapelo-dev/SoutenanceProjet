@@ -44,7 +44,8 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
     && a2enmod rewrite headers remoteip
 
 COPY docker/apache-remoteip.conf /etc/apache2/conf-available/render-remoteip.conf
-RUN a2enconf render-remoteip
+COPY docker/apache-cache.conf /etc/apache2/conf-available/pdv-cache.conf
+RUN a2enconf render-remoteip pdv-cache
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

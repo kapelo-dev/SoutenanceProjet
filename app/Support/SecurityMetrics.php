@@ -17,18 +17,25 @@ class SecurityMetrics
         $since24h = now()->subDay();
         $since7d = now()->subDays(7);
 
-        $failed24h = SystemLog::where('action', 'login_failed')->where('created_at', '>=', $since24h)->count();
-        $success24h = SystemLog::where('action', 'login')->where('created_at', '>=', $since24h)->count();
-        $failed7d = SystemLog::where('action', 'login_failed')->where('created_at', '>=', $since7d)->count();
+        // Compteurs en une requête (au lieu de 4)
+        $compteurs = SystemLog::query()
+            ->where('created_at', '>=', $since7d)
+            ->selectRaw("COUNT(CASE WHEN action = 'login_failed' AND created_at >= ? THEN 1 END) as failed24h", [$since24h])
+            ->selectRaw("COUNT(CASE WHEN action = 'login' AND created_at >= ? THEN 1 END) as success24h", [$since24h])
+            ->selectRaw("COUNT(CASE WHEN action = 'login_failed' THEN 1 END) as failed7d")
+            ->selectRaw("COUNT(CASE WHEN action IN ('delete', 'export') AND created_at >= ? THEN 1 END) as sensitive24h", [$since24h])
+            ->toBase()
+            ->first();
+        $failed24h = (int) $compteurs->failed24h;
+        $success24h = (int) $compteurs->success24h;
+        $failed7d = (int) $compteurs->failed7d;
 
         $suspiciousIps = self::suspiciousIps($since24h, 3, $ipBlockService);
         $blockedIps = $ipBlockService->listActive();
         $topIps = self::topFailedIps($since7d, 8);
         $timeline = self::timeline($since24h);
         $recentEvents = self::recentEvents(15);
-        $sensitive24h = SystemLog::whereIn('action', ['delete', 'export'])
-            ->where('created_at', '>=', $since24h)
-            ->count();
+        $sensitive24h = (int) $compteurs->sensitive24h;
 
         $compromiseSignals = self::compromiseSignals($since24h);
 
@@ -132,22 +139,35 @@ class SecurityMetrics
             ]);
     }
 
+    /**
+     * Connexions réussies / échouées par heure sur les 24 dernières heures, en une requête groupée
+     * (au lieu de 2 requêtes par heure).
+     */
     protected static function timeline($since): array
     {
-        $hours = collect(range(23, 0))->map(function ($h) use ($since) {
+        $debut = now()->subHours(23)->startOfHour();
+
+        $parHeure = SystemLog::query()
+            ->whereIn('action', ['login_failed', 'login'])
+            ->whereBetween('created_at', [$debut, now()->endOfHour()])
+            ->groupByRaw("DATE_FORMAT(created_at, '%Y-%m-%d %H')")
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m-%d %H') as heure")
+            ->selectRaw("COUNT(CASE WHEN action = 'login_failed' THEN 1 END) as failed")
+            ->selectRaw("COUNT(CASE WHEN action = 'login' THEN 1 END) as success")
+            ->toBase()
+            ->get()
+            ->keyBy('heure');
+
+        return collect(range(23, 0))->map(function ($h) use ($parHeure) {
             $start = now()->subHours($h)->startOfHour();
-            $end = $start->copy()->endOfHour();
+            $ligne = $parHeure[$start->format('Y-m-d H')] ?? null;
 
             return [
                 'label' => $start->format('H\h'),
-                'failed' => SystemLog::where('action', 'login_failed')
-                    ->whereBetween('created_at', [$start, $end])->count(),
-                'success' => SystemLog::where('action', 'login')
-                    ->whereBetween('created_at', [$start, $end])->count(),
+                'failed' => (int) ($ligne->failed ?? 0),
+                'success' => (int) ($ligne->success ?? 0),
             ];
-        });
-
-        return $hours->values()->all();
+        })->values()->all();
     }
 
     protected static function recentEvents(int $limit): array
