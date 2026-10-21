@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\MotDePasseTemporaire;
 use App\Support\PermissionCache;
 use App\Support\UserMenuPermissions;
 use App\Models\Utilisateur;
@@ -69,7 +70,6 @@ class UtilisateurController extends Controller
             'nom' => 'required|string|max:100',
             'prenom' => 'required|string|max:100',
             'email' => 'required|email|max:100|unique:utilisateurs,email',
-            'mot_de_passe' => 'required|string|min:8|confirmed',
             'telephone' => 'nullable|string|max:20',
             'photo_profil' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'statut' => 'required|in:actif,inactif,suspendu',
@@ -82,8 +82,10 @@ class UtilisateurController extends Controller
             'profil_id.not_in' => 'Les agents se créent depuis le module Agents, pas ici.',
         ]);
 
-        // Hasher le mot de passe
-        $validated['mot_de_passe'] = Hash::make($validated['mot_de_passe']);
+        // Mot de passe temporaire unique, affiché une seule fois à l'administrateur :
+        // dernier_connexion reste null, le changement est imposé à la première connexion
+        $motDePasse = MotDePasseTemporaire::generer();
+        $validated['mot_de_passe'] = Hash::make($motDePasse);
 
         // Upload de la photo
         if ($request->hasFile('photo_profil')) {
@@ -100,8 +102,21 @@ class UtilisateurController extends Controller
         $utilisateur->profils()->attach([$profilId]);
         PermissionCache::flush();
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Utilisateur créé avec succès !',
+                'utilisateur' => [
+                    'nom' => trim($utilisateur->prenom . ' ' . $utilisateur->nom),
+                    'identifiant' => $utilisateur->email,
+                    'mot_de_passe' => $motDePasse,
+                ],
+            ]);
+        }
+
+        // Sans JavaScript le mot de passe ne peut pas être affiché : il faudra le régénérer
         return redirect()->route('utilisateurs.index')
-            ->with('success', 'Utilisateur créé avec succès !');
+            ->with('success', 'Utilisateur créé. Régénérez son mot de passe pour lui communiquer ses identifiants.');
     }
 
     /**
@@ -182,7 +197,6 @@ class UtilisateurController extends Controller
             'nom' => 'required|string|max:100',
             'prenom' => 'required|string|max:100',
             'email' => $emailRules,
-            'mot_de_passe' => 'nullable|string|min:8|confirmed',
             'telephone' => 'nullable|string|max:20',
             'photo_profil' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'statut' => 'required|in:actif,inactif,suspendu',
@@ -190,12 +204,7 @@ class UtilisateurController extends Controller
             'profils.*' => 'exists:profils,id',
         ]);
 
-        // Hasher le mot de passe si fourni
-        if ($request->filled('mot_de_passe')) {
-            $validated['mot_de_passe'] = Hash::make($validated['mot_de_passe']);
-        } else {
-            unset($validated['mot_de_passe']);
-        }
+        // Le mot de passe ne se modifie pas ici : voir resetPassword (régénération)
 
         // Upload de la nouvelle photo
         if ($request->hasFile('photo_profil')) {
@@ -303,23 +312,29 @@ class UtilisateurController extends Controller
     }
 
     /**
-     * Réinitialiser le mot de passe
+     * Régénérer le mot de passe : un mot de passe temporaire est généré et renvoyé une seule fois
+     * à l'administrateur. dernier_connexion à null impose le changement à la prochaine connexion
+     * (web : RequirePasswordChange, mobile : AuthenticateMobileToken, y compris les sessions ouvertes).
      */
-    public function resetPassword(Request $request, Utilisateur $utilisateur)
+    public function resetPassword(Utilisateur $utilisateur)
     {
-        $request->validate([
-            'nouveau_mot_de_passe' => 'required|string|min:8|confirmed',
-        ]);
+        $motDePasse = MotDePasseTemporaire::generer();
 
-        // Le mot de passe choisi par l'administrateur est temporaire : à changer à la prochaine connexion
         $utilisateur->forceFill([
-            'mot_de_passe' => Hash::make($request->nouveau_mot_de_passe),
+            'mot_de_passe' => Hash::make($motDePasse),
             'dernier_connexion' => null,
         ])->save();
 
+        $utilisateur->loadMissing('agent');
+
         return response()->json([
             'success' => true,
-            'message' => 'Mot de passe réinitialisé. L\'utilisateur devra le changer à sa prochaine connexion.'
+            'message' => 'Mot de passe régénéré. L\'utilisateur devra le changer à sa prochaine connexion.',
+            'utilisateur' => [
+                'nom' => trim($utilisateur->prenom . ' ' . $utilisateur->nom),
+                'identifiant' => $utilisateur->agent?->code_agent ?: $utilisateur->email,
+                'mot_de_passe' => $motDePasse,
+            ],
         ]);
     }
 }

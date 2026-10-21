@@ -137,12 +137,71 @@ class MotDePasseAgentTest extends TestCase
         $this->actingAs(Utilisateur::factory()->create());
         $agent = $this->agentAvecCompte('MonVraiMdp2026', temporaire: false);
 
-        $this->postJson(route('utilisateurs.reset-password', $agent->utilisateur), [
-            'nouveau_mot_de_passe' => 'Reset2345ab',
-            'nouveau_mot_de_passe_confirmation' => 'Reset2345ab',
-        ])->assertOk();
+        $reponse = $this->postJson(route('utilisateurs.reset-password', $agent->utilisateur))
+            ->assertOk()
+            ->assertJsonPath('utilisateur.identifiant', $agent->code_agent);
+        $motDePasse = $reponse->json('utilisateur.mot_de_passe');
 
-        $this->loginMobile($agent, 'Reset2345ab')->assertJson(['doit_changer_mot_de_passe' => true]);
+        $this->assertNotSame('MonVraiMdp2026', $motDePasse);
+        $this->assertTrue($agent->utilisateur->fresh()->doitChangerMotDePasse());
+        $this->loginMobile($agent, 'MonVraiMdp2026')->assertUnauthorized();
+        $this->loginMobile($agent, $motDePasse)->assertJson(['doit_changer_mot_de_passe' => true]);
+    }
+
+    public function test_regeneration_impose_le_changement_a_un_utilisateur_web_deja_connecte(): void
+    {
+        $this->withoutMiddleware(CheckRoutePermission::class);
+        $admin = Utilisateur::factory()->create();
+        $utilisateur = Utilisateur::factory()->create(['email' => 'web@test.local']);
+
+        $this->actingAs($admin)
+            ->postJson(route('utilisateurs.reset-password', $utilisateur))
+            ->assertOk()
+            ->assertJsonPath('utilisateur.identifiant', 'web@test.local');
+
+        // Sa session déjà ouverte est renvoyée vers le changement de mot de passe
+        $this->actingAs($utilisateur->fresh())->get('/dashboard')->assertRedirect(route('password.change'));
+    }
+
+    public function test_creation_utilisateur_genere_un_mot_de_passe_temporaire(): void
+    {
+        $this->withoutMiddleware(CheckRoutePermission::class);
+        $profil = Profil::create(['libelle' => 'Test creation', 'niveau' => 0]);
+
+        $reponse = $this->actingAs(Utilisateur::factory()->create())->postJson(route('utilisateurs.store'), [
+            'nom' => 'Nouvel',
+            'prenom' => 'Utilisateur',
+            'email' => 'nouvel@test.local',
+            'statut' => 'actif',
+            'profil_id' => $profil->id,
+            'mot_de_passe' => 'Choisi2345ab', // ignoré : plus choisi par l'administrateur
+            'mot_de_passe_confirmation' => 'Choisi2345ab',
+        ])->assertOk()->assertJsonPath('utilisateur.identifiant', 'nouvel@test.local');
+
+        $cree = Utilisateur::where('email', 'nouvel@test.local')->firstOrFail();
+        $this->assertTrue(Hash::check($reponse->json('utilisateur.mot_de_passe'), $cree->mot_de_passe));
+        $this->assertFalse(Hash::check('Choisi2345ab', $cree->mot_de_passe));
+        $this->assertTrue($cree->doitChangerMotDePasse());
+    }
+
+    public function test_modifier_un_utilisateur_ne_change_pas_son_mot_de_passe(): void
+    {
+        $this->withoutMiddleware(CheckRoutePermission::class);
+        $utilisateur = Utilisateur::factory()->create(['mot_de_passe' => Hash::make('Garde2345ab')]);
+        $profil = Profil::create(['libelle' => 'Test modif', 'niveau' => 0]);
+
+        $this->actingAs(Utilisateur::factory()->create())->put(route('utilisateurs.update', $utilisateur), [
+            'nom' => 'Nouveau',
+            'prenom' => $utilisateur->prenom,
+            'email' => $utilisateur->email,
+            'statut' => 'actif',
+            'profils' => [$profil->id],
+            'mot_de_passe' => 'Pirate2345ab',
+            'mot_de_passe_confirmation' => 'Pirate2345ab',
+        ])->assertRedirect(route('utilisateurs.index'));
+
+        $this->assertSame('Nouveau', $utilisateur->fresh()->nom);
+        $this->assertTrue(Hash::check('Garde2345ab', $utilisateur->fresh()->mot_de_passe));
     }
 
     public function test_changement_web_refuse_le_meme_mot_de_passe(): void

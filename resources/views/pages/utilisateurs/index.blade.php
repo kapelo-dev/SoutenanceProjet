@@ -169,6 +169,9 @@
            <i class="ki-filled ki-pencil"></i>
            Modifier
           </button>
+          <button type="button" class="kt-btn kt-btn-sm kt-btn-outline" title="Régénérer le mot de passe" onclick="regenererMotDePasse({{ $utilisateur->id }}, @js($utilisateur->prenom . ' ' . $utilisateur->nom))">
+           <i class="ki-filled ki-key"></i>
+          </button>
          </div>
         </div>
         @empty
@@ -279,6 +282,10 @@
             <i class="ki-filled ki-pencil"></i>
             Modifier
            </button>
+           <button type="button" class="kt-btn kt-btn-sm kt-btn-outline" onclick="regenererMotDePasse({{ $utilisateur->id }}, @js($utilisateur->prenom . ' ' . $utilisateur->nom))">
+            <i class="ki-filled ki-key"></i>
+            Mot de passe
+           </button>
           </div>
          </div>
         </div>
@@ -309,9 +316,15 @@
        <i class="ki-filled ki-cross"></i>
       </button>
      </div>
-     <form action="{{ route('utilisateurs.store') }}" method="POST" enctype="multipart/form-data" id="form_nouvel_utilisateur">
+     <form action="{{ route('utilisateurs.store') }}" method="POST" enctype="multipart/form-data" id="form_nouvel_utilisateur" data-ajax="false">
       @csrf
       <div class="kt-modal-body flex flex-col gap-5">
+       <div id="create_errors_container" class="hidden">
+        <div class="kt-alert kt-alert-danger">
+         <i class="ki-filled ki-information-2"></i>
+         <ul class="list-disc list-inside text-sm" id="create_errors_list"></ul>
+        </div>
+       </div>
        @if($errors->any())
         <div class="kt-alert kt-alert-danger">
          <i class="ki-filled ki-information-2"></i>
@@ -336,16 +349,10 @@
         <label class="kt-label" for="create_email">Email <span class="text-destructive">*</span></label>
         <input type="email" name="email" id="create_email" class="kt-input" value="{{ old('email') }}" required maxlength="100" placeholder="email@exemple.com">
        </div>
-       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div class="flex flex-col gap-2">
-         <label class="kt-label" for="create_mot_de_passe">Mot de passe <span class="text-destructive">*</span></label>
-         <input type="password" name="mot_de_passe" id="create_mot_de_passe" class="kt-input" required minlength="8" value="changeMe" placeholder="changeMe">
-        </div>
-        <div class="flex flex-col gap-2">
-         <label class="kt-label" for="create_mot_de_passe_confirmation">Confirmer le mot de passe <span class="text-destructive">*</span></label>
-         <input type="password" name="mot_de_passe_confirmation" id="create_mot_de_passe_confirmation" class="kt-input" required minlength="8" value="changeMe" placeholder="changeMe">
-        </div>
-       </div>
+       <p class="text-sm text-secondary-foreground">
+        Un mot de passe temporaire sera généré et affiché une seule fois après la création.
+        L'utilisateur devra le changer à sa première connexion.
+       </p>
        <div class="flex flex-col gap-2">
         <label class="kt-label" for="create_telephone">Téléphone</label>
         <input type="text" name="telephone" id="create_telephone" class="kt-input" value="{{ old('telephone') }}" maxlength="20" placeholder="Optionnel">
@@ -390,7 +397,7 @@
       </div>
       <div class="kt-modal-footer">
        <button type="button" class="kt-btn kt-btn-outline" data-kt-modal-dismiss="true">Annuler</button>
-       <button type="submit" class="kt-btn kt-btn-primary">
+       <button type="submit" class="kt-btn kt-btn-primary" id="btn_create_utilisateur">
         <i class="ki-filled ki-check me-1"></i>
         Créer l'utilisateur
        </button>
@@ -478,18 +485,6 @@
         <input type="email" name="email" id="edit_email" class="kt-input" required maxlength="100" placeholder="email@exemple.com">
         <span class="text-xs text-destructive hidden" id="error_edit_email"></span>
        </div>
-       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div class="flex flex-col gap-2">
-         <label class="kt-label" for="edit_mot_de_passe">Mot de passe</label>
-         <input type="password" name="mot_de_passe" id="edit_mot_de_passe" class="kt-input" minlength="8" placeholder="Laisser vide pour ne pas changer">
-         <span class="text-xs text-muted-foreground">Laisser vide pour ne pas modifier le mot de passe</span>
-        </div>
-        <div class="flex flex-col gap-2">
-         <label class="kt-label" for="edit_mot_de_passe_confirmation">Confirmer le mot de passe</label>
-         <input type="password" name="mot_de_passe_confirmation" id="edit_mot_de_passe_confirmation" class="kt-input" minlength="8" placeholder="Répéter le mot de passe">
-         <span class="text-xs text-destructive hidden" id="error_edit_mot_de_passe"></span>
-        </div>
-       </div>
        <div class="flex flex-col gap-2">
         <label class="kt-label" for="edit_telephone">Téléphone</label>
         <input type="text" name="telephone" id="edit_telephone" class="kt-input" maxlength="20" placeholder="Optionnel">
@@ -535,6 +530,52 @@
     </div>
    </div>
    <!-- End Modal Modifier Utilisateur -->
+
+   <!-- Modal Nouveau mot de passe (affiché une seule fois) -->
+   <div class="kt-modal" data-kt-modal="true" data-kt-modal-backdrop-static="true" id="modal_identifiants_utilisateur">
+    <div class="kt-modal-content w-full max-w-[480px]">
+     <div class="kt-modal-header">
+      <h3 class="kt-modal-title" id="identifiants_utilisateur_titre">Nouveau mot de passe</h3>
+     </div>
+     <div class="kt-modal-body flex flex-col gap-4">
+      <div class="kt-alert kt-alert-warning">
+       <div class="kt-alert-title">
+        Notez ces identifiants maintenant : le mot de passe ne sera plus jamais affiché.
+       </div>
+      </div>
+      <div class="flex flex-col gap-1">
+       <span class="text-sm text-secondary-foreground">Utilisateur</span>
+       <span class="text-base font-medium text-mono" id="identifiants_utilisateur_nom"></span>
+      </div>
+      <div class="flex flex-col gap-1">
+       <span class="text-sm text-secondary-foreground">Identifiant</span>
+       <span class="text-lg font-semibold text-mono" id="identifiants_utilisateur_identifiant"></span>
+      </div>
+      <div class="flex flex-col gap-1">
+       <span class="text-sm text-secondary-foreground">Mot de passe temporaire</span>
+       <div class="flex items-center gap-2">
+        <span class="text-lg font-semibold text-mono font-mono tracking-wider" id="identifiants_utilisateur_mdp"></span>
+        <button type="button" class="kt-btn kt-btn-sm kt-btn-outline" id="btn_copier_identifiants_utilisateur">
+         <i class="ki-filled ki-copy"></i> Copier
+        </button>
+       </div>
+      </div>
+      <p class="text-sm text-secondary-foreground">
+       L'ancien mot de passe ne fonctionne plus. À sa prochaine connexion (web ou application mobile),
+       l'utilisateur devra choisir son propre mot de passe.
+      </p>
+     </div>
+     <div class="kt-modal-footer">
+      <button type="button" class="kt-btn kt-btn-outline" id="btn_imprimer_identifiants_utilisateur">
+       <i class="ki-filled ki-printer"></i> Imprimer
+      </button>
+      <button type="button" class="kt-btn kt-btn-primary" id="btn_identifiants_utilisateur_notes">
+       <i class="ki-filled ki-check"></i> J'ai noté les identifiants
+      </button>
+     </div>
+    </div>
+   </div>
+   <!-- End Modal Nouveau mot de passe -->
    </main>
 
 <script>
@@ -579,8 +620,6 @@ window.loadUserEdit = function(id) {
             document.getElementById('edit_prenom').value = user.prenom || '';
             document.getElementById('edit_email').value = user.email || '';
             document.getElementById('edit_telephone').value = user.telephone || '';
-            document.getElementById('edit_mot_de_passe').value = '';
-            document.getElementById('edit_mot_de_passe_confirmation').value = '';
             
             // Photo de profil
             const photoPreview = document.getElementById('edit_photo_preview');
@@ -637,6 +676,84 @@ window.loadUserEdit = function(id) {
         AppToast.error('Une erreur est survenue lors du chargement des données : ' + error.message);
     });
 };
+
+// Régénérer le mot de passe : nouveau mot de passe temporaire, affiché une seule fois
+window.regenererMotDePasse = function(id, nom) {
+    if (!confirm(`Régénérer le mot de passe de ${nom} ?\n\nL'ancien mot de passe ne fonctionnera plus et l'utilisateur devra en choisir un nouveau à sa prochaine connexion.`)) {
+        return;
+    }
+
+    fetch(`/utilisateurs/${id}/reset-password`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(({ ok, data }) => {
+        if (!ok || !data.success || !data.utilisateur) {
+            throw new Error(data.message || 'Régénération impossible');
+        }
+        afficherIdentifiantsUtilisateur(data.utilisateur);
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        AppToast.error('Une erreur est survenue lors de la régénération du mot de passe : ' + error.message);
+    });
+};
+
+function afficherIdentifiantsUtilisateur(utilisateur, messageFermeture = 'Mot de passe régénéré.') {
+    const modal = document.getElementById('modal_identifiants_utilisateur');
+    document.getElementById('identifiants_utilisateur_titre').textContent = utilisateur.recharger
+        ? 'Identifiants du nouvel utilisateur'
+        : 'Nouveau mot de passe';
+    document.getElementById('identifiants_utilisateur_nom').textContent = utilisateur.nom;
+    document.getElementById('identifiants_utilisateur_identifiant').textContent = utilisateur.identifiant;
+    document.getElementById('identifiants_utilisateur_mdp').textContent = utilisateur.mot_de_passe;
+
+    const boutonCopier = document.getElementById('btn_copier_identifiants_utilisateur');
+    boutonCopier.innerHTML = '<i class="ki-filled ki-copy"></i> Copier';
+    boutonCopier.onclick = function () {
+        const texte = 'Identifiant : ' + utilisateur.identifiant + '\nMot de passe temporaire : ' + utilisateur.mot_de_passe;
+        navigator.clipboard?.writeText(texte).then(function () {
+            boutonCopier.innerHTML = '<i class="ki-filled ki-check"></i> Copié';
+        });
+    };
+
+    document.getElementById('btn_imprimer_identifiants_utilisateur').onclick = function () {
+        window.imprimerIdentifiants({
+            application: @json(config('app.name')),
+            nom: utilisateur.nom,
+            identifiant: utilisateur.identifiant,
+            motDePasse: utilisateur.mot_de_passe,
+        });
+    };
+
+    document.getElementById('btn_identifiants_utilisateur_notes').onclick = function () {
+        // Le mot de passe ne doit plus rester dans la page une fois noté
+        document.getElementById('identifiants_utilisateur_mdp').textContent = '';
+        if (utilisateur.recharger) {
+            AppToast.reload(messageFermeture, 'success');
+            return;
+        }
+        if (typeof KTModal !== 'undefined') {
+            KTModal.getInstance(modal)?.hide();
+        } else {
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+        }
+        AppToast.success(messageFermeture);
+    };
+
+    if (typeof KTModal !== 'undefined') {
+        (KTModal.getInstance(modal) || new KTModal(modal)).show();
+    } else {
+        modal.classList.add('show');
+        modal.style.display = 'block';
+    }
+}
 
 // Fonction d'initialisation pour la page utilisateurs (appelée après navigation AJAX)
 window.initUtilisateursPage = function() {
@@ -736,6 +853,64 @@ document.addEventListener('ajax-content-loaded', function() {
         window.initUtilisateursPage();
     }
 });
+
+// Création : envoi en JSON pour afficher une seule fois le mot de passe temporaire généré
+(function() {
+    const createForm = document.getElementById('form_nouvel_utilisateur');
+    if (!createForm || createForm._createFormHandlerAttached) return;
+    createForm._createFormHandlerAttached = true;
+
+    createForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById('btn_create_utilisateur');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="ki-filled ki-loading animate-spin me-1"></i> Création...';
+
+        const errorsContainer = document.getElementById('create_errors_container');
+        const errorsList = document.getElementById('create_errors_list');
+        errorsContainer.classList.add('hidden');
+        errorsList.innerHTML = '';
+
+        fetch(this.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            body: new FormData(this)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.utilisateur) {
+                const modal = document.getElementById('modal_nouvel_utilisateur');
+                if (typeof KTModal !== 'undefined') {
+                    KTModal.getInstance(modal)?.hide();
+                }
+                afficherIdentifiantsUtilisateur({ ...data.utilisateur, recharger: true }, data.message || 'Utilisateur créé avec succès.');
+                return;
+            }
+
+            const messages = data.errors ? Object.values(data.errors).flat() : [data.message || 'Création impossible.'];
+            messages.forEach(msg => {
+                const li = document.createElement('li');
+                li.textContent = msg;
+                errorsList.appendChild(li);
+            });
+            errorsContainer.classList.remove('hidden');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            AppToast.error('Une erreur est survenue lors de la création.');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    });
+})();
 
 // Gestionnaire de soumission du formulaire de modification
 (function() {

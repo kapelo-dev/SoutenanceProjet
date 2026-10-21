@@ -14,6 +14,7 @@ import './menu-permissions';
 import './page-init';
 import './pdf-preview';
 import './grid-export';
+import './identifiants';
 
 // Start Alpine.js
 window.Alpine = Alpine;
