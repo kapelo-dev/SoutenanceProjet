@@ -1061,7 +1061,6 @@ function afficherIdentifiantsAgent(codeAgent, motDePasse, nomAgent) {
 
     document.getElementById('btn_imprimer_identifiants').onclick = function () {
         window.imprimerIdentifiants({
-            application: @json(config('app.name')),
             nom: nomAgent,
             identifiant: codeAgent,
             libelleIdentifiant: 'Identifiant (code agent)',

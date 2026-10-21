@@ -724,7 +724,6 @@ function afficherIdentifiantsUtilisateur(utilisateur, messageFermeture = 'Mot de
 
     document.getElementById('btn_imprimer_identifiants_utilisateur').onclick = function () {
         window.imprimerIdentifiants({
-            application: @json(config('app.name')),
             nom: utilisateur.nom,
             identifiant: utilisateur.identifiant,
             motDePasse: utilisateur.mot_de_passe,
