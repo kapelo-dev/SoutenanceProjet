@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    {{-- Doit précéder tout texte accentué : sinon libxml lit le document en Latin-1 --}}
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>{{ $title }}</title>
     @include('exports.partials.pdf-styles')
 </head>

@@ -1,5 +1,4 @@
 @php use App\Support\PdfBranding; $c = PdfBranding::COLORS; @endphp
-<meta charset="UTF-8">
 <style>
     @page {
         margin: 12mm 14mm 16mm 14mm;
