@@ -271,6 +271,15 @@ function initStickyHeaders() {
 function portalModalsToBody(root = document) {
     root.querySelectorAll('[data-kt-modal="true"]').forEach(modalEl => {
         if (modalEl.parentElement !== document.body) {
+            // Une page rechargée via AJAX apporte une nouvelle copie de ses modals : retirer
+            // l'ancienne copie déjà déplacée dans le body, sinon getElementById la trouve en premier.
+            if (modalEl.id) {
+                document.querySelectorAll(`body > [id="${CSS.escape(modalEl.id)}"]`).forEach(ancienne => {
+                    if (ancienne === modalEl) return;
+                    try { KTModal.getInstance(ancienne)?.hide(); } catch (e) {}
+                    ancienne.remove();
+                });
+            }
             document.body.appendChild(modalEl);
         }
     });

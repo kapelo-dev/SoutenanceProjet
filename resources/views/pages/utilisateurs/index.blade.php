@@ -595,104 +595,25 @@ window.loadUserEdit = function(id) {
             const form = document.getElementById('form_edit_utilisateur');
             form.action = `/utilisateurs/${user.id}`;
             
-            // Détruire les instances existantes de KTSelect avant de définir les valeurs
-            const editProfilsSelect = document.getElementById('edit_profils');
-            const editStatutSelect = document.getElementById('edit_statut');
-            
-            if (editProfilsSelect && typeof KTSelect !== 'undefined') {
-                try {
-                    const existingProfilsInstance = KTSelect.getInstance(editProfilsSelect);
-                    if (existingProfilsInstance) {
-                        existingProfilsInstance.destroy();
-                    }
-                } catch (error) {
-                    console.warn('Erreur destruction select profils:', error);
+            // Statut et profils : KTSelect (ktui) n'a ni getInstance() ni destroy(), et un
+            // "new KTSelect()" sur un select déjà initialisé ne fait rien. Il ne se resynchronise
+            // qu'en observant l'attribut "selected" des <option> : on met donc à jour la propriété
+            // ET l'attribut pour que l'affichage suive.
+            const setSelectedValues = (select, values) => {
+                if (!select) return;
+                if (typeof KTSelect !== 'undefined') {
+                    try { new KTSelect(select); } catch (error) { console.warn('Erreur initialisation select:', error); }
                 }
-            }
-            
-            if (editStatutSelect && typeof KTSelect !== 'undefined') {
-                try {
-                    const existingStatutInstance = KTSelect.getInstance(editStatutSelect);
-                    if (existingStatutInstance) {
-                        existingStatutInstance.destroy();
-                    }
-                } catch (error) {
-                    console.warn('Erreur destruction select statut:', error);
-                }
-            }
-            
-            // Maintenant définir les valeurs des selects (après avoir détruit les instances)
-            if (editStatutSelect) {
-                editStatutSelect.value = user.statut || 'actif';
-                // Déclencher l'événement change pour que KTSelect détecte la valeur
-                editStatutSelect.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            
-            // Profils - définir les valeurs sélectionnées
-            if (editProfilsSelect && user.profils) {
-                // Désélectionner tous les profils d'abord
-                Array.from(editProfilsSelect.options).forEach(option => {
-                    option.selected = false;
+                Array.from(select.options).forEach(option => {
+                    const selected = values.includes(option.value);
+                    option.selected = selected;
+                    option.removeAttribute('selected');
+                    if (selected) option.setAttribute('selected', 'selected');
                 });
-                // Sélectionner les profils de l'utilisateur
-                const selectedValues = [];
-                user.profils.forEach(profil => {
-                    const option = editProfilsSelect.querySelector(`option[value="${profil.id}"]`);
-                    if (option) {
-                        option.selected = true;
-                        selectedValues.push(profil.id);
-                    }
-                });
-                // Déclencher l'événement change pour que KTSelect détecte les valeurs
-                editProfilsSelect.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            
-            // Initialiser les selects Metronic APRÈS avoir défini les valeurs
-            setTimeout(() => {
-                if (editStatutSelect && typeof KTSelect !== 'undefined') {
-                    try {
-                        const newStatutInstance = new KTSelect(editStatutSelect);
-                        // Réappliquer la valeur après l'initialisation pour s'assurer qu'elle est affichée
-                        setTimeout(() => {
-                            editStatutSelect.value = user.statut || 'actif';
-                            // Si KTSelect a une méthode pour mettre à jour, l'utiliser
-                            if (newStatutInstance && typeof newStatutInstance.setValue === 'function') {
-                                newStatutInstance.setValue(user.statut || 'actif');
-                            } else if (newStatutInstance && typeof newStatutInstance.update === 'function') {
-                                newStatutInstance.update();
-                            }
-                            editStatutSelect.dispatchEvent(new Event('change', { bubbles: true }));
-                        }, 100);
-                    } catch (error) {
-                        console.warn('Erreur initialisation select statut:', error);
-                    }
-                }
-                
-                if (editProfilsSelect && typeof KTSelect !== 'undefined') {
-                    try {
-                        const newProfilsInstance = new KTSelect(editProfilsSelect);
-                        // Réappliquer les valeurs sélectionnées après l'initialisation
-                        setTimeout(() => {
-                            if (user.profils && user.profils.length > 0) {
-                                const selectedIds = user.profils.map(p => p.id.toString());
-                                // Réappliquer les sélections
-                                Array.from(editProfilsSelect.options).forEach(option => {
-                                    option.selected = selectedIds.includes(option.value);
-                                });
-                                // Si KTSelect a une méthode pour mettre à jour, l'utiliser
-                                if (newProfilsInstance && typeof newProfilsInstance.setValue === 'function') {
-                                    newProfilsInstance.setValue(selectedIds);
-                                } else if (newProfilsInstance && typeof newProfilsInstance.update === 'function') {
-                                    newProfilsInstance.update();
-                                }
-                                editProfilsSelect.dispatchEvent(new Event('change', { bubbles: true }));
-                            }
-                        }, 100);
-                    } catch (error) {
-                        console.warn('Erreur initialisation select profils:', error);
-                    }
-                }
-            }, 100);
+            };
+
+            setSelectedValues(document.getElementById('edit_statut'), [user.statut || 'actif']);
+            setSelectedValues(document.getElementById('edit_profils'), (user.profils || []).map(p => String(p.id)));
             
             // Ouvrir le modal
             setTimeout(() => {

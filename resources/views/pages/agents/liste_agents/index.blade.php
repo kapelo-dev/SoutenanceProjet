@@ -697,6 +697,9 @@
             </p>
         </div>
         <div class="kt-modal-footer">
+            <button type="button" class="kt-btn kt-btn-outline" id="btn_imprimer_identifiants">
+                <i class="ki-filled ki-printer"></i> Imprimer
+            </button>
             <button type="button" class="kt-btn kt-btn-primary" id="btn_identifiants_notes">
                 <i class="ki-filled ki-check"></i> J'ai noté les identifiants
             </button>
@@ -1039,11 +1042,11 @@ window.resetAgentModal = function resetAgentModal() {
     });
 }
 
-window.saveAgentWithKiosque = /**
+/**
  * Identifiants du nouvel agent : fenêtre qui reste ouverte jusqu'à confirmation
  * (le mot de passe temporaire n'est affiché qu'une fois), puis rechargement de la liste.
  */
-function afficherIdentifiantsAgent(codeAgent, motDePasse) {
+function afficherIdentifiantsAgent(codeAgent, motDePasse, nomAgent) {
     const modal = document.getElementById('modal_identifiants_agent');
     document.getElementById('identifiant_agent_code').textContent = codeAgent;
     document.getElementById('identifiant_agent_mdp').textContent = motDePasse;
@@ -1054,6 +1057,10 @@ function afficherIdentifiantsAgent(codeAgent, motDePasse) {
         navigator.clipboard?.writeText(texte).then(function () {
             boutonCopier.innerHTML = '<i class="ki-filled ki-check"></i> Copié';
         });
+    };
+
+    document.getElementById('btn_imprimer_identifiants').onclick = function () {
+        imprimerIdentifiantsAgent(codeAgent, motDePasse, nomAgent);
     };
 
     document.getElementById('btn_identifiants_notes').onclick = function () {
@@ -1068,7 +1075,59 @@ function afficherIdentifiantsAgent(codeAgent, motDePasse) {
     }
 }
 
-function saveAgentWithKiosque() {
+/**
+ * Fiche imprimable des identifiants, imprimée depuis une iframe cachée
+ * (pas de fenêtre popup, et seule la fiche part à l'impression, pas la page).
+ */
+function imprimerIdentifiantsAgent(codeAgent, motDePasse, nomAgent) {
+    const echapper = (valeur) => String(valeur ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+    const date = new Date().toLocaleString('fr-FR');
+
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+<title>Identifiants agent ${echapper(codeAgent)}</title>
+<style>
+  body { font-family: Arial, sans-serif; color: #111; margin: 40px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sous-titre { color: #555; font-size: 13px; margin-bottom: 24px; }
+  table { border-collapse: collapse; width: 100%; max-width: 520px; }
+  td { border: 1px solid #999; padding: 10px 14px; font-size: 15px; }
+  td:first-child { background: #f3f3f3; width: 45%; }
+  .valeur { font-family: 'Courier New', monospace; font-weight: bold; font-size: 17px; letter-spacing: 1px; }
+  .note { margin-top: 24px; font-size: 13px; color: #333; max-width: 520px; line-height: 1.5; }
+</style></head><body>
+  <h1>{{ config('app.name') }} — Identifiants de connexion</h1>
+  <div class="sous-titre">Édité le ${echapper(date)}</div>
+  <table>
+    ${nomAgent ? `<tr><td>Agent</td><td>${echapper(nomAgent)}</td></tr>` : ''}
+    <tr><td>Identifiant (code agent)</td><td class="valeur">${echapper(codeAgent)}</td></tr>
+    <tr><td>Mot de passe temporaire</td><td class="valeur">${echapper(motDePasse)}</td></tr>
+  </table>
+  <p class="note">À la première connexion (application mobile ou web), l'agent devra choisir son propre mot de passe.
+  Ce document est confidentiel : remettez-le uniquement à l'agent concerné puis détruisez-le.</p>
+</body></html>`);
+    doc.close();
+
+    const lancer = () => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => iframe.remove(), 1000);
+    };
+    if (doc.readyState === 'complete') {
+        lancer();
+    } else {
+        iframe.onload = lancer;
+    }
+}
+
+window.saveAgentWithKiosque = function saveAgentWithKiosque() {
     console.log('saveAgentWithKiosque appelée');
     const form = document.getElementById('form_nouvel_agent_kiosque');
     const formData = new FormData(form);
@@ -1282,7 +1341,11 @@ function saveAgentWithKiosque() {
             resetAgentModal();
             
             if (data.utilisateur) {
-                afficherIdentifiantsAgent(data.utilisateur.code_agent, data.utilisateur.mot_de_passe);
+                afficherIdentifiantsAgent(
+                    data.utilisateur.code_agent,
+                    data.utilisateur.mot_de_passe,
+                    data.agent ? [data.agent.prenom, data.agent.nom].filter(Boolean).join(' ') : ''
+                );
             } else {
                 AppToast.reload(data.message || 'Agent créé avec succès.', 'success');
             }
