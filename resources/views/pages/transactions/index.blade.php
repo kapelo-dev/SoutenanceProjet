@@ -313,7 +313,45 @@
 </div>
 <!-- End of Container -->
 
-<!-- Panneau de filtres (s'ouvre depuis la droite) -->
+<!-- Panneau de filtres (s'ouvre depuis la droite).
+     Déplacé sous <body> au chargement : <main> est animé (transform), ce qui casserait position: fixed. -->
+<div id="transactions_filtres_portail" data-transactions-filtres-portail>
+<style>
+    #content #transactions_filtres_portail {
+        display: none;
+    }
+    .transactions-filtres-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 99;
+        background: rgba(0, 0, 0, .35);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity .25s ease, visibility .25s ease;
+    }
+    .transactions-filtres-drawer {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        z-index: 100;
+        width: 380px;
+        max-width: 90%;
+        transform: translateX(100%);
+        transition: transform .25s ease;
+        box-shadow: -8px 0 24px rgba(0, 0, 0, .08);
+    }
+    body.transactions-filtres-ouvert .transactions-filtres-backdrop {
+        opacity: 1;
+        visibility: visible;
+    }
+    body.transactions-filtres-ouvert .transactions-filtres-drawer {
+        transform: translateX(0);
+    }
+    body.transactions-filtres-ouvert {
+        overflow: hidden;
+    }
+</style>
 <div class="transactions-filtres-backdrop" data-transactions-filtres-close></div>
 <aside class="transactions-filtres-drawer bg-background border-s border-border flex flex-col" id="transactions_filtres_drawer" aria-hidden="true">
     <div class="flex items-center justify-between gap-2.5 px-5 py-4 border-b border-border">
@@ -388,40 +426,7 @@
         </div>
     </form>
 </aside>
-
-<style>
-    .transactions-filtres-backdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 99;
-        background: rgba(0, 0, 0, .35);
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity .25s ease, visibility .25s ease;
-    }
-    .transactions-filtres-drawer {
-        position: fixed;
-        top: 0;
-        bottom: 0;
-        right: 0;
-        z-index: 100;
-        width: 380px;
-        max-width: 90%;
-        transform: translateX(100%);
-        transition: transform .25s ease;
-        box-shadow: -8px 0 24px rgba(0, 0, 0, .08);
-    }
-    body.transactions-filtres-ouvert .transactions-filtres-backdrop {
-        opacity: 1;
-        visibility: visible;
-    }
-    body.transactions-filtres-ouvert .transactions-filtres-drawer {
-        transform: translateX(0);
-    }
-    body.transactions-filtres-ouvert {
-        overflow: hidden;
-    }
-</style>
+</div>
 <style>
     /* S'assurer que le message vide est centré sur toute la largeur */
     #transactions_table tbody tr.empty-row {
@@ -470,6 +475,13 @@ window.initTransactionsPage = function() {
 
     if (window.AjaxNavigation && typeof window.AjaxNavigation.setupEmptyDatatable === 'function') {
         window.AjaxNavigation.setupEmptyDatatable('transactions_table', 8, @json($transactions->isEmpty()));
+    }
+
+    // Sortir le panneau de <main> (remplace l'éventuel panneau d'un chargement précédent)
+    const portail = document.querySelector('#content [data-transactions-filtres-portail]');
+    if (portail) {
+        document.querySelectorAll('body > [data-transactions-filtres-portail]').forEach(ancien => ancien.remove());
+        document.body.appendChild(portail);
     }
 };
 
@@ -560,8 +572,13 @@ if (!window._transactionsFiltresBound) {
         if (e.key === 'Escape') fermer();
     });
 
-    // Changement de page : ne pas laisser le panneau ouvert ni le défilement bloqué
-    document.addEventListener('ajax-content-loaded', fermer);
+    // Changement de page : fermer le panneau et le supprimer si on a quitté les transactions
+    document.addEventListener('ajax-content-loaded', () => {
+        fermer();
+        if (!document.getElementById('transactions_table')) {
+            document.querySelectorAll('body > [data-transactions-filtres-portail]').forEach(ancien => ancien.remove());
+        }
+    });
 }
 
 if (document.readyState === 'loading') {
