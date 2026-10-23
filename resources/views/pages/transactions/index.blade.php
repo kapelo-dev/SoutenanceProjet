@@ -34,31 +34,72 @@
 <!-- Container -->
 <div class="kt-container-fixed">
     <div class="kt-card kt-card-grid min-w-full">
+        @php
+            $typesTransaction = [
+                'depot' => 'Dépôt',
+                'retrait' => 'Retrait',
+                'transfert' => 'Transfert',
+                'paiement' => 'Paiement',
+            ];
+            $agentFiltre = request('agent_id') ? $agents->firstWhere('id', (int) request('agent_id')) : null;
+            $filtresActifs = array_filter([
+                'date_debut' => request('date_debut') ? 'Du ' . \Carbon\Carbon::parse(request('date_debut'))->format('d/m/Y') : null,
+                'date_fin' => request('date_fin') ? 'Au ' . \Carbon\Carbon::parse(request('date_fin'))->format('d/m/Y') : null,
+                'agent_id' => $agentFiltre ? 'Agent : ' . $agentFiltre->nomComplet : null,
+                'type' => request('type') ? 'Type : ' . ($typesTransaction[request('type')] ?? request('type')) : null,
+            ]);
+            $puces = $filtresActifs + (request('search') ? ['search' => 'Recherche : « ' . request('search') . ' »'] : []);
+            // Paramètres à conserver d'un formulaire à l'autre (filtres, recherche, taille de page)
+            $paramsConserves = fn (array $sauf) => \Illuminate\Support\Arr::except(request()->query(), array_merge($sauf, ['page']));
+        @endphp
         <div class="kt-card-header py-5 flex-wrap gap-2">
-            <div class="flex items-center gap-5 ml-auto">
-                <label class="kt-input">
-                    <i class="ki-filled ki-magnifier"></i>
-                    <input data-kt-datatable-search="#transactions_table" placeholder="Rechercher une transaction" type="text" value=""/>
-                </label>
-                
+            <div class="flex flex-wrap items-center gap-2">
+                @foreach($puces as $champ => $libelle)
+                    <span class="kt-badge kt-badge-outline kt-badge-primary gap-1.5">
+                        {{ $libelle }}
+                        <a href="{{ route('transactions.index', $paramsConserves([$champ])) }}"
+                           class="leading-none" title="Retirer ce filtre">
+                            <i class="ki-filled ki-cross text-xs"></i>
+                        </a>
+                    </span>
+                @endforeach
+                @if(count($puces) > 1)
+                    <a href="{{ route('transactions.index') }}" class="kt-link kt-link-underlined kt-link-dashed text-sm">Tout effacer</a>
+                @endif
             </div>
-
+            <div class="flex items-center gap-2.5 ml-auto">
+                <form method="GET" action="{{ route('transactions.index') }}" id="transactions_recherche_form">
+                    @foreach($paramsConserves(['search']) as $cle => $valeur)
+                        <input type="hidden" name="{{ $cle }}" value="{{ $valeur }}"/>
+                    @endforeach
+                    <label class="kt-input">
+                        <i class="ki-filled ki-magnifier"></i>
+                        <input name="search" placeholder="Référence, client, téléphone…" type="search" value="{{ request('search') }}"/>
+                    </label>
+                </form>
+                <button type="button" class="kt-btn kt-btn-outline relative" data-transactions-filtres-open>
+                    <i class="ki-filled ki-filter"></i>
+                    Filtres
+                    @if(count($filtresActifs))
+                        <span class="kt-badge kt-badge-sm kt-badge-primary rounded-full">{{ count($filtresActifs) }}</span>
+                    @endif
+                </button>
+            </div>
         </div>
         <div class="kt-card-content">
-            <div class="grid" data-kt-datatable="true" data-kt-datatable-page-size="10">
+            <div class="grid">
                 <div class="kt-scrollable-x-auto">
-                    <table class="kt-table kt-table-border" data-kt-datatable-table="true" id="transactions_table" style="table-layout: fixed; width: 100%;">
+                    <table class="kt-table kt-table-border" id="transactions_table" style="table-layout: fixed; width: 100%;">
                         <thead>
                             <tr>
                                 <th class="w-[50px] text-center">
-                                    <input class="kt-checkbox kt-checkbox-sm" data-kt-datatable-check="true" type="checkbox"/>
+                                    <input class="kt-checkbox kt-checkbox-sm" data-transactions-check-all type="checkbox"/>
                                 </th>
                                 <th class="min-w-[160px] text-center" style="width: 14%;">
                                     <span class="kt-table-col">
                                         <span class="kt-table-col-label">
                                             N° Transaction
                                         </span>
-                                        <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
                                 <th class="min-w-[180px] text-center" style="width: 18%;">
@@ -66,7 +107,6 @@
                                         <span class="kt-table-col-label">
                                             Client
                                         </span>
-                                        <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
                                 <th class="min-w-[180px] text-center" style="width: 18%;">
@@ -74,7 +114,6 @@
                                         <span class="kt-table-col-label">
                                             Agent
                                         </span>
-                                        <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
                                 <th class="min-w-[120px] text-center" style="width: 12%;">
@@ -82,7 +121,6 @@
                                         <span class="kt-table-col-label">
                                             Montant
                                         </span>
-                                        <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
                                 <th class="min-w-[100px] text-center" style="width: 10%;">
@@ -90,7 +128,6 @@
                                         <span class="kt-table-col-label">
                                             Commission
                                         </span>
-                                        <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
                                 <th class="min-w-[120px] text-center" style="width: 12%;">
@@ -98,7 +135,6 @@
                                         <span class="kt-table-col-label">
                                             Statut
                                         </span>
-                                        <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
                                 <th class="min-w-[160px] text-center" style="width: 18%;">
@@ -106,7 +142,6 @@
                                         <span class="kt-table-col-label">
                                             Date
                                         </span>
-                                        <span class="kt-table-col-sort"></span>
                                     </span>
                                 </th>
                             </tr>
@@ -241,7 +276,9 @@
                                         </div>
                                         <div class="flex flex-col gap-2 items-center text-center max-w-md">
                                             <h3 class="text-lg font-semibold text-foreground">Aucune transaction</h3>
-                                            <p class="text-sm text-secondary-foreground">Il n'y a actuellement aucune transaction dans le système.</p>
+                                            <p class="text-sm text-secondary-foreground">
+                                                {{ count($filtresActifs) ? 'Aucune transaction ne correspond aux filtres sélectionnés.' : "Il n'y a actuellement aucune transaction dans le système." }}
+                                            </p>
                                         </div>
                                     </div>
                                 </td>
@@ -251,17 +288,23 @@
                     </table>
                 </div>
                 <div class="kt-card-footer justify-center md:justify-between flex-col md:flex-row gap-5 text-secondary-foreground text-sm font-medium">
-                    <div class="flex items-center gap-2 order-2 md:order-1">
+                    <form method="GET" action="{{ route('transactions.index') }}" class="flex items-center gap-2 order-2 md:order-1">
+                        @foreach($paramsConserves(['per_page']) as $cle => $valeur)
+                            <input type="hidden" name="{{ $cle }}" value="{{ $valeur }}"/>
+                        @endforeach
                         Afficher
-                        <select class="kt-select w-16" data-kt-datatable-size="true" data-kt-select="" name="perpage">
+                        <select class="kt-select w-20" name="per_page" onchange="this.form.requestSubmit()">
+                            @foreach([10, 20, 50, 100] as $n)
+                                <option value="{{ $n }}" @selected($transactions->perPage() == $n)>{{ $n }}</option>
+                            @endforeach
                         </select>
                         par page
-                    </div>
+                    </form>
                     <div class="flex items-center gap-4 order-1 md:order-2">
-                        <span data-kt-datatable-info="true">
+                        <span>
+                            {{ $transactions->total() ? $transactions->firstItem() . '-' . $transactions->lastItem() . ' sur ' . number_format($transactions->total(), 0, ',', ' ') : '0 résultat' }}
                         </span>
-                        <div class="kt-datatable-pagination" data-kt-datatable-pagination="true">
-                        </div>
+                        {{ $transactions->links('partials.pagination-metronic') }}
                     </div>
                 </div>
             </div>
@@ -269,6 +312,116 @@
     </div>
 </div>
 <!-- End of Container -->
+
+<!-- Panneau de filtres (s'ouvre depuis la droite) -->
+<div class="transactions-filtres-backdrop" data-transactions-filtres-close></div>
+<aside class="transactions-filtres-drawer bg-background border-s border-border flex flex-col" id="transactions_filtres_drawer" aria-hidden="true">
+    <div class="flex items-center justify-between gap-2.5 px-5 py-4 border-b border-border">
+        <div class="flex items-center gap-2 text-base font-semibold text-mono">
+            <i class="ki-filled ki-filter text-primary"></i>
+            Filtrer les transactions
+        </div>
+        <button type="button" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-transactions-filtres-close title="Fermer">
+            <i class="ki-filled ki-cross"></i>
+        </button>
+    </div>
+    <form id="transactions_filtres_form" method="GET" action="{{ route('transactions.index') }}" data-ajax="false" class="flex flex-col flex-1 min-h-0">
+        @foreach(\Illuminate\Support\Arr::only(request()->query(), ['search', 'per_page']) as $cle => $valeur)
+            <input type="hidden" name="{{ $cle }}" value="{{ $valeur }}"/>
+        @endforeach
+        <div class="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-6">
+            <div class="flex flex-col gap-2.5">
+                <span class="text-sm font-medium text-mono">Période</span>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs text-secondary-foreground" for="filtre_date_debut">Du</label>
+                        <input class="kt-input" type="date" id="filtre_date_debut" name="date_debut" value="{{ request('date_debut') }}"/>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs text-secondary-foreground" for="filtre_date_fin">Au</label>
+                        <input class="kt-input" type="date" id="filtre_date_fin" name="date_fin" value="{{ request('date_fin') }}"/>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                    <button type="button" class="kt-btn kt-btn-xs kt-btn-outline" data-filtre-periode="aujourdhui">Aujourd'hui</button>
+                    <button type="button" class="kt-btn kt-btn-xs kt-btn-outline" data-filtre-periode="7j">7 derniers jours</button>
+                    <button type="button" class="kt-btn kt-btn-xs kt-btn-outline" data-filtre-periode="mois">Ce mois</button>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2.5">
+                <label class="text-sm font-medium text-mono" for="filtre_agent">Agent</label>
+                <select class="kt-select" id="filtre_agent" name="agent_id">
+                    <option value="">Tous les agents</option>
+                    @foreach($agents as $agent)
+                        <option value="{{ $agent->id }}" @selected((string) request('agent_id') === (string) $agent->id)>
+                            {{ $agent->nomComplet }}@if($agent->code_agent) ({{ $agent->code_agent }})@endif
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="flex flex-col gap-2.5">
+                <span class="text-sm font-medium text-mono">Type</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center gap-2 text-sm">
+                        <input class="kt-radio kt-radio-sm" type="radio" name="type" value="" @checked(!request('type'))/>
+                        Tous
+                    </label>
+                    @foreach($typesTransaction as $valeur => $libelle)
+                        <label class="flex items-center gap-2 text-sm">
+                            <input class="kt-radio kt-radio-sm" type="radio" name="type" value="{{ $valeur }}" @checked(request('type') === $valeur)/>
+                            {{ $libelle }}
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center gap-2.5 px-5 py-4 border-t border-border">
+            <button type="button" class="kt-btn kt-btn-outline flex-1 justify-center" data-transactions-filtres-reset>
+                Réinitialiser
+            </button>
+            <button type="submit" class="kt-btn kt-btn-primary flex-1 justify-center">
+                <i class="ki-filled ki-check"></i>
+                Appliquer
+            </button>
+        </div>
+    </form>
+</aside>
+
+<style>
+    .transactions-filtres-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 99;
+        background: rgba(0, 0, 0, .35);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity .25s ease, visibility .25s ease;
+    }
+    .transactions-filtres-drawer {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        z-index: 100;
+        width: 380px;
+        max-width: 90%;
+        transform: translateX(100%);
+        transition: transform .25s ease;
+        box-shadow: -8px 0 24px rgba(0, 0, 0, .08);
+    }
+    body.transactions-filtres-ouvert .transactions-filtres-backdrop {
+        opacity: 1;
+        visibility: visible;
+    }
+    body.transactions-filtres-ouvert .transactions-filtres-drawer {
+        transform: translateX(0);
+    }
+    body.transactions-filtres-ouvert {
+        overflow: hidden;
+    }
+</style>
 <style>
     /* S'assurer que le message vide est centré sur toute la largeur */
     #transactions_table tbody tr.empty-row {
@@ -315,21 +468,101 @@
 window.initTransactionsPage = function() {
     if (!document.getElementById('transactions_table')) return;
 
-    const isEmpty = @json($transactions->isEmpty());
-
     if (window.AjaxNavigation && typeof window.AjaxNavigation.setupEmptyDatatable === 'function') {
-        window.AjaxNavigation.setupEmptyDatatable('transactions_table', 8, isEmpty);
-    } else {
-        const table = document.getElementById('transactions_table');
-        const emptyRow = table?.querySelector('tbody tr.empty-row');
-        if (emptyRow && isEmpty) {
-            const td = emptyRow.querySelector('td');
-            if (td) { td.setAttribute('colspan', '8'); td.style.width = '100%'; td.style.border = 'none'; }
-            const wrapper = table.closest('[data-kt-datatable="true"]');
-            if (wrapper) wrapper.removeAttribute('data-kt-datatable');
-        }
+        window.AjaxNavigation.setupEmptyDatatable('transactions_table', 8, @json($transactions->isEmpty()));
     }
 };
+
+// Panneau de filtres : écouteurs délégués, attachés une seule fois (survivent à la navigation AJAX)
+if (!window._transactionsFiltresBound) {
+    window._transactionsFiltresBound = true;
+
+    const ouvrir = () => document.body.classList.add('transactions-filtres-ouvert');
+    const fermer = () => document.body.classList.remove('transactions-filtres-ouvert');
+    const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    // Filtres cumulatifs : seuls les champs renseignés partent dans l'URL
+    const appliquer = (form) => {
+        const url = new URL(form.action, window.location.origin);
+        for (const [cle, valeur] of new FormData(form).entries()) {
+            if (valeur !== '') url.searchParams.set(cle, valeur);
+        }
+        fermer();
+        if (window.AjaxNavigation && typeof window.AjaxNavigation.loadPage === 'function') {
+            window.AjaxNavigation.loadPage(url.toString());
+        } else {
+            window.location.href = url.toString();
+        }
+    };
+
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-transactions-filtres-open]')) {
+            ouvrir();
+            return;
+        }
+        if (e.target.closest('[data-transactions-filtres-close]')) {
+            fermer();
+            return;
+        }
+
+        const form = document.getElementById('transactions_filtres_form');
+        if (!form) return;
+
+        if (e.target.closest('[data-transactions-filtres-reset]')) {
+            form.querySelectorAll('input[type="date"], select').forEach(champ => { champ.value = ''; });
+            const tous = form.querySelector('input[name="type"][value=""]');
+            if (tous) tous.checked = true;
+            appliquer(form);
+            return;
+        }
+
+        const raccourci = e.target.closest('[data-filtre-periode]');
+        if (raccourci) {
+            const fin = new Date();
+            let debut = new Date();
+            if (raccourci.dataset.filtrePeriode === '7j') debut.setDate(fin.getDate() - 6);
+            if (raccourci.dataset.filtrePeriode === 'mois') debut = new Date(fin.getFullYear(), fin.getMonth(), 1);
+            form.querySelector('[name="date_debut"]').value = isoDate(debut);
+            form.querySelector('[name="date_fin"]').value = isoDate(fin);
+        }
+    });
+
+    document.addEventListener('submit', (e) => {
+        if (e.target.id !== 'transactions_filtres_form') return;
+        e.preventDefault();
+        const form = e.target;
+        const debut = form.querySelector('[name="date_debut"]').value;
+        const fin = form.querySelector('[name="date_fin"]').value;
+        if (debut && fin && debut > fin) {
+            form.querySelector('[name="date_fin"]').setCustomValidity('La date de fin doit être postérieure à la date de début.');
+            form.reportValidity();
+            form.querySelector('[name="date_fin"]').setCustomValidity('');
+            return;
+        }
+        appliquer(form);
+    });
+
+    document.addEventListener('change', (e) => {
+        const table = document.getElementById('transactions_table');
+        if (!table || !table.contains(e.target)) return;
+        const lignes = [...table.querySelectorAll('[data-kt-datatable-row-check]')];
+        const toutCocher = table.querySelector('[data-transactions-check-all]');
+        if (e.target === toutCocher) {
+            lignes.forEach(caseLigne => { caseLigne.checked = toutCocher.checked; });
+        } else if (toutCocher && e.target.matches('[data-kt-datatable-row-check]')) {
+            const cochees = lignes.filter(caseLigne => caseLigne.checked).length;
+            toutCocher.checked = cochees === lignes.length;
+            toutCocher.indeterminate = cochees > 0 && cochees < lignes.length;
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') fermer();
+    });
+
+    // Changement de page : ne pas laisser le panneau ouvert ni le défilement bloqué
+    document.addEventListener('ajax-content-loaded', fermer);
+}
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => window.initTransactionsPage());

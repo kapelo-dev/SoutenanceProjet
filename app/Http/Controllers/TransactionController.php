@@ -31,10 +31,13 @@ class TransactionController extends Controller
         // avec l'OFFSET de la page 2, la requête de totaux (une seule ligne) ne renverrait rien.
         $requeteStats = clone $query;
 
-        $transactions = $query->latest('date')->paginate(20);
+        $parPage = (int) $request->input('per_page', 20);
+        $parPage = in_array($parPage, [10, 20, 50, 100], true) ? $parPage : 20;
+        $transactions = $query->latest('date')->paginate($parPage)->onEachSide(1)->withQueryString();
         
         $operateurs = Operateur::actif()->get();
-        $agents = Agent::actif()->orderBy('nom')->get();
+        // Tous les agents (y compris inactifs) pour pouvoir filtrer leurs transactions passées
+        $agents = Agent::orderBy('nom')->orderBy('prenom')->get();
 
         // Statistiques pour la période affichée (une requête)
         $totaux = $requeteStats->valide()
