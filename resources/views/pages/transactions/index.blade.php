@@ -419,10 +419,6 @@
             <button type="button" class="kt-btn kt-btn-outline flex-1 justify-center" data-transactions-filtres-reset>
                 Réinitialiser
             </button>
-            <button type="submit" class="kt-btn kt-btn-primary flex-1 justify-center">
-                <i class="ki-filled ki-check"></i>
-                Appliquer
-            </button>
         </div>
     </form>
 </aside>
@@ -493,13 +489,25 @@ if (!window._transactionsFiltresBound) {
     const fermer = () => document.body.classList.remove('transactions-filtres-ouvert');
     const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+    // Le panneau reste ouvert pendant l'application automatique des filtres
+    let garderOuvert = false;
+    let minuterie = null;
+
     // Filtres cumulatifs : seuls les champs renseignés partent dans l'URL
     const appliquer = (form) => {
+        const debut = form.querySelector('[name="date_debut"]');
+        const fin = form.querySelector('[name="date_fin"]');
+        if (debut.value && fin.value && debut.value > fin.value) {
+            fin.setCustomValidity('La date de fin doit être postérieure à la date de début.');
+            form.reportValidity();
+            fin.setCustomValidity('');
+            return;
+        }
         const url = new URL(form.action, window.location.origin);
         for (const [cle, valeur] of new FormData(form).entries()) {
             if (valeur !== '') url.searchParams.set(cle, valeur);
         }
-        fermer();
+        garderOuvert = document.body.classList.contains('transactions-filtres-ouvert');
         if (window.AjaxNavigation && typeof window.AjaxNavigation.loadPage === 'function') {
             window.AjaxNavigation.loadPage(url.toString());
         } else {
@@ -536,22 +544,22 @@ if (!window._transactionsFiltresBound) {
             if (raccourci.dataset.filtrePeriode === 'mois') debut = new Date(fin.getFullYear(), fin.getMonth(), 1);
             form.querySelector('[name="date_debut"]').value = isoDate(debut);
             form.querySelector('[name="date_fin"]').value = isoDate(fin);
+            appliquer(form);
         }
     });
 
     document.addEventListener('submit', (e) => {
         if (e.target.id !== 'transactions_filtres_form') return;
         e.preventDefault();
-        const form = e.target;
-        const debut = form.querySelector('[name="date_debut"]').value;
-        const fin = form.querySelector('[name="date_fin"]').value;
-        if (debut && fin && debut > fin) {
-            form.querySelector('[name="date_fin"]').setCustomValidity('La date de fin doit être postérieure à la date de début.');
-            form.reportValidity();
-            form.querySelector('[name="date_fin"]').setCustomValidity('');
-            return;
-        }
-        appliquer(form);
+        appliquer(e.target);
+    });
+
+    // Application automatique dès qu'un filtre change (léger délai pour la saisie des dates)
+    document.addEventListener('change', (e) => {
+        const form = e.target.closest('#transactions_filtres_form');
+        if (!form) return;
+        clearTimeout(minuterie);
+        minuterie = setTimeout(() => appliquer(form), e.target.type === 'date' ? 500 : 0);
     });
 
     document.addEventListener('change', (e) => {
@@ -574,7 +582,8 @@ if (!window._transactionsFiltresBound) {
 
     // Changement de page : fermer le panneau et le supprimer si on a quitté les transactions
     document.addEventListener('ajax-content-loaded', () => {
-        fermer();
+        if (!garderOuvert || !document.getElementById('transactions_table')) fermer();
+        garderOuvert = false;
         if (!document.getElementById('transactions_table')) {
             document.querySelectorAll('body > [data-transactions-filtres-portail]').forEach(ancien => ancien.remove());
         }
